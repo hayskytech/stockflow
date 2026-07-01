@@ -1,0 +1,52 @@
+# ---- Dependencies ----
+node_modules/
+**/node_modules/
+
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- Logs ----
+logs/
+*.log
+dev.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- Build output ----
+dist/
+build/
+frontend/dist/
+.vite/
+
+# ---- Uploads / user-generated media ----
+backend/uploads/
+!backend/uploads/.gitkeep
+
+# ---- Testing / coverage ----
+coverage/
+.nyc_output/
+
+# ---- Caches ----
+.cache/
+.eslintcache
+.npm/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---- Misc ----
+*.local
+tmp/
+temp/
