@@ -13,9 +13,17 @@ CREATE DATABASE IF NOT EXISTS stockflow
 
 USE stockflow;
 
+-- -----------------------------------------------------------------------------
+-- MIGRATION NOTE (existing databases only):
+-- This init script only runs on a fresh database. To add the `customer` role to
+-- an already-provisioned DB, run once:
+--   ALTER TABLE users MODIFY role ENUM('admin','staff','customer') NOT NULL DEFAULT 'staff';
+-- -----------------------------------------------------------------------------
+
 -- =============================================================================
 -- TABLE: users
--- Two roles only: admin (full access) and staff (operational, no user/warehouse mgmt).
+-- Three roles: admin (full access), staff (operational, no user/warehouse mgmt),
+-- and customer (self-registered storefront shopper — browse only, no back-office).
 -- =============================================================================
 CREATE TABLE users (
   id                    CHAR(36)        NOT NULL                    COMMENT 'UUID v4 primary key',
@@ -23,7 +31,7 @@ CREATE TABLE users (
   email                 VARCHAR(150)    NOT NULL                    COMMENT 'Login email',
 
   password_hash         VARCHAR(255)    NOT NULL                    COMMENT 'bcrypt hash (cost 12)',
-  role                  ENUM('admin','staff') NOT NULL DEFAULT 'staff',
+  role                  ENUM('admin','staff','customer') NOT NULL DEFAULT 'staff',
 
   is_active             BOOLEAN         NOT NULL DEFAULT TRUE       COMMENT 'FALSE = account disabled',
   must_change_password  BOOLEAN         NOT NULL DEFAULT FALSE      COMMENT 'Forces password change on next login',
@@ -42,7 +50,7 @@ CREATE TABLE users (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='System users - admin or staff';
+  COMMENT='System users - admin, staff, or customer';
 
 
 -- =============================================================================

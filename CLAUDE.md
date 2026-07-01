@@ -151,6 +151,7 @@ Two separate state tools with distinct responsibilities — do not mix them:
 
 JWT-based auth with access + refresh tokens.
 
+- **Register** (`POST /auth/register`) — public, rate-limited customer self-signup (name, email, password + confirm; same password policy as change-password). Role is hard-coded to `customer` server-side. On success the customer is auto-logged-in (issues the token pair + refresh cookie). Duplicate email returns a generic 409.
 - **Login** (`POST /auth/login`) — validates email/password against `users` table (bcrypt hash). Generic "Invalid email or password" error — never reveal whether the email exists.
 - **Account lockout** — after 5 failed attempts, lock the account for 15 minutes (`failed_login_attempts`, `locked_until` columns).
 - **Tokens**:
@@ -181,12 +182,13 @@ Each row in `refresh_tokens` represents one active session (one login on one dev
 
 ## Roles
 
-Two roles only — no scoping. There's a single warehouse, so no per-user or per-request warehouse filtering exists anywhere:
+Three roles — no scoping. There's a single warehouse, so no per-user or per-request warehouse filtering exists anywhere:
 
 - **Admin** — full access: manages Users/Staff, warehouse settings, products/stock, orders/dispatches, and reports.
 - **Staff** — operational role: places orders, accepts/dispatches orders, manages stock. Cannot manage users or warehouse settings.
+- **Customer** — self-registered storefront shopper. Browse-only access to the product catalog through the separate storefront UI; no back-office access at all. Customers sign up themselves via the public `POST /auth/register` endpoint (role is hard-coded server-side to `customer` — never taken from the request).
 
-Role is embedded in the access token payload (`{ sub, role }`) so every route handler can authorize without an extra DB lookup.
+Admin and staff are the internal back-office (AdminLTE sidebar shell); customers get a separate top-navbar storefront shell (`StoreShell`) mounted at `/store`. Role is embedded in the access token payload (`{ sub, role }`) so every route handler can authorize without an extra DB lookup.
 
 ### Data model
 
@@ -196,7 +198,7 @@ id               PK
 name
 email            UNIQUE
 password_hash
-role             ENUM('admin','staff')
+role             ENUM('admin','staff','customer')
 is_active
 must_change_password
 failed_login_attempts, locked_until
@@ -205,22 +207,26 @@ created_at, updated_at
 
 ### Permission matrix (high level)
 
-| Action                                           | Admin | Staff |
-| ------------------------------------------------ | ----- | ----- |
-| Manage warehouse settings (name/address/contact) | ✅    | ❌    |
-| Manage users (create/edit/deactivate)            | ✅    | ❌    |
-| View/manage products & stock                     | ✅    | ✅    |
-| Place orders                                     | ✅    | ✅    |
-| Accept/dispatch orders                           | ✅    | ✅    |
-| View reports                                     | ✅    | ✅    |
-| View/terminate sessions — own                    | ✅    | ✅    |
-| View/terminate sessions — others                 | ✅    | ❌    |
+| Action                                           | Admin | Staff | Customer |
+| ------------------------------------------------ | ----- | ----- | -------- |
+| Manage warehouse settings (name/address/contact) | ✅    | ❌    | ❌       |
+| Manage users (create/edit/deactivate)            | ✅    | ❌    | ❌       |
+| View/manage products & stock                     | ✅    | ✅    | ❌       |
+| Browse product catalog (storefront)              | ✅    | ✅    | ✅       |
+| Place orders                                     | ✅    | ✅    | ❌\*     |
+| Accept/dispatch orders                           | ✅    | ✅    | ❌       |
+| View reports                                     | ✅    | ✅    | ❌       |
+| View/terminate sessions — own                    | ✅    | ✅    | ✅       |
+| View/terminate sessions — others                 | ✅    | ❌    | ❌       |
+
+\* Customers are browse-only in the current storefront; customer order placement (cart/checkout) is a planned follow-up.
 
 ### Onboarding flow
 
 1. Admin sets up the Warehouse record (`PUT /warehouse`) — name, address, contact details.
 2. Admin creates Users, choosing `role` (`admin` or `staff`).
 3. New user logs in with a temporary password and is forced through `must_change_password` before normal use.
+4. Customers self-register at `POST /auth/register` (public) and are auto-logged-in into the storefront — no admin involvement, no forced password change.
 
 ## Pagination & Filtering — WordPress REST API style
 
@@ -244,6 +250,7 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 
 ## Feature Modules & Example Routes
 
+- **Storefront (Home)** — customer-facing ecommerce landing at `/store` (frontend `features/home/`). Lists active products grouped by category using the existing `GET /products` endpoint; browse-only, no new backend routes. Renders inside `StoreShell` (top navbar, no admin sidebar).
 - **Dashboard** — summary widgets, no dedicated routes beyond `GET /reports/*`.
 - **Warehouse** — `GET /warehouse`, `PUT /warehouse` — single-record settings (name, address, contact); admin only for write.
 - **Catalog** — `divisions`, `categories`, `sub_categories` — `GET /divisions`, `GET /categories` (`division_id`), `GET /sub-categories` (`category_id`), CRUD on each — admin only for write; staff read-only. Deleting a division/category/sub-category that still has children or products is rejected (`ON DELETE RESTRICT`) — deactivate (`is_active=false`) instead.

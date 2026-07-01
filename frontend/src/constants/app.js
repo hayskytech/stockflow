@@ -4,6 +4,7 @@ export const APP_TAGLINE = "From Warehouse to Store — Seamlessly"
 export const ROLES = {
   ADMIN: "admin",
   STAFF: "staff",
+  CUSTOMER: "customer",
 }
 
 export const MEDIA = {

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { ENV } from '../../config/env.js';
 import { executeQuery } from '../../db/query.js';
@@ -34,6 +35,45 @@ async function storeRefreshToken(userId, tokenHash, ip, userAgent) {
      VALUES (UUID(), ?, ?, ?, ?, ?)`,
     [userId, tokenHash, userAgent, ip, expiresAt],
   );
+}
+
+/**
+ * Registers a new storefront customer and logs them in immediately.
+ * Role is hard-coded to 'customer' — it is never taken from the request body,
+ * so this public endpoint can never mint an admin/staff account.
+ */
+export async function registerCustomer(input, ip, userAgent) {
+  const id = crypto.randomUUID();
+  const passwordHash = await bcrypt.hash(input.password, 12);
+
+  try {
+    await executeQuery(
+      `INSERT INTO users (id, name, email, password_hash, role, is_active, must_change_password)
+       VALUES (?, ?, ?, ?, 'customer', 1, 0)`,
+      [id, input.name, input.email, passwordHash],
+    );
+  } catch (err) {
+    // Generic message intentionally — do not reveal registration state beyond "taken".
+    if (err.code === 'ER_DUP_ENTRY') throw new AppError(409, 'Email is already registered');
+    throw err;
+  }
+
+  const accessToken = signAccessToken({ sub: id, role: 'customer' });
+  const refreshToken = generateRefreshToken();
+
+  await storeRefreshToken(id, hashRefreshToken(refreshToken), ip, userAgent);
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id,
+      name: input.name,
+      email: input.email,
+      role: 'customer',
+      mustChangePassword: false,
+    },
+  };
 }
 
 /** Validates credentials, enforces account lockout, and issues tokens on success. */

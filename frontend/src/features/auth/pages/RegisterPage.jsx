@@ -1,45 +1,47 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
-import { loginApi } from "@/features/auth/auth.api"
-import { loginSchema } from "@/features/auth/auth.schema"
+import { registerApi } from "@/features/auth/auth.api"
+import { registerSchema } from "@/features/auth/auth.schema"
 import { useAuthStore } from "@/store/auth.store"
 import { APP_NAME, APP_TAGLINE } from "@/constants/app"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
 
-export function LoginPage() {
+export function RegisterPage() {
   const [serverError, setServerError] = useState("")
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
 
   const form = useForm({
-    defaultValues: { email: "", password: "" },
-    validators: { onSubmit: loginSchema },
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
+    validators: { onSubmit: registerSchema },
     onSubmit: async ({ value }) => {
       setServerError("")
       try {
-        const { user, accessToken } = await loginApi(value)
+        const { user, accessToken } = await registerApi(value)
         setAuth(user, accessToken)
         navigate(landingPathForRole(user.role), { replace: true })
       } catch (err) {
         setServerError(
-          err.response ? (err.response.data?.message ?? "Invalid email or password") : "Could not reach the server. Please check your connection and try again."
+          err.response
+            ? (err.response.data?.message ?? "Could not create your account")
+            : "Could not reach the server. Please check your connection and try again."
         )
       }
     },
   })
 
   return (
-    <div className="login-page">
-      <div className="login-box">
-        <div className="login-logo">
+    <div className="register-page">
+      <div className="register-box">
+        <div className="register-logo">
           <b>{APP_NAME}</b>
         </div>
         <p className="text-center text-muted">{APP_TAGLINE}</p>
 
         <div className="card">
-          <div className="card-body login-card-body">
-            <p className="login-box-msg">Sign in to continue</p>
+          <div className="card-body register-card-body">
+            <p className="login-box-msg">Create your account</p>
 
             <form
               onSubmit={(e) => {
@@ -47,10 +49,35 @@ export function LoginPage() {
                 form.handleSubmit()
               }}
             >
+              <form.Field name="name">
+                {(field) => (
+                  <div className="input-group mb-3">
+                    <input
+                      id="register-name"
+                      type="text"
+                      className="form-control"
+                      placeholder="Full name"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <div className="input-group-append">
+                      <div className="input-group-text">
+                        <i className="fas fa-user" />
+                      </div>
+                    </div>
+                    {field.state.meta.errors.length > 0 ? (
+                      <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+
               <form.Field name="email">
                 {(field) => (
                   <div className="input-group mb-3">
                     <input
+                      id="register-email"
                       type="email"
                       className="form-control"
                       placeholder="Email"
@@ -74,9 +101,34 @@ export function LoginPage() {
                 {(field) => (
                   <div className="input-group mb-3">
                     <input
+                      id="register-password"
                       type="password"
                       className="form-control"
                       placeholder="Password"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <div className="input-group-append">
+                      <div className="input-group-text">
+                        <i className="fas fa-lock" />
+                      </div>
+                    </div>
+                    {field.state.meta.errors.length > 0 ? (
+                      <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
+                    ) : null}
+                  </div>
+                )}
+              </form.Field>
+
+              <form.Field name="confirmPassword">
+                {(field) => (
+                  <div className="input-group mb-3">
+                    <input
+                      id="register-confirm-password"
+                      type="password"
+                      className="form-control"
+                      placeholder="Confirm password"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -98,14 +150,14 @@ export function LoginPage() {
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => (
                   <button type="submit" className="btn btn-primary btn-block" disabled={isSubmitting}>
-                    {isSubmitting ? "Signing in…" : "Sign In"}
+                    {isSubmitting ? "Creating account…" : "Register"}
                   </button>
                 )}
               </form.Subscribe>
             </form>
 
             <p className="text-center mt-3 mb-0">
-              Don&apos;t have an account? <Link to={ROUTES.AUTH.REGISTER}>Create one</Link>
+              Already have an account? <Link to={ROUTES.AUTH.LOGIN}>Sign in</Link>
             </p>
           </div>
         </div>

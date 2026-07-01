@@ -19,6 +19,7 @@ I want to make a webapp for stock management. There is a single warehouse in whi
 - Reports
 - Users / Staff
 - Media Library (shared image uploads, reused across features)
+- Storefront (customer-facing ecommerce home — products browsed category-wise)
 
 ## Stack
 
@@ -68,12 +69,22 @@ Each row in `refresh_tokens` represents one active session (one login on one dev
 
 ### Roles for StockFlow
 
-Two roles only, no per-user scoping, since there's no branch concept and only a single warehouse:
+Three roles, no per-user scoping, since there's no branch concept and only a single warehouse:
 
 - **Admin** — full access: manages Users/Staff, warehouse settings, products/stock, orders/dispatches, and reports.
 - **Staff** — operational role: places orders, accepts/dispatches orders, manages stock. Cannot manage users or warehouse settings.
+- **Customer** — self-registered storefront shopper. Browse-only access to the product catalog via a separate storefront UI; no back-office access.
 
 Role is embedded in the access token payload (`{ sub, role }`) so every route handler can authorize without an extra DB lookup.
+
+### Storefront (Customer) Concept
+
+Customers are a distinct audience from the back-office team, so they get a **separate ecommerce experience**, not the AdminLTE dashboard:
+
+- **Signup** — customers self-register at the public `POST /auth/register` (role hard-coded server-side to `customer`) and are auto-logged-in. Admins can also create users of any role (`admin`/`staff`/`customer`) from the Users page.
+- **Storefront shell** — a top-navbar layout (`StoreShell`, mounted at `/store`) with **no admin sidebar**. The home page lists active products grouped by category, ecommerce-style (image, name, WSP price with MRP struck-through, stock badge).
+- **Role-based landing** — after login, customers land on `/store`; admin/staff land on the dashboard. Route guards keep each audience out of the other's area.
+- **Scope** — browse-only for now; customer cart/checkout (placing orders) is a planned follow-up.
 
 ## Users & Roles — Enhanced Plan
 
@@ -85,7 +96,7 @@ id               PK
 name
 email            UNIQUE
 password_hash
-role             ENUM('admin','staff')
+role             ENUM('admin','staff','customer')
 is_active
 must_change_password
 failed_login_attempts, locked_until
@@ -98,22 +109,26 @@ created_at, updated_at
 
 ### Permission matrix (high level)
 
-| Action                                                        | Admin | Staff |
-| ------------------------------------------------------------- | ----- | ----- |
-| Manage warehouse settings (name/address/contact)              | ✅    | ❌    |
-| Manage users (create staff/admin, reset password, deactivate) | ✅    | ❌    |
-| View/manage products & stock                                  | ✅    | ✅    |
-| Place orders                                                  | ✅    | ✅    |
-| Accept/dispatch orders                                        | ✅    | ✅    |
-| View reports                                                  | ✅    | ✅    |
-| View/terminate sessions — own                                 | ✅    | ✅    |
-| View/terminate sessions — others                              | ✅    | ❌    |
+| Action                                                                 | Admin | Staff | Customer |
+| ---------------------------------------------------------------------- | ----- | ----- | -------- |
+| Manage warehouse settings (name/address/contact)                       | ✅    | ❌    | ❌       |
+| Manage users (create admin/staff/customer, reset password, deactivate) | ✅    | ❌    | ❌       |
+| View/manage products & stock                                           | ✅    | ✅    | ❌       |
+| Browse product catalog (storefront)                                    | ✅    | ✅    | ✅       |
+| Place orders                                                           | ✅    | ✅    | ❌\*     |
+| Accept/dispatch orders                                                 | ✅    | ✅    | ❌       |
+| View reports                                                           | ✅    | ✅    | ❌       |
+| View/terminate sessions — own                                          | ✅    | ✅    | ✅       |
+| View/terminate sessions — others                                       | ✅    | ❌    | ❌       |
+
+\* Customers are browse-only in the current storefront; customer order placement is a planned follow-up.
 
 ### Onboarding flow
 
 1. Admin sets up the Warehouse record (`PUT /warehouse`) — name, address, contact details.
-2. Admin creates Users, choosing `role` (`admin` or `staff`).
+2. Admin creates Users, choosing `role` (`admin`, `staff`, or `customer`).
 3. New user logs in with a temporary password and is forced through `must_change_password` before normal use (existing Auth Concept flow).
+4. Customers may also self-register at `POST /auth/register` (public) and are auto-logged-in into the storefront — no admin involvement, no forced password change.
 
 ## Backend Routes Implementation Plan
 

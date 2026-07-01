@@ -1,13 +1,18 @@
 import { Navigate, useLocation } from "react-router-dom"
 import { useAuthStore } from "@/store/auth.store"
-import { ROUTES } from "@/constants/routes"
+import { ROUTES, landingPathForRole } from "@/constants/routes"
 
 /**
  * Blocks access to authenticated routes while the initial silent refresh is in
  * flight, then redirects to login if no valid session exists after it completes.
+ *
+ * Pass `allow` (array of roles) to also restrict the branch to those roles — a
+ * user whose role is not allowed is redirected to their own landing area
+ * (e.g. a customer hitting an admin route lands on the storefront, and vice-versa).
  */
-export function ProtectedRoute({ children }) {
+export function ProtectedRoute({ children, allow }) {
   const accessToken = useAuthStore((s) => s.accessToken)
+  const role = useAuthStore((s) => s.user?.role)
   const mustChangePassword = useAuthStore((s) => s.mustChangePassword)
   const isInitialized = useAuthStore((s) => s.isInitialized)
   const { pathname } = useLocation()
@@ -26,6 +31,10 @@ export function ProtectedRoute({ children }) {
 
   if (mustChangePassword && pathname !== ROUTES.AUTH.CHANGE_PASSWORD) {
     return <Navigate to={ROUTES.AUTH.CHANGE_PASSWORD} replace />
+  }
+
+  if (allow && !allow.includes(role)) {
+    return <Navigate to={landingPathForRole(role)} replace />
   }
 
   return children

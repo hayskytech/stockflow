@@ -7,6 +7,12 @@ export async function loginApi(credentials) {
   return data
 }
 
+/** Registers a new customer account and auto-logs in, returning user profile + access token */
+export async function registerApi(input) {
+  const { data } = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, input)
+  return data
+}
+
 /**
  * Exchanges the HttpOnly refresh cookie for a new access token + user profile.
  * Called on app load to silently restore a session without requiring re-login.

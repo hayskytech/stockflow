@@ -1,7 +1,11 @@
 export const ROUTES = {
   AUTH: {
     LOGIN: "/login",
+    REGISTER: "/register",
     CHANGE_PASSWORD: "/change-password",
+  },
+  STORE: {
+    HOME: "/store",
   },
   DASHBOARD: "/dashboard",
   WAREHOUSE: "/warehouse",
@@ -25,4 +29,9 @@ export const ROUTES = {
   USERS: {
     LIST: "/users",
   },
+}
+
+/** The landing route for a user after login/registration, based on their role. */
+export function landingPathForRole(role) {
+  return role === "customer" ? ROUTES.STORE.HOME : ROUTES.DASHBOARD
 }

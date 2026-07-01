@@ -1,7 +1,7 @@
 import { ENV } from '../../config/env.js';
 import { AppError } from '../../middleware/errorHandler.js';
-import { changePasswordSchema, loginSchema } from './auth.schema.js';
-import { changeUserPassword, getMe, loginUser, logoutUser, refreshTokens } from './auth.service.js';
+import { changePasswordSchema, loginSchema, registerSchema } from './auth.schema.js';
+import { changeUserPassword, getMe, loginUser, logoutUser, refreshTokens, registerCustomer } from './auth.service.js';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
 
@@ -11,6 +11,28 @@ const cookieOptions = {
   sameSite: 'strict',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
+
+/** POST /api/auth/register — public customer self-signup, auto-logs in on success. */
+export async function register(req, res, next) {
+  try {
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(400, parsed.error.issues[0]?.message ?? 'Invalid input');
+    }
+
+    const ip = req.ip ?? '';
+    const userAgent = req.headers['user-agent'] ?? '';
+    const result = await registerCustomer(parsed.data, ip, userAgent);
+
+    res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, cookieOptions);
+    res.status(201).json({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
 
 /** POST /api/auth/login */
 export async function login(req, res, next) {

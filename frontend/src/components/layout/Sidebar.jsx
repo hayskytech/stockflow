@@ -1,10 +1,11 @@
 import { NavLink } from "react-router-dom"
+import { useAuthStore } from "@/store/auth.store"
 import { ROUTES } from "@/constants/routes"
-import { APP_NAME } from "@/constants/app"
+import { APP_NAME, ROLES } from "@/constants/app"
 
 const NAV_ITEMS = [
   { to: ROUTES.DASHBOARD, icon: "fa-gauge", label: "Dashboard" },
-  { to: ROUTES.WAREHOUSE, icon: "fa-warehouse", label: "Warehouse" },
+  { to: ROUTES.WAREHOUSE, icon: "fa-warehouse", label: "Warehouse", adminOnly: true },
   { to: ROUTES.CATALOG.DIVISIONS, icon: "fa-sitemap", label: "Divisions" },
   { to: ROUTES.CATALOG.CATEGORIES, icon: "fa-tags", label: "Categories" },
   { to: ROUTES.PRODUCTS.LIST, icon: "fa-shirt", label: "Products" },
@@ -13,10 +14,13 @@ const NAV_ITEMS = [
   { to: ROUTES.ORDERS.LIST, icon: "fa-cart-shopping", label: "Orders" },
   { to: ROUTES.DISPATCHES, icon: "fa-truck", label: "Dispatches" },
   { to: ROUTES.REPORTS, icon: "fa-chart-line", label: "Reports" },
-  { to: ROUTES.USERS.LIST, icon: "fa-users", label: "Users / Staff" },
+  { to: ROUTES.USERS.LIST, icon: "fa-users", label: "Users / Staff", adminOnly: true },
 ]
 
 export function Sidebar() {
+  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
+  const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
+
   return (
     <aside className="main-sidebar sidebar-dark-primary elevation-4">
       <a href={ROUTES.DASHBOARD} className="brand-link">
@@ -26,7 +30,7 @@ export function Sidebar() {
       <div className="sidebar">
         <nav className="mt-2">
           <ul className="nav nav-pills nav-sidebar flex-column" role="menu">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <li className="nav-item" key={item.to}>
                 <NavLink
                   to={item.to}

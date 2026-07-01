@@ -1,10 +1,14 @@
 import { createBrowserRouter, Navigate } from "react-router-dom"
 import { AppShell } from "@/components/layout/AppShell"
+import { StoreShell } from "@/components/layout/StoreShell"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
 import { ROUTES } from "@/constants/routes"
+import { ROLES } from "@/constants/app"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
+import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
+import { HomePage } from "@/features/home/pages/HomePage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
 import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
 import { DivisionsPage } from "@/features/catalog/pages/DivisionsPage"
@@ -29,6 +33,10 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
+    path: ROUTES.AUTH.REGISTER,
+    element: <RegisterPage />,
+  },
+  {
     path: ROUTES.AUTH.CHANGE_PASSWORD,
     element: (
       <ProtectedRoute>
@@ -37,9 +45,24 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: ROUTES.STORE.HOME,
+    element: (
+      <ProtectedRoute allow={[ROLES.CUSTOMER]}>
+        <StoreShell />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorPage />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+    ],
+  },
+  {
     path: "/",
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allow={[ROLES.ADMIN, ROLES.STAFF]}>
         <AppShell />
       </ProtectedRoute>
     ),

@@ -9,6 +9,7 @@ import { authRouter } from './modules/auth/auth.router.js';
 import { catalogRouter } from './modules/catalog/catalog.router.js';
 import { mediaRouter } from './modules/media/media.router.js';
 import { productsRouter } from './modules/products/products.router.js';
+import { usersRouter } from './modules/users/users.router.js';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/auth', authRouter);
 app.use('/api', catalogRouter);
 app.use('/api/products', productsRouter);
 app.use('/api/media', mediaRouter);
+app.use('/api/users', usersRouter);
 
 app.use(errorHandler);
 
