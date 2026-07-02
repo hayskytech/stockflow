@@ -67,10 +67,10 @@ export function CheckoutPage() {
     <div>
       <h2 className="mb-4">Checkout</h2>
       <div className="row">
-        <div className="col-md-7">
+        <div className="col-12 col-md-7">
           <div className="card mb-4">
             <div className="card-body">
-              <h5 className="card-title mb-3">Shipping Details</h5>
+              <h5 className="card-title float-none mb-3">Shipping Details</h5>
 
               <form
                 onSubmit={(e) => {
@@ -152,7 +152,7 @@ export function CheckoutPage() {
                 </form.Field>
 
                 <div className="form-row">
-                  <div className="form-group col-md-6">
+                  <div className="form-group col-12 col-md-6">
                     <form.Field name="city">
                       {(field) => (
                         <>
@@ -172,7 +172,7 @@ export function CheckoutPage() {
                       )}
                     </form.Field>
                   </div>
-                  <div className="form-group col-md-3">
+                  <div className="form-group col-6 col-md-3">
                     <form.Field name="state">
                       {(field) => (
                         <>
@@ -192,7 +192,7 @@ export function CheckoutPage() {
                       )}
                     </form.Field>
                   </div>
-                  <div className="form-group col-md-3">
+                  <div className="form-group col-6 col-md-3">
                     <form.Field name="pincode">
                       {(field) => (
                         <>
@@ -270,10 +270,10 @@ export function CheckoutPage() {
           </div>
         </div>
 
-        <div className="col-md-5">
+        <div className="col-12 col-md-5">
           <div className="card mb-4">
             <div className="card-body">
-              <h5 className="card-title">Account Details</h5>
+              <h5 className="card-title float-none">Account Details</h5>
               {isLoadingWarehouse ? (
                 <div className="spinner-border spinner-border-sm text-primary" role="status" />
               ) : warehouse ? (
@@ -317,7 +317,7 @@ export function CheckoutPage() {
 
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">Order Summary</h5>
+              <h5 className="card-title float-none">Order Summary</h5>
               {items.map((item) => (
                 <div key={item.productId} className="d-flex justify-content-between small mb-2">
                   <span>

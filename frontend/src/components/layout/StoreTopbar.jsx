@@ -28,12 +28,13 @@ export function StoreTopbar() {
 
   return (
     <nav className="navbar navbar-expand navbar-dark bg-primary sticky-top">
-      <div className="container">
-        <a href={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold">
+      <div className="container flex-wrap">
+        <a href={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
           {APP_NAME}
         </a>
 
-        <div className="flex-grow-1 mx-3" style={{ maxWidth: "480px" }}>
+        {/* Inline search — desktop only; on mobile it drops to its own full-width row below. */}
+        <div className="d-none d-md-block flex-grow-1 mx-3" style={{ maxWidth: "480px" }}>
           <input
             id="store-search"
             type="search"
@@ -44,7 +45,7 @@ export function StoreTopbar() {
           />
         </div>
 
-        <ul className="navbar-nav ml-auto">
+        <ul className="navbar-nav flex-row align-items-center ml-auto">
           <li className="nav-item">
             <Link id="store-cart-link" to={ROUTES.STORE.CART} className="nav-link position-relative mr-2">
               <i className="fas fa-shopping-cart" />
@@ -64,8 +65,8 @@ export function StoreTopbar() {
               className="nav-link btn btn-link text-white"
               onClick={() => setMenuOpen((v) => !v)}
             >
-              <i className="far fa-user mr-1" />
-              {user?.name ?? "Account"}
+              <i className="far fa-user mr-md-1" />
+              <span className="d-none d-md-inline">{user?.name ?? "Account"}</span>
             </button>
             <div className={`dropdown-menu dropdown-menu-right ${menuOpen ? "show" : ""}`}>
               <Link id="store-my-orders-link" to={ROUTES.STORE.ORDERS} className="dropdown-item" onClick={() => setMenuOpen(false)}>
@@ -79,6 +80,18 @@ export function StoreTopbar() {
             </div>
           </li>
         </ul>
+
+        {/* Full-width search row — mobile only. */}
+        <div className="d-md-none w-100 mt-2">
+          <input
+            id="store-search-mobile"
+            type="search"
+            className="form-control"
+            placeholder="Search products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
     </nav>
   )

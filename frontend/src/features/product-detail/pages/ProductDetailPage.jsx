@@ -44,24 +44,26 @@ export function ProductDetailPage() {
         <i className="fas fa-arrow-left mr-1" /> Back to shopping
       </Link>
 
-      <div className="row bg-white rounded shadow-sm p-4" id={`product-detail-${product.id}`}>
-        <div
-          className="col-md-5 d-flex align-items-center justify-content-center bg-light rounded"
-          style={{ minHeight: "360px" }}
-        >
-          {product.productPhotoUrl ? (
-            <img
-              src={resolveMediaUrl(product.productPhotoUrl)}
-              alt={product.name}
-              className="img-fluid"
-              style={{ maxHeight: "360px", objectFit: "contain" }}
-            />
-          ) : (
-            <i className="fas fa-shirt fa-5x text-muted" />
-          )}
+      <div className="row bg-white rounded shadow-sm p-3 p-md-4" id={`product-detail-${product.id}`}>
+        <div className="col-12 col-md-5">
+          <div
+            className="d-flex align-items-center justify-content-center bg-light rounded overflow-hidden"
+            style={{ aspectRatio: "4 / 5" }}
+          >
+            {product.productPhotoUrl ? (
+              <img
+                src={resolveMediaUrl(product.productPhotoUrl)}
+                alt={product.name}
+                className="w-100 h-100"
+                style={{ objectFit: "cover" }}
+              />
+            ) : (
+              <i className="fas fa-shirt fa-5x text-muted" />
+            )}
+          </div>
         </div>
 
-        <div className="col-md-7 pl-md-5 pt-4 pt-md-0">
+        <div className="col-12 col-md-7 pl-md-5 pt-4 pt-md-0">
           {breadcrumb ? <p className="text-muted mb-1">{breadcrumb}</p> : null}
           <h2 className="mb-2">{product.name}</h2>
           {attributes ? <p className="text-muted">{attributes}</p> : null}

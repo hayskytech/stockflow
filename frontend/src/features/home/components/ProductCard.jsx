@@ -14,14 +14,14 @@ export function ProductCard({ product }) {
       <div className="card h-100 shadow-sm" id={`product-card-${product.id}`}>
         <div
           className="d-flex align-items-center justify-content-center bg-white border-bottom"
-          style={{ height: "200px", overflow: "hidden" }}
+          style={{ aspectRatio: "4 / 5", overflow: "hidden" }}
         >
           {product.productPhotoUrl ? (
             <img
               src={resolveMediaUrl(product.productPhotoUrl)}
               alt={product.name}
-              className="img-fluid"
-              style={{ maxHeight: "100%", objectFit: "contain" }}
+              className="w-100 h-100"
+              style={{ objectFit: "cover" }}
             />
           ) : (
             <i className="fas fa-shirt fa-3x text-muted" />
@@ -29,7 +29,7 @@ export function ProductCard({ product }) {
         </div>
 
         <div className="card-body d-flex flex-column p-3">
-          <h6 className="card-title mb-1 text-truncate" title={product.name}>
+          <h6 className="card-title float-none mb-1 text-truncate" title={product.name}>
             {product.name}
           </h6>
           {attributes ? <p className="text-muted small mb-2">{attributes}</p> : null}

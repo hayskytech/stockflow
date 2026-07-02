@@ -34,52 +34,60 @@ export function CartPage() {
       <h2 className="mb-4">Your Cart</h2>
 
       <div className="row">
-        <div className="col-md-8">
+        <div className="col-12 col-md-8">
           {items.map((item) => (
             <div key={item.productId} className="card mb-3" id={`cart-item-${item.productId}`}>
-              <div className="card-body d-flex align-items-center">
-                <div
-                  className="mr-3 d-flex align-items-center justify-content-center bg-light rounded"
-                  style={{ width: "80px", height: "80px", flexShrink: 0 }}
-                >
-                  {item.productPhotoUrl ? (
-                    <img
-                      src={resolveMediaUrl(item.productPhotoUrl)}
-                      alt={item.name}
-                      className="img-fluid"
-                      style={{ maxHeight: "100%", objectFit: "contain" }}
-                    />
-                  ) : (
-                    <i className="fas fa-shirt fa-2x text-muted" />
-                  )}
-                </div>
-
-                <div className="flex-grow-1">
-                  <h6 className="mb-1">{item.name}</h6>
-                  <p className="text-muted small mb-1">{[item.color, item.size].filter(Boolean).join(" · ")}</p>
-                  <div className="font-weight-bold">{formatMoney(item.wsp)}</div>
-                </div>
-
-                <div className="mx-3">
-                  <QuantitySelector
-                    id={`cart-item-quantity-${item.productId}`}
-                    value={item.quantity}
-                    min={1}
-                    max={item.maxQuantity}
-                    onChange={(qty) => updateQuantity(item.productId, qty)}
-                  />
-                </div>
-
-                <div className="text-right" style={{ minWidth: "100px" }}>
-                  <div className="font-weight-bold mb-2">{formatMoney(item.wsp * item.quantity)}</div>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => removeItem(item.productId)}
-                    aria-label={`Remove ${item.name} from cart`}
+              <div className="card-body d-flex flex-column flex-sm-row align-items-sm-center">
+                <div className="d-flex align-items-center flex-grow-1 mb-3 mb-sm-0">
+                  <div
+                    className="mr-3 d-flex align-items-center justify-content-center bg-light rounded"
+                    style={{ width: "72px", height: "72px", flexShrink: 0 }}
                   >
-                    <i className="fas fa-trash-alt" />
-                  </button>
+                    {item.productPhotoUrl ? (
+                      <img
+                        src={resolveMediaUrl(item.productPhotoUrl)}
+                        alt={item.name}
+                        className="img-fluid"
+                        style={{ maxHeight: "100%", objectFit: "contain" }}
+                      />
+                    ) : (
+                      <i className="fas fa-shirt fa-2x text-muted" />
+                    )}
+                  </div>
+
+                  <div style={{ minWidth: 0 }}>
+                    <h6 className="mb-1 text-truncate">{item.name}</h6>
+                    <p className="text-muted small mb-1">{[item.color, item.size].filter(Boolean).join(" · ")}</p>
+                    <div className="font-weight-bold d-sm-none">{formatMoney(item.wsp)}</div>
+                  </div>
+                </div>
+
+                <div className="d-none d-sm-block text-center font-weight-bold mx-3" style={{ minWidth: "80px" }}>
+                  {formatMoney(item.wsp)}
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between justify-content-sm-end">
+                  <div className="mr-3">
+                    <QuantitySelector
+                      id={`cart-item-quantity-${item.productId}`}
+                      value={item.quantity}
+                      min={1}
+                      max={item.maxQuantity}
+                      onChange={(qty) => updateQuantity(item.productId, qty)}
+                    />
+                  </div>
+
+                  <div className="text-right" style={{ minWidth: "90px" }}>
+                    <div className="font-weight-bold mb-2">{formatMoney(item.wsp * item.quantity)}</div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => removeItem(item.productId)}
+                      aria-label={`Remove ${item.name} from cart`}
+                    >
+                      <i className="fas fa-trash-alt" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -90,10 +98,10 @@ export function CartPage() {
           </Link>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-12 col-md-4 mt-4 mt-md-0">
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">Order Summary</h5>
+              <h5 className="card-title float-none">Order Summary</h5>
               <div className="d-flex justify-content-between mb-2">
                 <span>Subtotal</span>
                 <span>{formatMoney(subtotal)}</span>

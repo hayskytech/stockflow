@@ -41,8 +41,8 @@ export function MyOrderDetailPage() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4">
+        <div className="mb-2 mb-sm-0">
           <h2 className="mb-0">Order {order.orderNumber}</h2>
           <p className="text-muted mb-0">Placed {formatDateTimeIST(order.createdAt)}</p>
         </div>
@@ -54,11 +54,11 @@ export function MyOrderDetailPage() {
       {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
 
       <div className="row">
-        <div className="col-md-8">
+        <div className="col-12 col-md-8">
           <div className="card mb-4">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="card-title mb-0">Items</h5>
+                <h5 className="card-title float-none mb-0">Items</h5>
                 <OrderStatusBadge status={order.status} />
               </div>
               <div className="table-responsive">
@@ -106,7 +106,7 @@ export function MyOrderDetailPage() {
 
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">Shipping Details</h5>
+              <h5 className="card-title float-none">Shipping Details</h5>
               <p className="mb-1">
                 {order.shippingName} · {order.shippingPhone}
               </p>
@@ -119,10 +119,10 @@ export function MyOrderDetailPage() {
           </div>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-12 col-md-4 mt-4 mt-md-0">
           <div className="card mb-4">
             <div className="card-body">
-              <h5 className="card-title">Payment</h5>
+              <h5 className="card-title float-none">Payment</h5>
               <p className="mb-1">
                 Method: <strong>Bank Transfer</strong>
               </p>
