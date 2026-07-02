@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { loginApi } from "@/features/auth/auth.api"
 import { loginSchema } from "@/features/auth/auth.schema"
+import { PasswordField } from "@/features/auth/components/PasswordField"
 import { useAuthStore } from "@/store/auth.store"
 import { APP_NAME, APP_TAGLINE } from "@/constants/app"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
@@ -71,26 +72,7 @@ export function LoginPage() {
               </form.Field>
 
               <form.Field name="password">
-                {(field) => (
-                  <div className="input-group mb-3">
-                    <input
-                      type="password"
-                      className="form-control"
-                      placeholder="Password"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    <div className="input-group-append">
-                      <div className="input-group-text">
-                        <i className="fas fa-lock" />
-                      </div>
-                    </div>
-                    {field.state.meta.errors.length > 0 ? (
-                      <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                    ) : null}
-                  </div>
-                )}
+                {(field) => <PasswordField id="login-password" placeholder="Password" field={field} />}
               </form.Field>
 
               {serverError ? <div className="alert alert-danger py-2">{serverError}</div> : null}

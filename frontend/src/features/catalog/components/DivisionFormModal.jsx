@@ -4,7 +4,7 @@ import { divisionSchema } from "@/features/catalog/catalog.schema"
 
 export function DivisionFormModal({ open, division, onClose, onSubmit, isSubmitting, serverError }) {
   const form = useForm({
-    defaultValues: { name: division?.name ?? "", isActive: division?.isActive ?? true },
+    defaultValues: { name: division?.name ?? "", isActive: division ? Boolean(division.isActive) : true },
     validators: { onSubmit: divisionSchema },
     onSubmit: async ({ value }) => onSubmit(value),
   })

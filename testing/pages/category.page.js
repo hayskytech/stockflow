@@ -24,7 +24,7 @@ export class CategoriesPage {
   }
 
   async goto() {
-    await this.page.goto("/catalog/categories")
+    await this.page.goto("/#/catalog/categories")
   }
 
   categoryRowByText(text) {

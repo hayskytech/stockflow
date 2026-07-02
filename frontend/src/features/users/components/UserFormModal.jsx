@@ -27,7 +27,7 @@ export function UserFormModal({ open, user, onClose, onSubmit, isSubmitting, ser
       email: user?.email ?? "",
       role: normalizeRole(user?.role),
       password: "",
-      isActive: user?.isActive ?? true,
+      isActive: user ? Boolean(user.isActive) : true,
     },
     validators: { onSubmit: isEdit ? editUserSchema : createUserSchema },
     onSubmit: async ({ value }) => {

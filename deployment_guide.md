@@ -80,7 +80,7 @@ Create the MySQL DB + user in cPanel → **MySQL Databases**, assign user to DB 
 
 - Node Selector → **Restart** the app after any `.env` or code change.
 - Hit `https://wholesale.southcenter.in/api/...` (a known GET route) to confirm the API proxy works.
-- Hit `https://wholesale.southcenter.in/` to confirm the SPA loads and routes client-side (check `.htaccess` in doc root — if deep-linking to routes like `/store/orders` 404s, add an SPA fallback rewrite to `index.html`).
+- Hit `https://wholesale.southcenter.in/` to confirm the SPA loads and routes client-side. The app uses hash routing (`/#/store/orders`), so no `.htaccess` SPA fallback rewrite is needed — deep links and reloads always hit `index.html` since everything after `#` is client-only.
 
 ## Updates later
 

@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/auth.store"
 import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useProductsStore } from "@/features/products/products.store"
 import { useDeleteProduct, useProducts } from "@/features/products/hooks/use-products"
+import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductsPage() {
@@ -51,11 +52,29 @@ export function ProductsPage() {
   }
 
   const columns = [
+    {
+      key: "productPhotoUrl",
+      label: "",
+      render: (row) =>
+        row.productPhotoUrl ? (
+          <img
+            src={resolveMediaUrl(row.productPhotoUrl)}
+            alt={row.name}
+            style={{ width: 40, height: 40, objectFit: "cover" }}
+            className="rounded"
+          />
+        ) : (
+          <div
+            className="d-flex align-items-center justify-content-center bg-light rounded"
+            style={{ width: 40, height: 40 }}
+          >
+            <i className="fas fa-shirt text-muted" />
+          </div>
+        ),
+    },
     { key: "productCode", label: "Code" },
     { key: "name", label: "Name" },
     { key: "categoryName", label: "Category" },
-    { key: "color", label: "Color" },
-    { key: "size", label: "Size" },
     { key: "mrp", label: "MRP", render: (row) => `₹${Number(row.mrp).toFixed(2)}` },
     { key: "wsp", label: "WSP", render: (row) => `₹${Number(row.wsp).toFixed(2)}` },
     {

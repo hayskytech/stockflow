@@ -46,15 +46,34 @@ export async function registerCustomer(input, ip, userAgent) {
   const id = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(input.password, 12);
 
+  const businessName = input.businessName || null;
+
   try {
     await executeQuery(
-      `INSERT INTO users (id, name, email, password_hash, role, is_active, must_change_password)
-       VALUES (?, ?, ?, ?, 'customer', 1, 0)`,
-      [id, input.name, input.email, passwordHash],
+      `INSERT INTO users (id, name, email, phone, password_hash, role, business_name, address, town, district, state, pincode, is_active, must_change_password)
+       VALUES (?, ?, ?, ?, ?, 'customer', ?, ?, ?, ?, ?, ?, 1, 0)`,
+      [
+        id,
+        input.name,
+        input.email,
+        input.phone,
+        passwordHash,
+        businessName,
+        input.address,
+        input.town,
+        input.district,
+        input.state,
+        input.pincode,
+      ],
     );
   } catch (err) {
     // Generic message intentionally — do not reveal registration state beyond "taken".
-    if (err.code === 'ER_DUP_ENTRY') throw new AppError(409, 'Email is already registered');
+    if (err.code === 'ER_DUP_ENTRY') {
+      const message = String(err.sqlMessage ?? '').includes('uq_users_phone')
+        ? 'Phone number is already registered'
+        : 'Email is already registered';
+      throw new AppError(409, message);
+    }
     throw err;
   }
 
@@ -70,7 +89,14 @@ export async function registerCustomer(input, ip, userAgent) {
       id,
       name: input.name,
       email: input.email,
+      phone: input.phone,
       role: 'customer',
+      businessName,
+      address: input.address,
+      town: input.town,
+      district: input.district,
+      state: input.state,
+      pincode: input.pincode,
       mustChangePassword: false,
     },
   };
@@ -206,7 +232,8 @@ export async function logoutUser(rawToken) {
 /** Returns the authenticated user's profile, excluding all sensitive fields. */
 export async function getMe(userId) {
   const [user] = await executeQuery(
-    `SELECT id, name, email, role, is_active, must_change_password, last_login_at, created_at, updated_at
+    `SELECT id, name, email, phone, role, business_name, address, town, district, state, pincode,
+            is_active, must_change_password, last_login_at, created_at, updated_at
      FROM users
      WHERE id = ? AND is_active = 1`,
     [userId],

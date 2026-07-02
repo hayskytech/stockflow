@@ -60,6 +60,14 @@ CREATE TABLE users (
   password_hash         VARCHAR(255)    NOT NULL                    COMMENT 'bcrypt hash (cost 12)',
   role                  ENUM('admin','staff','customer') NOT NULL DEFAULT 'staff',
 
+  phone                 VARCHAR(15)     NULL                        COMMENT 'Customer phone number (self-registration, mandatory + unique for customers)',
+  business_name         VARCHAR(150)    NULL                        COMMENT 'Customer business/shop name (self-registration, optional)',
+  address               VARCHAR(255)    NULL                        COMMENT 'Customer shipping address (self-registration)',
+  town                  VARCHAR(100)    NULL,
+  district              VARCHAR(100)    NULL,
+  state                 VARCHAR(100)    NULL,
+  pincode               VARCHAR(10)     NULL,
+
   is_active             BOOLEAN         NOT NULL DEFAULT TRUE       COMMENT 'FALSE = account disabled',
   must_change_password  BOOLEAN         NOT NULL DEFAULT FALSE      COMMENT 'Forces password change on next login',
   failed_login_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0        COMMENT 'Resets to 0 on successful login',
@@ -71,6 +79,7 @@ CREATE TABLE users (
 
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_phone (phone),
   KEY idx_users_role       (role),
   KEY idx_users_is_active  (is_active)
 
@@ -321,6 +330,34 @@ CREATE TABLE products (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Product catalog';
+
+
+-- =============================================================================
+-- TABLE: product_gallery_images
+-- Up to 5 extra photos per product, in addition to the single featured photo on
+-- products.product_photo_media_id. Enforced in the service layer, not here.
+-- =============================================================================
+CREATE TABLE product_gallery_images (
+  id            CHAR(36)      NOT NULL                        COMMENT 'UUID v4 primary key',
+  product_id    CHAR(36)      NOT NULL,
+  media_id      CHAR(36)      NOT NULL                        COMMENT 'FK into the shared media library',
+  media_url     VARCHAR(500)  NOT NULL                        COMMENT 'Denormalized URL of media_id, cached for fast reads',
+  sort_order    TINYINT UNSIGNED NOT NULL DEFAULT 0            COMMENT 'Display order within the product gallery',
+  created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_product_gallery_product_media (product_id, media_id),
+  KEY idx_product_gallery_product             (product_id, sort_order),
+
+  CONSTRAINT fk_product_gallery_product_id
+    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_product_gallery_media_id
+    FOREIGN KEY (media_id) REFERENCES media (id) ON DELETE CASCADE ON UPDATE CASCADE
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Up to 5 gallery images per product';
 
 
 -- =============================================================================

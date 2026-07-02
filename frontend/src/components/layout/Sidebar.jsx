@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom"
+import { Link, NavLink } from "react-router-dom"
 import { useAuthStore } from "@/store/auth.store"
 import { ROUTES } from "@/constants/routes"
 import { APP_NAME, ROLES } from "@/constants/app"
@@ -22,9 +22,9 @@ export function Sidebar() {
 
   return (
     <aside className="main-sidebar sidebar-dark-primary elevation-4">
-      <a href={ROUTES.DASHBOARD} className="brand-link">
+      <Link to={ROUTES.DASHBOARD} className="brand-link">
         <span className="brand-text font-weight-light ml-2">{APP_NAME}</span>
-      </a>
+      </Link>
 
       <div className="sidebar">
         <nav className="mt-2">

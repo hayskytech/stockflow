@@ -15,7 +15,6 @@ I want to make a webapp for stock management. There is a single warehouse in whi
 - Inward (stock receipt entries against a product)
 - Stock Ledger
 - Orders
-- Dispatches
 - Reports
 - Users / Staff
 - Media Library (shared image uploads, reused across features)
@@ -71,7 +70,7 @@ Each row in `refresh_tokens` represents one active session (one login on one dev
 
 Three roles, no per-user scoping, since there's no branch concept and only a single warehouse:
 
-- **Admin** — full access: manages Users/Staff, warehouse settings, products/stock, orders/dispatches, and reports.
+- **Admin** — full access: manages Users/Staff, warehouse settings, products/stock, orders, and reports.
 - **Staff** — operational role: places orders, accepts/dispatches orders, manages stock. Cannot manage users or warehouse settings.
 - **Customer** — self-registered storefront shopper. Browse-only access to the product catalog via a separate storefront UI; no back-office access.
 

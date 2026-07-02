@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
+import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
 import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
 import { productSchema } from "@/features/products/products.schema"
 import { useCreateProduct, useProduct, useUpdateProduct } from "@/features/products/hooks/use-products"
@@ -68,6 +69,9 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
   const [selectedDivisionId, setSelectedDivisionId] = useState(product?.divisionId ?? "")
   const [selectedCategoryId, setSelectedCategoryId] = useState(product?.categoryId ?? "")
   const [photoUrl, setPhotoUrl] = useState(product?.productPhotoUrl ?? null)
+  const [galleryImages, setGalleryImages] = useState(
+    (product?.galleryImages ?? []).map((img) => ({ mediaId: img.mediaId, url: img.url }))
+  )
 
   const { data: divisions = [] } = useDivisionOptions()
   const { data: categories = [] } = useCategoryOptions(selectedDivisionId)
@@ -89,6 +93,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       reorderLevel: product?.reorderLevel ?? 0,
       unit: product?.unit ?? "pc",
       productPhotoMediaId: product?.productPhotoMediaId ?? null,
+      galleryMediaIds: (product?.galleryImages ?? []).map((img) => img.mediaId),
       isActive: product ? Boolean(product.isActive) : true,
     },
     validators: { onSubmit: productSchema },
@@ -442,6 +447,19 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
             onChange={(media) => {
               field.handleChange(media?.id ?? null)
               setPhotoUrl(media?.url ?? null)
+            }}
+          />
+        )}
+      </form.Field>
+
+      <form.Field name="galleryMediaIds">
+        {(field) => (
+          <MediaGalleryPickerField
+            label="Gallery Images (optional, up to 5)"
+            images={galleryImages}
+            onChange={(images) => {
+              setGalleryImages(images)
+              field.handleChange(images.map((img) => img.mediaId))
             }}
           />
         )}

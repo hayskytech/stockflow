@@ -1,2 +1,9 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
 @import "@fortawesome/fontawesome-free/css/all.min.css";
+
+/* AdminLTE's default .register-box is 360px, too narrow for the two-column address fields on desktop. */
+@media (min-width: 768px) {
+  .register-box {
+    width: 700px;
+  }
+}

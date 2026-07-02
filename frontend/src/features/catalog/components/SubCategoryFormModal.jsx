@@ -7,7 +7,7 @@ export function SubCategoryFormModal({ open, subCategory, categories, onClose, o
     defaultValues: {
       categoryId: subCategory?.categoryId ?? "",
       name: subCategory?.name ?? "",
-      isActive: subCategory?.isActive ?? true,
+      isActive: subCategory ? Boolean(subCategory.isActive) : true,
     },
     validators: { onSubmit: subCategorySchema },
     onSubmit: async ({ value }) => onSubmit(value),

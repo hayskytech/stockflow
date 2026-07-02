@@ -7,7 +7,7 @@ export function CategoryFormModal({ open, category, divisions, onClose, onSubmit
     defaultValues: {
       divisionId: category?.divisionId ?? "",
       name: category?.name ?? "",
-      isActive: category?.isActive ?? true,
+      isActive: category ? Boolean(category.isActive) : true,
     },
     validators: { onSubmit: categorySchema },
     onSubmit: async ({ value }) => onSubmit(value),

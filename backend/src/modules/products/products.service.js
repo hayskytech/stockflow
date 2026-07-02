@@ -5,20 +5,23 @@ import { executeQuery } from '../../db/query.js';
 import { AppError } from '../../middleware/errorHandler.js';
 
 const MEDIA_ENTITY_TYPE = 'product';
+export const MAX_GALLERY_IMAGES = 5;
 
 /**
  * Resolves a product's photo media reference into the (mediaId, url) pair to persist,
  * and keeps media_usage in sync so the media library knows this product depends on it.
  * Pass `previousMediaId` on updates so a changed/removed photo releases its old usage row.
+ * `keepMediaIds` (the product's gallery) are never detached even if replaced as the photo,
+ * since they're still referenced by that other role.
  */
-async function resolvePhotoMedia(productId, nextMediaId, previousMediaId) {
+async function resolvePhotoMedia(productId, nextMediaId, previousMediaId, keepMediaIds = []) {
   if (nextMediaId === previousMediaId) return undefined; // no change — nothing to persist or re-link
 
   // Validated before detaching the old usage row, so a bad new media id 404s cleanly
   // instead of leaving the product pointing at a media item with no usage row.
   const media = nextMediaId ? await getMediaById(nextMediaId) : null;
 
-  if (previousMediaId) {
+  if (previousMediaId && !keepMediaIds.includes(previousMediaId)) {
     await detachUsage(previousMediaId, MEDIA_ENTITY_TYPE, productId);
   }
   if (!media) {
@@ -27,6 +30,56 @@ async function resolvePhotoMedia(productId, nextMediaId, previousMediaId) {
 
   await attachUsage(media.id, MEDIA_ENTITY_TYPE, productId);
   return { productPhotoMediaId: media.id, productPhotoUrl: media.url };
+}
+
+async function getGalleryImages(productId) {
+  const rows = await executeQuery(
+    `SELECT media_id AS mediaId, media_url AS url
+       FROM product_gallery_images WHERE product_id = ? ORDER BY sort_order`,
+    [productId],
+  );
+  return rows;
+}
+
+/**
+ * Reconciles a product's gallery to exactly `nextMediaIds`, in order, keeping media_usage in
+ * sync. `keepMediaId` (the product's featured photo) is never detached even if dropped from
+ * the gallery, since it's still referenced by that other role.
+ */
+async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keepMediaId) {
+  if (nextMediaIds.length > MAX_GALLERY_IMAGES) {
+    throw new AppError(400, `Maximum ${MAX_GALLERY_IMAGES} gallery images allowed`);
+  }
+
+  const nextSet = new Set(nextMediaIds);
+  for (const mediaId of previousMediaIds) {
+    if (nextSet.has(mediaId)) continue;
+    await executeQuery(`DELETE FROM product_gallery_images WHERE product_id = ? AND media_id = ?`, [
+      productId,
+      mediaId,
+    ]);
+    if (mediaId !== keepMediaId) {
+      await detachUsage(mediaId, MEDIA_ENTITY_TYPE, productId);
+    }
+  }
+
+  const previousSet = new Set(previousMediaIds);
+  for (let i = 0; i < nextMediaIds.length; i += 1) {
+    const mediaId = nextMediaIds[i];
+    if (previousSet.has(mediaId)) {
+      await executeQuery(
+        `UPDATE product_gallery_images SET sort_order = ? WHERE product_id = ? AND media_id = ?`,
+        [i, productId, mediaId],
+      );
+      continue;
+    }
+    const media = await getMediaById(mediaId); // 404s cleanly if a bad id was sent
+    await executeQuery(
+      `INSERT INTO product_gallery_images (id, product_id, media_id, media_url, sort_order) VALUES (?, ?, ?, ?, ?)`,
+      [crypto.randomUUID(), productId, media.id, media.url, i],
+    );
+    await attachUsage(media.id, MEDIA_ENTITY_TYPE, productId);
+  }
 }
 
 const PRODUCT_COLUMNS = `
@@ -122,7 +175,8 @@ export async function listProducts(listQuery, filters) {
 export async function getProductById(id) {
   const [row] = await executeQuery(`SELECT ${PRODUCT_COLUMNS} ${PRODUCT_JOINS} WHERE p.id = ?`, [id]);
   if (!row) throw new AppError(404, 'Product not found');
-  return row;
+  const galleryImages = await getGalleryImages(id);
+  return { ...row, galleryImages };
 }
 
 export async function createProduct(input) {
@@ -132,6 +186,12 @@ export async function createProduct(input) {
   // Validated before the insert so a bad media id 404s cleanly instead of leaving behind
   // a half-created product row with no photo.
   const photoMedia = input.productPhotoMediaId ? await getMediaById(input.productPhotoMediaId) : null;
+
+  const galleryMediaIds = input.galleryMediaIds ?? [];
+  if (galleryMediaIds.length > MAX_GALLERY_IMAGES) {
+    throw new AppError(400, `Maximum ${MAX_GALLERY_IMAGES} gallery images allowed`);
+  }
+  const galleryMedia = await Promise.all(galleryMediaIds.map((mediaId) => getMediaById(mediaId)));
 
   const id = crypto.randomUUID();
   try {
@@ -169,6 +229,14 @@ export async function createProduct(input) {
   // dangling usage row pointing at a product that doesn't exist.
   if (photoMedia) {
     await attachUsage(photoMedia.id, MEDIA_ENTITY_TYPE, id);
+  }
+  for (let i = 0; i < galleryMedia.length; i += 1) {
+    const media = galleryMedia[i];
+    await executeQuery(
+      `INSERT INTO product_gallery_images (id, product_id, media_id, media_url, sort_order) VALUES (?, ?, ?, ?, ?)`,
+      [crypto.randomUUID(), id, media.id, media.url, i],
+    );
+    await attachUsage(media.id, MEDIA_ENTITY_TYPE, id);
   }
   return getProductById(id);
 }
@@ -217,15 +285,24 @@ export async function updateProduct(id, input) {
     }
   }
 
+  const previousGalleryMediaIds = existing.galleryImages.map((g) => g.mediaId);
+  const nextGalleryMediaIds = input.galleryMediaIds !== undefined ? input.galleryMediaIds : previousGalleryMediaIds;
+
+  let nextPhotoMediaId = existing.productPhotoMediaId;
   if (input.productPhotoMediaId !== undefined) {
-    const photo = await resolvePhotoMedia(id, input.productPhotoMediaId, existing.productPhotoMediaId);
+    const photo = await resolvePhotoMedia(id, input.productPhotoMediaId, existing.productPhotoMediaId, nextGalleryMediaIds);
     if (photo) {
       fields.push('product_photo_media_id = ?', 'product_photo_url = ?');
       params.push(photo.productPhotoMediaId, photo.productPhotoUrl);
+      nextPhotoMediaId = photo.productPhotoMediaId;
     }
   }
 
-  if (fields.length === 0) return existing;
+  if (input.galleryMediaIds !== undefined) {
+    await syncGalleryImages(id, input.galleryMediaIds, previousGalleryMediaIds, nextPhotoMediaId);
+  }
+
+  if (fields.length === 0) return getProductById(id);
 
   params.push(id);
   try {
@@ -240,6 +317,9 @@ export async function deleteProduct(id) {
   const existing = await getProductById(id);
   if (existing.productPhotoMediaId) {
     await detachUsage(existing.productPhotoMediaId, MEDIA_ENTITY_TYPE, id);
+  }
+  for (const gallery of existing.galleryImages) {
+    await detachUsage(gallery.mediaId, MEDIA_ENTITY_TYPE, id);
   }
   try {
     await executeQuery(`DELETE FROM products WHERE id = ?`, [id]);

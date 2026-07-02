@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom"
+import { createHashRouter, Navigate } from "react-router-dom"
 import { AppShell } from "@/components/layout/AppShell"
 import { StoreShell } from "@/components/layout/StoreShell"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
@@ -28,7 +28,7 @@ import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
 import { UppyUploader } from "@/components/common/UppyUploader"
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/__debug-upload",
     element: <UppyUploader onUploaded={() => {}} allowMultiple={false} />,

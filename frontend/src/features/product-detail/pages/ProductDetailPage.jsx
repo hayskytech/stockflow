@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useProductDetail } from "@/features/product-detail/hooks/use-product-detail"
 import { QuantitySelector } from "@/components/ui/QuantitySelector"
@@ -14,6 +14,11 @@ export function ProductDetailPage() {
   const addItem = useCartStore((s) => s.addItem)
   const [quantity, setQuantity] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState(null)
+
+  useEffect(() => {
+    setSelectedImageUrl(null)
+  }, [id])
 
   if (isLoading) {
     return (
@@ -33,6 +38,10 @@ export function ProductDetailPage() {
   const breadcrumb = [product.divisionName, product.categoryName].filter(Boolean).join(" · ")
   const outOfStock = product.quantityAvailable <= 0
 
+  const galleryUrls = (product.galleryImages ?? []).map((img) => img.url)
+  const allImageUrls = [product.productPhotoUrl, ...galleryUrls].filter(Boolean)
+  const displayImageUrl = selectedImageUrl ?? allImageUrls[0] ?? null
+
   function handleAddToCart() {
     addItem(product, quantity)
     setJustAdded(true)
@@ -50,9 +59,9 @@ export function ProductDetailPage() {
             className="d-flex align-items-center justify-content-center bg-light rounded overflow-hidden"
             style={{ aspectRatio: "4 / 5" }}
           >
-            {product.productPhotoUrl ? (
+            {displayImageUrl ? (
               <img
-                src={resolveMediaUrl(product.productPhotoUrl)}
+                src={resolveMediaUrl(displayImageUrl)}
                 alt={product.name}
                 className="w-100 h-100"
                 style={{ objectFit: "cover" }}
@@ -61,6 +70,27 @@ export function ProductDetailPage() {
               <i className="fas fa-shirt fa-5x text-muted" />
             )}
           </div>
+
+          {allImageUrls.length > 1 ? (
+            <div id="product-detail-gallery" className="d-flex flex-wrap mt-2" style={{ gap: "0.5rem" }}>
+              {allImageUrls.map((url) => (
+                <button
+                  key={url}
+                  type="button"
+                  className={`btn p-0 border rounded overflow-hidden ${url === displayImageUrl ? "border-primary" : ""}`}
+                  style={{ width: 56, height: 56 }}
+                  onClick={() => setSelectedImageUrl(url)}
+                >
+                  <img
+                    src={resolveMediaUrl(url)}
+                    alt=""
+                    className="w-100 h-100"
+                    style={{ objectFit: "cover" }}
+                  />
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="col-12 col-md-7 pl-md-5 pt-4 pt-md-0">

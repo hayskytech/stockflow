@@ -22,6 +22,7 @@ export const productSchema = z
     reorderLevel: nonNegativeInt,
     unit: z.string().trim().min(1, "Required").max(20, "Too long"),
     productPhotoMediaId: z.string().optional().nullable(),
+    galleryMediaIds: z.array(z.string()).max(5, "Maximum 5 gallery images allowed").optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => data.wsp <= data.mrp, {

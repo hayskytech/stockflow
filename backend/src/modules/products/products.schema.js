@@ -20,6 +20,7 @@ export const createProductSchema = z
     reorderLevel: z.number().int().nonnegative('Must be zero or greater').default(0),
     unit: z.string().trim().min(1).max(20).default('pc'),
     productPhotoMediaId: uuidField.optional().nullable(),
+    galleryMediaIds: z.array(uuidField).max(5, 'Maximum 5 gallery images allowed').optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => data.wsp <= data.mrp, {
@@ -44,6 +45,7 @@ export const updateProductSchema = z
     reorderLevel: z.number().int().nonnegative().optional(),
     unit: z.string().trim().min(1).max(20).optional(),
     productPhotoMediaId: uuidField.optional().nullable(),
+    galleryMediaIds: z.array(uuidField).max(5, 'Maximum 5 gallery images allowed').optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });

@@ -1,5 +1,6 @@
 import axios from "axios"
 import { API_BASE_URL, API_ENDPOINTS } from "@/constants/api"
+import { ROUTES } from "@/constants/routes"
 import { useAuthStore } from "@/store/auth.store"
 
 export const apiClient = axios.create({
@@ -58,7 +59,7 @@ apiClient.interceptors.response.use(
         return apiClient(original)
       } catch {
         useAuthStore.getState().clearAuth()
-        window.location.href = "/login"
+        window.location.href = `/#${ROUTES.AUTH.LOGIN}`
         return Promise.reject(error)
       }
     }
