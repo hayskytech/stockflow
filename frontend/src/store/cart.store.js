@@ -9,8 +9,16 @@ function clampQuantity(quantity, maxQuantity) {
 /** Customer shopping cart — client-owned, persisted to localStorage so it survives page refreshes. */
 export const useCartStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
+      ownerId: null,
+
+      // Admin/staff share the same browser profile far more often than individual customers do
+      // (a back-office terminal). Call this whenever the logged-in user is known so a leftover
+      // cart from a previous session on the same machine never bleeds into the next one.
+      syncOwner: (userId) => {
+        if (get().ownerId !== userId) set({ ownerId: userId, items: [] });
+      },
 
       addItem: (product, quantity = 1) =>
         set((state) => {

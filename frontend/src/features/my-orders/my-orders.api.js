@@ -11,12 +11,14 @@ function toListResult({ data, headers }) {
 
 /**
  * Customer-facing order history — hits the same `/orders` endpoints as the admin
- * `features/orders` feature, but the backend automatically scopes results to the
- * logged-in customer's own orders. Kept as a separate feature (not shared) since a
- * feature must never import from another feature's folder (see CLAUDE.md).
+ * `features/orders` feature. `scope: "own"` restricts results to the logged-in user's own
+ * orders; the backend also forces this for role `customer` regardless of the param, but
+ * admin/staff accounts browsing the storefront need it set explicitly or they'd see every
+ * order in the system. Kept as a separate feature (not shared) since a feature must never
+ * import from another feature's folder (see CLAUDE.md).
  */
 export async function listMyOrdersApi(params) {
-  const res = await apiClient.get(API_ENDPOINTS.ORDERS.LIST, { params })
+  const res = await apiClient.get(API_ENDPOINTS.ORDERS.LIST, { params: { ...params, scope: "own" } })
   return toListResult(res)
 }
 

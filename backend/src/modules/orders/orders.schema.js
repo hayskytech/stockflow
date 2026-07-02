@@ -35,11 +35,15 @@ export const updatePaymentStatusSchema = z.object({
   paymentStatus: z.enum(['verified', 'rejected']),
 });
 
-/** GET /api/orders?status=...&date_from=...&date_to=... */
+/** GET /api/orders?status=...&date_from=...&date_to=...&scope=own|all */
 export const listOrdersQuerySchema = z.object({
   status: z.enum(['pending', 'accepted', 'rejected', 'dispatched', 'completed', 'cancelled']).optional(),
   dateFrom: z.string().trim().min(1).optional(),
   dateTo: z.string().trim().min(1).optional(),
+  // 'own' restricts results to the requester's own orders even for admin/staff — used by the
+  // storefront "My Orders" screen when an admin/staff account browses the store as a shopper.
+  // A `customer` requester is always restricted to their own orders regardless of this value.
+  scope: z.enum(['own', 'all']).optional(),
 });
 
 export const idParamSchema = z.object({ id: uuidField });

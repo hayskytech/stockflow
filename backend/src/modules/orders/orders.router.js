@@ -13,7 +13,8 @@ const ordersPagination = pagination({
 });
 
 // List/detail carry no role restriction — the service scopes results to the requester's own
-// orders when role is `customer`, and returns everything for admin/staff (see orders.service.js).
+// orders when role is `customer`, or when `?scope=own` is passed (used by the storefront "My
+// Orders" screen for any role); admin/staff otherwise see everything (see orders.service.js).
 ordersRouter.get('/', authenticate, ordersPagination, listOrders);
 ordersRouter.get('/:id', authenticate, getOrder);
 ordersRouter.post('/', authenticate, orderLimiter, createOrder);

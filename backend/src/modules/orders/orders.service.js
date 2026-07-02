@@ -39,7 +39,7 @@ export async function listOrders(listQuery, filters, requester) {
 
   const conditions = [];
   const params = [];
-  if (requester.role === 'customer') {
+  if (requester.role === 'customer' || filters.scope === 'own') {
     conditions.push('o.requested_by = ?');
     params.push(requester.sub);
   }
