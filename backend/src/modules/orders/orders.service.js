@@ -219,6 +219,15 @@ export async function createOrder(input, userId) {
   return getOrderById(orderId);
 }
 
+// Order lifecycle: pending -> accepted -> dispatched -> completed, with rejected/cancelled
+// as terminal exits from pending. Dispatch is just another status on this timeline — there's
+// no separate dispatches resource.
+const ALLOWED_TRANSITIONS = {
+  pending: ['accepted', 'rejected', 'cancelled'],
+  accepted: ['dispatched'],
+  dispatched: ['completed'],
+};
+
 export async function updateOrderStatus(id, status, requester) {
   const order = await getOrderRow(id);
 
@@ -226,20 +235,40 @@ export async function updateOrderStatus(id, status, requester) {
     if (order.requestedBy !== requester.sub) throw new AppError(404, 'Order not found');
     if (status !== 'cancelled') throw new AppError(403, 'You can only cancel your own order');
   }
-  if (order.status !== 'pending') {
-    throw new AppError(409, `Order is already ${order.status} and cannot be changed`);
+  if (!ALLOWED_TRANSITIONS[order.status]?.includes(status)) {
+    throw new AppError(409, `Order is ${order.status} and cannot be changed to ${status}`);
   }
 
-  if (status === 'accepted') {
+  if (status === 'accepted' || status === 'completed') {
     await executeQuery(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
     return getOrderById(id, requester);
   }
 
-  // rejected / cancelled — release the stock this order had reserved.
   const items = await executeQuery(`SELECT product_id AS productId, quantity FROM order_items WHERE order_id = ?`, [
     id,
   ]);
 
+  if (status === 'dispatched') {
+    // Stock already left quantity_available when the order was placed — dispatch only
+    // consumes the reservation, it never touches quantity_available.
+    await withTransaction(async (execute) => {
+      for (const item of items) {
+        await execute(`UPDATE products SET quantity_reserved = quantity_reserved - ? WHERE id = ?`, [
+          item.quantity,
+          item.productId,
+        ]);
+        await execute(
+          `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
+           VALUES (?, 'out', ?, 'order', ?, 'Order dispatched — reserved stock consumed')`,
+          [item.productId, item.quantity, id],
+        );
+      }
+      await execute(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
+    });
+    return getOrderById(id, requester);
+  }
+
+  // rejected / cancelled — release the stock this order had reserved.
   await withTransaction(async (execute) => {
     for (const item of items) {
       await execute(

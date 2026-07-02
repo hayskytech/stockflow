@@ -201,6 +201,22 @@ export function OrderDetailPage() {
                     Cancel Order
                   </button>
                 </div>
+              ) : order.status === "accepted" ? (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => handleStatusChange("dispatched")}
+                >
+                  Mark as Dispatched
+                </button>
+              ) : order.status === "dispatched" ? (
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => handleStatusChange("completed")}
+                >
+                  Mark as Completed
+                </button>
               ) : (
                 <p className="text-muted mb-0">
                   This order is <OrderStatusBadge status={order.status} /> — no further status changes available here.

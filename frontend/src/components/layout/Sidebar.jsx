@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { to: ROUTES.STOCK_LEDGER, icon: "fa-book", label: "Stock Ledger" },
   { to: ROUTES.MEDIA_LIBRARY, icon: "fa-images", label: "Media Library" },
   { to: ROUTES.ORDERS.LIST, icon: "fa-cart-shopping", label: "Orders" },
-  { to: ROUTES.DISPATCHES, icon: "fa-truck", label: "Dispatches" },
   { to: ROUTES.REPORTS, icon: "fa-chart-line", label: "Reports" },
   { to: ROUTES.USERS.LIST, icon: "fa-users", label: "Users / Staff", adminOnly: true },
 ]

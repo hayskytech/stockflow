@@ -57,7 +57,6 @@ backend/src/
     inward/      ...
     stockLedger/ ...
     orders/      ...
-    dispatches/  ...
     reports/     ...
   utils/jwt.js, logger.js
 ```
@@ -70,7 +69,7 @@ Each domain feature lives in `frontend/src/features/<feature-name>/` and contain
 - `<feature>.store.js` — Zustand store for this feature: **UI/client state only** (filters, selected rows, open modals, pagination cursor); never async data fetching
 - `<feature>.schema.js` — Zod (or Yup) schemas used for client-side form validation with TanStack Form; must be consistent with the backend schema for the same feature
 - `hooks/` — TanStack Query hooks for this feature (e.g. `use-orders.js`, `use-order-detail.js`); these wrap the `.api.js` functions with `useQuery` / `useMutation`
-- `components/` — UI components specific to this feature and with no meaning outside it (e.g. `OrderStatusBadge`, `DispatchSummaryCard`)
+- `components/` — UI components specific to this feature and with no meaning outside it (e.g. `OrderStatusBadge`, `OrderTimeline`)
 - `pages/` — full page-level components that compose the feature's components; these are what the router points to
 
 Code that is shared across features goes into top-level folders, not inside any feature:
@@ -257,8 +256,7 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 - **Products** — `GET /products` (`search`, `division_id`, `category_id`, `sub_category_id`, `brand_id`, `is_active`), CRUD — admin/staff for write. `mrp`/`wsp` validated `wsp <= mrp`; `product_code`/`barcode` unique.
 - **Inward** — `POST /inward` (receive stock against a product: qty, supplier, invoice) — admin/staff; increments `products.quantity_available` and writes a `stock_ledger` row.
 - **Stock Ledger** — `GET /stock-ledger` (`product_id`, `movement_type`, `date_from`, `date_to`) — read-only, append-only log of every stock movement (inward, order reserve/release, dispatch, adjustment).
-- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`), `POST /orders` (reserves stock per line, all-or-nothing), `PATCH /orders/:id/status` (accept/reject/cancel — reject/cancel releases reserved stock).
-- **Dispatches** — `GET /dispatches` (`order_id`, `status`), `POST /dispatches` (creates a dispatch against an accepted order; can be partial — order status becomes `partially_dispatched` until fully fulfilled; consumes reserved stock, never touches `quantity_available` directly).
+- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`), `POST /orders` (reserves stock per line, all-or-nothing), `PATCH /orders/:id/status`. Status is a single lifecycle field, not a separate resource: `pending` → `accepted` → `dispatched` → `completed`, with `rejected`/`cancelled` as terminal exits from `pending`. Reject/cancel releases reserved stock; dispatch consumes the reservation (never touches `quantity_available` directly, since that was already decremented when the order was placed).
 - **Reports** — `GET /reports/stock-summary` (includes low-stock: `quantity_available <= reorder_level`), `GET /reports/order-history` (`date_from`, `date_to`) — aggregate queries.
 - **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Plus session endpoints above.
 

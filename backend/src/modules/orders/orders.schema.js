@@ -27,7 +27,7 @@ export const createOrderSchema = z.object({
 
 /** PATCH /api/orders/:id/status */
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['accepted', 'rejected', 'cancelled']),
+  status: z.enum(['accepted', 'rejected', 'cancelled', 'dispatched', 'completed']),
 });
 
 /** PATCH /api/orders/:id/payment-status */

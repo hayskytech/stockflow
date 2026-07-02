@@ -43,9 +43,6 @@ export const API_ENDPOINTS = {
     STATUS: (id) => `/orders/${id}/status`,
     PAYMENT_STATUS: (id) => `/orders/${id}/payment-status`,
   },
-  DISPATCHES: {
-    LIST: "/dispatches",
-  },
   REPORTS: {
     STOCK_SUMMARY: "/reports/stock-summary",
     ORDER_HISTORY: "/reports/order-history",

@@ -66,7 +66,7 @@ function rethrowAsAppError(err) {
     throw new AppError(409, message);
   }
   if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-    throw new AppError(409, 'Cannot delete a product that is referenced by existing orders or dispatches.');
+    throw new AppError(409, 'Cannot delete a product that is referenced by existing orders.');
   }
   throw err;
 }

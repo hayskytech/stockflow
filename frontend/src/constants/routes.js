@@ -29,7 +29,6 @@ export const ROUTES = {
     LIST: "/orders",
     DETAIL: (id) => `/orders/${id}`,
   },
-  DISPATCHES: "/dispatches",
   REPORTS: "/reports",
   USERS: {
     LIST: "/users",

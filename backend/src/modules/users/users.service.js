@@ -23,7 +23,7 @@ function rethrowAsAppError(err) {
     throw new AppError(409, 'Email is already registered');
   }
   if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
-    throw new AppError(409, 'Cannot delete a user that is referenced by orders, dispatches, or media.');
+    throw new AppError(409, 'Cannot delete a user that is referenced by orders or media.');
   }
   throw err;
 }

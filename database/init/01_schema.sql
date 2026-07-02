@@ -398,64 +398,13 @@ CREATE TABLE order_items (
   COMMENT='Line items for an order';
 
 
--- =============================================================================
--- TABLE: dispatches
--- Created against an accepted order to record what was actually sent out.
--- =============================================================================
-CREATE TABLE dispatches (
-  id             CHAR(36)      NOT NULL                             COMMENT 'UUID v4 primary key',
-  order_id       CHAR(36)      NOT NULL,
-  dispatched_by  CHAR(36)      NOT NULL                             COMMENT 'User who created the dispatch',
-  status         ENUM('pending','dispatched') NOT NULL DEFAULT 'pending',
-  dispatched_at  DATETIME      NULL,
-  notes          VARCHAR(500)  NULL,
-  created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (id),
-  KEY idx_dispatches_order_id      (order_id),
-  KEY idx_dispatches_status        (status),
-  KEY idx_dispatches_dispatched_by (dispatched_by),
-
-  CONSTRAINT fk_dispatches_order_id
-    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT fk_dispatches_dispatched_by
-    FOREIGN KEY (dispatched_by) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE CASCADE
-
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci
-  COMMENT='Dispatches created against accepted orders';
-
-
--- =============================================================================
--- TABLE: dispatch_items
--- Line items for a dispatch — what was actually sent for each product.
--- =============================================================================
-CREATE TABLE dispatch_items (
-  id            CHAR(36)  NOT NULL                                  COMMENT 'UUID v4 primary key',
-  dispatch_id   CHAR(36)  NOT NULL,
-  product_id    CHAR(36)  NOT NULL,
-  quantity      INT       NOT NULL                                  COMMENT 'Quantity actually dispatched',
-
-  PRIMARY KEY (id),
-  KEY idx_dispatch_items_dispatch_id (dispatch_id),
-  KEY idx_dispatch_items_product_id  (product_id),
-
-  CONSTRAINT fk_dispatch_items_dispatch_id
-    FOREIGN KEY (dispatch_id) REFERENCES dispatches (id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_dispatch_items_product_id
-    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE
-
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci
-  COMMENT='Line items for a dispatch';
+-- Dispatch is a stage in the orders.status lifecycle (see orders.status ENUM above), not a
+-- separate resource — there is no dispatches/dispatch_items table.
 
 
 -- =============================================================================
 -- TABLE: stock_ledger
--- Append-only record of every stock movement (order fulfilment, dispatch,
+-- Append-only record of every stock movement (order reserve/release/dispatch,
 -- manual adjustment). Uses BIGINT AUTO_INCREMENT for high-volume insert order.
 -- =============================================================================
 CREATE TABLE stock_ledger (
@@ -463,8 +412,8 @@ CREATE TABLE stock_ledger (
   product_id      CHAR(36)        NOT NULL,
   change_type     ENUM('in','out') NOT NULL                         COMMENT 'Stock coming in or going out',
   quantity        INT             NOT NULL                         COMMENT 'Always positive - direction comes from change_type',
-  reference_type  ENUM('order','dispatch','adjustment') NOT NULL,
-  reference_id    CHAR(36)        NULL                              COMMENT 'ID of the order/dispatch that caused this movement',
+  reference_type  ENUM('order','adjustment') NOT NULL,
+  reference_id    CHAR(36)        NULL                              COMMENT 'ID of the order that caused this movement',
   note            VARCHAR(500)    NULL,
   created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

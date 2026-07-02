@@ -24,7 +24,6 @@ import { OrdersPage } from "@/features/orders/pages/OrdersPage"
 import { OrderDetailPage } from "@/features/orders/pages/OrderDetailPage"
 import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
 import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
-import { DispatchesPage } from "@/features/dispatches/pages/DispatchesPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
 import { UppyUploader } from "@/components/common/UppyUploader"
@@ -141,10 +140,6 @@ export const router = createBrowserRouter([
       {
         path: "/orders/:id",
         element: <OrderDetailPage />,
-      },
-      {
-        path: ROUTES.DISPATCHES,
-        element: <DispatchesPage />,
       },
       {
         path: ROUTES.REPORTS,
