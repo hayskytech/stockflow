@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { MediaLibraryModal } from "@/components/common/MediaLibraryModal"
+import { resolveMediaUrl } from "@/lib/media"
 
 /** Thumbnail + "Choose image" trigger that opens the shared media library modal. */
 export function MediaPickerField({ label, imageUrl, onChange }) {
@@ -11,7 +12,7 @@ export function MediaPickerField({ label, imageUrl, onChange }) {
       <div className="d-flex align-items-center">
         <div className="border rounded mr-3 d-flex align-items-center justify-content-center" style={{ width: 80, height: 80, overflow: "hidden" }}>
           {imageUrl ? (
-            <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={resolveMediaUrl(imageUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             <i className="fas fa-image text-muted" />
           )}

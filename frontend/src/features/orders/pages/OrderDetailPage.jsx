@@ -1,0 +1,215 @@
+import { useState } from "react"
+import { Link, useParams } from "react-router-dom"
+import { PageWrapper } from "@/components/layout/PageWrapper"
+import { PageHeader } from "@/components/common/PageHeader"
+import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
+import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
+import { useOrder, useUpdateOrderStatus, useUpdatePaymentStatus } from "@/features/orders/hooks/use-orders"
+import { formatMoney, formatDateTimeIST } from "@/lib/format"
+import { resolveMediaUrl } from "@/lib/media"
+import { ROUTES } from "@/constants/routes"
+
+export function OrderDetailPage() {
+  const { id } = useParams()
+  const { data: order, isLoading, isError } = useOrder(id)
+  const updateOrderStatus = useUpdateOrderStatus()
+  const updatePaymentStatus = useUpdatePaymentStatus()
+  const [serverError, setServerError] = useState("")
+
+  async function handleStatusChange(status) {
+    setServerError("")
+    try {
+      await updateOrderStatus.mutateAsync({ id, status })
+    } catch (err) {
+      setServerError(err.response?.data?.message ?? "Could not update order")
+    }
+  }
+
+  async function handlePaymentStatusChange(paymentStatus) {
+    setServerError("")
+    try {
+      await updatePaymentStatus.mutateAsync({ id, paymentStatus })
+    } catch (err) {
+      setServerError(err.response?.data?.message ?? "Could not update payment status")
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <PageWrapper>
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status" />
+        </div>
+      </PageWrapper>
+    )
+  }
+
+  if (isError || !order) {
+    return (
+      <PageWrapper>
+        <div className="alert alert-danger">Order not found.</div>
+        <Link to={ROUTES.ORDERS.LIST}>Back to Orders</Link>
+      </PageWrapper>
+    )
+  }
+
+  return (
+    <PageWrapper>
+      <PageHeader
+        title={`Order ${order.orderNumber}`}
+        description={`Placed ${formatDateTimeIST(order.createdAt)} by ${order.requestedByName}`}
+        actions={
+          <Link to={ROUTES.ORDERS.LIST} className="btn btn-outline-secondary">
+            Back to Orders
+          </Link>
+        }
+      />
+
+      {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
+
+      <div className="row">
+        <div className="col-md-8">
+          <div className="card mb-4">
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="card-title mb-0">Items</h5>
+                <div>
+                  <OrderStatusBadge status={order.status} />
+                </div>
+              </div>
+              <div className="table-responsive">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Qty</th>
+                      <th>WSP</th>
+                      <th>Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item) => (
+                      <tr key={item.id}>
+                        <td className="d-flex align-items-center">
+                          {item.productPhotoUrl ? (
+                            <img
+                              src={resolveMediaUrl(item.productPhotoUrl)}
+                              alt={item.productName}
+                              style={{ width: 40, height: 40, objectFit: "contain" }}
+                              className="mr-2"
+                            />
+                          ) : null}
+                          <div>
+                            <div>{item.productName}</div>
+                            <div className="text-muted small">{item.productCode}</div>
+                          </div>
+                        </td>
+                        <td>{item.quantity}</td>
+                        <td>{formatMoney(item.wspAtOrder)}</td>
+                        <td>{formatMoney(item.wspAtOrder * item.quantity)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colSpan={3} className="text-right">
+                        Total
+                      </th>
+                      <th>{formatMoney(order.totalAmount)}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              {order.notes ? (
+                <p className="text-muted small mb-0">
+                  <strong>Notes:</strong> {order.notes}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-body">
+              <h5 className="card-title">Shipping Details</h5>
+              <p className="mb-1">
+                {order.shippingName} · {order.shippingPhone}
+              </p>
+              <p className="mb-0 text-muted">
+                {order.shippingAddressLine1}
+                {order.shippingAddressLine2 ? `, ${order.shippingAddressLine2}` : ""}, {order.shippingCity},{" "}
+                {order.shippingState} - {order.shippingPincode}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-4">
+          <div className="card mb-4">
+            <div className="card-body">
+              <h5 className="card-title">Payment</h5>
+              <p className="mb-1">
+                Method: <strong>Bank Transfer</strong>
+              </p>
+              <p className="mb-1">
+                Transaction ID: <strong id="order-transaction-id">{order.transactionId}</strong>
+              </p>
+              <p className="mb-2">
+                Status: <PaymentStatusBadge status={order.paymentStatus} />
+              </p>
+
+              {order.duplicateTransactionCount > 0 ? (
+                <div className="alert alert-warning py-2 small">
+                  <i className="fas fa-triangle-exclamation mr-1" />
+                  This transaction ID appears on {order.duplicateTransactionCount} other order
+                  {order.duplicateTransactionCount > 1 ? "s" : ""} — verify carefully before confirming payment.
+                </div>
+              ) : null}
+
+              {order.paymentStatus === "pending" ? (
+                <div className="d-flex">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-success mr-2"
+                    onClick={() => handlePaymentStatusChange("verified")}
+                  >
+                    Mark Verified
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => handlePaymentStatusChange("rejected")}
+                  >
+                    Reject Payment
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-body">
+              <h5 className="card-title">Order Actions</h5>
+              {order.status === "pending" ? (
+                <div className="d-flex flex-column">
+                  <button type="button" className="btn btn-success mb-2" onClick={() => handleStatusChange("accepted")}>
+                    Accept Order
+                  </button>
+                  <button type="button" className="btn btn-outline-danger mb-2" onClick={() => handleStatusChange("rejected")}>
+                    Reject Order
+                  </button>
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => handleStatusChange("cancelled")}>
+                    Cancel Order
+                  </button>
+                </div>
+              ) : (
+                <p className="text-muted mb-0">
+                  This order is <OrderStatusBadge status={order.status} /> — no further status changes available here.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </PageWrapper>
+  )
+}

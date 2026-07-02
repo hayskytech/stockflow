@@ -18,6 +18,33 @@ USE stockflow;
 -- This init script only runs on a fresh database. To add the `customer` role to
 -- an already-provisioned DB, run once:
 --   ALTER TABLE users MODIFY role ENUM('admin','staff','customer') NOT NULL DEFAULT 'staff';
+--
+-- To add bank-transfer order placement to an already-provisioned DB, run once:
+--   ALTER TABLE warehouse
+--     ADD COLUMN bank_name VARCHAR(150) NULL,
+--     ADD COLUMN account_holder_name VARCHAR(150) NULL,
+--     ADD COLUMN account_number VARCHAR(30) NULL,
+--     ADD COLUMN ifsc_code VARCHAR(15) NULL,
+--     ADD COLUMN upi_id VARCHAR(100) NULL;
+--   ALTER TABLE orders
+--     ADD COLUMN payment_method ENUM('bank_transfer') NOT NULL DEFAULT 'bank_transfer',
+--     ADD COLUMN transaction_id VARCHAR(100) NOT NULL,
+--     ADD COLUMN payment_status ENUM('pending','verified','rejected') NOT NULL DEFAULT 'pending',
+--     ADD COLUMN total_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+--     ADD COLUMN shipping_name VARCHAR(100) NOT NULL,
+--     ADD COLUMN shipping_phone VARCHAR(20) NOT NULL,
+--     ADD COLUMN shipping_address_line1 VARCHAR(200) NOT NULL,
+--     ADD COLUMN shipping_address_line2 VARCHAR(200) NULL,
+--     ADD COLUMN shipping_city VARCHAR(100) NOT NULL,
+--     ADD COLUMN shipping_state VARCHAR(100) NOT NULL,
+--     ADD COLUMN shipping_pincode VARCHAR(10) NOT NULL,
+--     ADD COLUMN idempotency_key CHAR(36) NULL,
+--     ADD UNIQUE KEY uq_orders_idempotency_key (idempotency_key),
+--     ADD KEY idx_orders_payment_status (payment_status),
+--     ADD KEY idx_orders_transaction_id (transaction_id);
+--   ALTER TABLE order_items
+--     ADD COLUMN mrp_at_order DECIMAL(10,2) NOT NULL,
+--     ADD COLUMN wsp_at_order DECIMAL(10,2) NOT NULL;
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
@@ -93,6 +120,11 @@ CREATE TABLE warehouse (
   address       VARCHAR(500)  NULL,
   phone         VARCHAR(20)   NULL,
   email         VARCHAR(150)  NULL,
+  bank_name             VARCHAR(150)  NULL                          COMMENT 'Shown to customers on the checkout page for bank transfer',
+  account_holder_name   VARCHAR(150)  NULL,
+  account_number        VARCHAR(30)   NULL,
+  ifsc_code              VARCHAR(15)   NULL,
+  upi_id                VARCHAR(100)  NULL,
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -301,15 +333,34 @@ CREATE TABLE orders (
   requested_by  CHAR(36)      NOT NULL                              COMMENT 'User who placed the order',
   status        ENUM('pending','accepted','rejected','dispatched','completed','cancelled')
                 NOT NULL DEFAULT 'pending',
+
+  payment_method  ENUM('bank_transfer') NOT NULL DEFAULT 'bank_transfer',
+  transaction_id  VARCHAR(100)  NOT NULL                            COMMENT 'Bank transfer reference/UTR number entered by the customer',
+  payment_status  ENUM('pending','verified','rejected') NOT NULL DEFAULT 'pending',
+  total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0.00                COMMENT 'Sum of wsp_at_order * quantity - the amount owed',
+
+  shipping_name           VARCHAR(100)  NOT NULL,
+  shipping_phone          VARCHAR(20)   NOT NULL,
+  shipping_address_line1  VARCHAR(200)  NOT NULL,
+  shipping_address_line2  VARCHAR(200)  NULL,
+  shipping_city           VARCHAR(100)  NOT NULL,
+  shipping_state          VARCHAR(100)  NOT NULL,
+  shipping_pincode        VARCHAR(10)   NOT NULL,
+
+  idempotency_key CHAR(36)      NULL                                COMMENT 'Client-generated UUID for one checkout attempt - dedupes retried submits',
+
   notes         VARCHAR(500)  NULL,
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE KEY uq_orders_order_number (order_number),
-  KEY idx_orders_status       (status),
-  KEY idx_orders_requested_by (requested_by),
-  KEY idx_orders_created_at   (created_at),
+  UNIQUE KEY uq_orders_order_number    (order_number),
+  UNIQUE KEY uq_orders_idempotency_key (idempotency_key),
+  KEY idx_orders_status          (status),
+  KEY idx_orders_requested_by    (requested_by),
+  KEY idx_orders_created_at      (created_at),
+  KEY idx_orders_payment_status  (payment_status),
+  KEY idx_orders_transaction_id  (transaction_id),
 
   CONSTRAINT fk_orders_requested_by
     FOREIGN KEY (requested_by) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -329,6 +380,8 @@ CREATE TABLE order_items (
   order_id    CHAR(36)  NOT NULL,
   product_id  CHAR(36)  NOT NULL,
   quantity    INT       NOT NULL                                    COMMENT 'Quantity requested',
+  mrp_at_order DECIMAL(10,2) NOT NULL                                COMMENT 'Snapshot of products.mrp at order time',
+  wsp_at_order DECIMAL(10,2) NOT NULL                                COMMENT 'Snapshot of products.wsp at order time - price never recomputed later',
 
   PRIMARY KEY (id),
   KEY idx_order_items_order_id   (order_id),

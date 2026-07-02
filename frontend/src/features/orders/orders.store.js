@@ -1,0 +1,13 @@
+import { create } from "zustand"
+
+/** UI/client state for the admin orders list page — filters only, no server data. */
+export const useOrdersStore = create((set) => ({
+  statusFilter: "",
+  setStatusFilter: (statusFilter) => set({ statusFilter }),
+
+  dateFrom: "",
+  setDateFrom: (dateFrom) => set({ dateFrom }),
+
+  dateTo: "",
+  setDateTo: (dateTo) => set({ dateTo }),
+}))

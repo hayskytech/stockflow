@@ -6,6 +6,11 @@ export const ROUTES = {
   },
   STORE: {
     HOME: "/store",
+    PRODUCT_DETAIL: (id) => `/store/products/${id}`,
+    CART: "/store/cart",
+    CHECKOUT: "/store/checkout",
+    ORDERS: "/store/orders",
+    ORDER_DETAIL: (id) => `/store/orders/${id}`,
   },
   DASHBOARD: "/dashboard",
   WAREHOUSE: "/warehouse",

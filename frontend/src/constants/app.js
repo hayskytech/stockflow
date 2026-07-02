@@ -14,3 +14,7 @@ export const MEDIA = {
     PRODUCT: "product",
   },
 }
+
+export const STORAGE_KEYS = {
+  CART: "stockflow-cart",
+}

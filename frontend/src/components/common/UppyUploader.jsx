@@ -26,9 +26,9 @@ export function UppyUploader({ onUploaded, allowMultiple = true }) {
       fieldName: "file",
       formData: true,
       withCredentials: true,
-      getResponseData: (responseText) => {
+      getResponseData: (res) => {
         try {
-          return JSON.parse(responseText)
+          return JSON.parse(res.responseText)
         } catch {
           return {}
         }

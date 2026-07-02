@@ -6,6 +6,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { UppyUploader } from "@/components/common/UppyUploader"
 import { useMediaList, useDeleteMedia } from "@/features/media/hooks/use-media"
 import { useMediaStore } from "@/features/media/media.store"
+import { resolveMediaUrl } from "@/lib/media"
 
 export function MediaLibraryPage() {
   const { search, setSearch, page, setPage } = useMediaStore()
@@ -84,7 +85,7 @@ export function MediaLibraryPage() {
               {items.map((media) => (
                 <div key={media.id} className="col-6 col-md-3 col-lg-2 mb-4">
                   <div className="card h-100">
-                    <img src={media.url} alt={media.originalName ?? ""} className="card-img-top" style={{ aspectRatio: "1 / 1", objectFit: "cover" }} />
+                    <img src={resolveMediaUrl(media.url)} alt={media.originalName ?? ""} className="card-img-top" style={{ aspectRatio: "1 / 1", objectFit: "cover" }} />
                     <div className="card-body p-2">
                       <p className="small text-muted mb-1 text-truncate" title={media.originalName ?? ""}>
                         {media.originalName ?? "Untitled"}

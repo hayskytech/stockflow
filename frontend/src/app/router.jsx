@@ -9,6 +9,9 @@ import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
 import { HomePage } from "@/features/home/pages/HomePage"
+import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
+import { CartPage } from "@/features/cart/pages/CartPage"
+import { CheckoutPage } from "@/features/checkout/pages/CheckoutPage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
 import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
 import { DivisionsPage } from "@/features/catalog/pages/DivisionsPage"
@@ -18,6 +21,9 @@ import { ProductFormPage } from "@/features/products/pages/ProductFormPage"
 import { StockLedgerPage } from "@/features/stock-ledger/pages/StockLedgerPage"
 import { MediaLibraryPage } from "@/features/media/pages/MediaLibraryPage"
 import { OrdersPage } from "@/features/orders/pages/OrdersPage"
+import { OrderDetailPage } from "@/features/orders/pages/OrderDetailPage"
+import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
+import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
 import { DispatchesPage } from "@/features/dispatches/pages/DispatchesPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
@@ -56,6 +62,26 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <HomePage />,
+      },
+      {
+        path: "products/:id",
+        element: <ProductDetailPage />,
+      },
+      {
+        path: "cart",
+        element: <CartPage />,
+      },
+      {
+        path: "checkout",
+        element: <CheckoutPage />,
+      },
+      {
+        path: "orders",
+        element: <MyOrdersPage />,
+      },
+      {
+        path: "orders/:id",
+        element: <MyOrderDetailPage />,
       },
     ],
   },
@@ -111,6 +137,10 @@ export const router = createBrowserRouter([
       {
         path: ROUTES.ORDERS.LIST,
         element: <OrdersPage />,
+      },
+      {
+        path: "/orders/:id",
+        element: <OrderDetailPage />,
       },
       {
         path: ROUTES.DISPATCHES,

@@ -13,8 +13,17 @@ export const generalLimiter = rateLimit({
 /** Applied only to auth routes — much stricter to slow down brute force attacks. */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: 150,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many attempts, please try again later' },
+});
+
+/** Applied only to POST /orders — stock-affecting and state-mutating, so tighter than generalLimiter. */
+export const orderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many orders placed, please try again later' },
 });

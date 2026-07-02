@@ -89,7 +89,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       reorderLevel: product?.reorderLevel ?? 0,
       unit: product?.unit ?? "pc",
       productPhotoMediaId: product?.productPhotoMediaId ?? null,
-      isActive: product?.isActive ?? true,
+      isActive: product ? Boolean(product.isActive) : true,
     },
     validators: { onSubmit: productSchema },
     onSubmit: async ({ value }) => {

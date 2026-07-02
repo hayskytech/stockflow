@@ -41,6 +41,7 @@ export const API_ENDPOINTS = {
     LIST: "/orders",
     BY_ID: (id) => `/orders/${id}`,
     STATUS: (id) => `/orders/${id}/status`,
+    PAYMENT_STATUS: (id) => `/orders/${id}/payment-status`,
   },
   DISPATCHES: {
     LIST: "/dispatches",

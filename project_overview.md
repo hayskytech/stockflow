@@ -9,7 +9,7 @@ I want to make a webapp for stock management. There is a single warehouse in whi
 ## Feature Module Names
 
 - Dashboard
-- Warehouse (single-record settings: name, address, contact)
+- Warehouse (single-record settings: name, address, contact, and bank transfer details shown to customers at checkout)
 - Catalog (divisions → categories → sub_categories — admin-managed product taxonomy)
 - Products (mrp, wsp, product_code, barcode, stock, category… see `cloth_inventory_db_schema.md`)
 - Inward (stock receipt entries against a product)
@@ -19,7 +19,7 @@ I want to make a webapp for stock management. There is a single warehouse in whi
 - Reports
 - Users / Staff
 - Media Library (shared image uploads, reused across features)
-- Storefront (customer-facing ecommerce home — products browsed category-wise)
+- Storefront (customer-facing ecommerce home, product detail page, cart, checkout — products browsed category-wise)
 
 ## Stack
 
@@ -83,8 +83,10 @@ Customers are a distinct audience from the back-office team, so they get a **sep
 
 - **Signup** — customers self-register at the public `POST /auth/register` (role hard-coded server-side to `customer`) and are auto-logged-in. Admins can also create users of any role (`admin`/`staff`/`customer`) from the Users page.
 - **Storefront shell** — a top-navbar layout (`StoreShell`, mounted at `/store`) with **no admin sidebar**. The home page lists active products grouped by category, ecommerce-style (image, name, WSP price with MRP struck-through, stock badge).
+- **Product detail, cart, checkout** — clicking a product opens a detail page to add it to the cart; the cart (Zustand, persisted to localStorage) is reviewed/edited on `/store/cart` and finalized on `/store/checkout` (shipping details form).
+- **Placing an order** — bank transfer is the only payment method: the checkout page shows the warehouse's bank account details (from `GET /warehouse`) and the customer enters the transaction ID from their transfer. `POST /orders` re-validates price/stock server-side, reserves stock transactionally, and creates the order (`status=pending`, `paymentStatus=pending`). Customers can view their own order history at `/store/orders` and cancel a still-pending order themselves.
 - **Role-based landing** — after login, customers land on `/store`; admin/staff land on the dashboard. Route guards keep each audience out of the other's area.
-- **Scope** — browse-only for now; customer cart/checkout (placing orders) is a planned follow-up.
+- **Scope** — browsing, product detail, cart, checkout, and order placement are all implemented end-to-end.
 
 ## Users & Roles — Enhanced Plan
 
@@ -115,13 +117,13 @@ created_at, updated_at
 | Manage users (create admin/staff/customer, reset password, deactivate) | ✅    | ❌    | ❌       |
 | View/manage products & stock                                           | ✅    | ✅    | ❌       |
 | Browse product catalog (storefront)                                    | ✅    | ✅    | ✅       |
-| Place orders                                                           | ✅    | ✅    | ❌\*     |
+| Place orders                                                           | ✅    | ✅    | ✅       |
 | Accept/dispatch orders                                                 | ✅    | ✅    | ❌       |
+| View/manage payment status (bank transfer verification)                | ✅    | ✅    | ❌       |
+| Cancel own order (while pending)                                       | ✅    | ✅    | ✅       |
 | View reports                                                           | ✅    | ✅    | ❌       |
 | View/terminate sessions — own                                          | ✅    | ✅    | ✅       |
 | View/terminate sessions — others                                       | ✅    | ❌    | ❌       |
-
-\* Customers are browse-only in the current storefront; customer order placement is a planned follow-up.
 
 ### Onboarding flow
 
@@ -192,7 +194,7 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 - **Products** — `GET /products` (`search`, `division_id`, `category_id`, `sub_category_id`, `brand_id`, `is_active`), CRUD — admin/staff for write. Enforces `wsp <= mrp` and unique `product_code`/`barcode`.
 - **Inward** — `GET /inward` (`product_id`, `date_from`, `date_to`), `POST /inward` — admin/staff; increments product stock inside a transaction that also writes a `stock_ledger` row.
 - **Stock Ledger** — `GET /stock-ledger` (`product_id`, `movement_type`, `date_from`, `date_to`) — read-only, append-only log of every stock movement.
-- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`), `POST /orders` (locks + reserves stock per line item, all-or-nothing on insufficient stock), `PATCH /orders/:id/status` (accept/reject/cancel — reject/cancel releases reserved stock back to `quantity_available`).
+- **Orders** — `GET /orders` (`status`, `date_from`, `date_to` — scoped to the requester's own orders for customers, all orders for admin/staff), `POST /orders` (locks + reserves stock per line item, all-or-nothing on insufficient stock; captures shipping details, the bank transfer `transaction_id`, and an idempotency key so a retried submit can't double-reserve stock), `PATCH /orders/:id/status` (accept/reject/cancel — reject/cancel releases reserved stock back to `quantity_available`; a customer may cancel their own still-pending order), `PATCH /orders/:id/payment-status` (admin/staff mark a bank transfer verified/rejected, independent of the accept/reject decision). Payment is bank transfer only for now — account details come from the Warehouse settings.
 - **Dispatches** — `GET /dispatches` (`order_id`, `status`), `POST /dispatches` (creates a dispatch against an accepted order; supports partial fulfillment — order status becomes `partially_dispatched` until every line is fully dispatched; consumes reserved stock, never re-adds to `quantity_available`).
 - **Reports** — `GET /reports/stock-summary` (includes low-stock via `quantity_available <= reorder_level`), `GET /reports/order-history` (`date_from`, `date_to`) — aggregate queries, no full pagination needed (or paginated same way if rows can be large).
 - **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Plus the session endpoints from **Session Management (Admin)** above.

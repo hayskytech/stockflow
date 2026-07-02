@@ -9,12 +9,20 @@ USE stockflow;
 -- =============================================================================
 -- Warehouse settings (single row)
 -- =============================================================================
-INSERT INTO warehouse (id, name, address, phone, email) VALUES (
+INSERT INTO warehouse (
+  id, name, address, phone, email,
+  bank_name, account_holder_name, account_number, ifsc_code, upi_id
+) VALUES (
   1,
   'StockFlow Main Warehouse',
   '123 Textile Market Road, Chennai, Tamil Nadu',
   '+91-9999999999',
-  'warehouse@stockflow.local'
+  'warehouse@stockflow.local',
+  'State Bank of India',
+  'StockFlow Textiles Pvt Ltd',
+  '000000000000',
+  'SBIN0000001',
+  'stockflow@sbi'
 );
 
 -- =============================================================================

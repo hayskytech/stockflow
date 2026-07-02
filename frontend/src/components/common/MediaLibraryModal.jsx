@@ -3,6 +3,7 @@ import { Modal } from "@/components/ui/Modal"
 import { UppyUploader } from "@/components/common/UppyUploader"
 import { EmptyState } from "@/components/common/EmptyState"
 import { useMediaList } from "@/features/media/hooks/use-media"
+import { resolveMediaUrl } from "@/lib/media"
 
 /**
  * Shared media picker — lets a feature either upload a new image or reuse an existing
@@ -66,7 +67,7 @@ export function MediaLibraryModal({ open, onClose, onSelect }) {
                     onClick={() => handleSelect(media)}
                     title={media.originalName ?? media.id}
                   >
-                    <img src={media.url} alt={media.originalName ?? ""} className="img-fluid" style={{ aspectRatio: "1 / 1", objectFit: "cover" }} />
+                    <img src={resolveMediaUrl(media.url)} alt={media.originalName ?? ""} className="img-fluid" style={{ aspectRatio: "1 / 1", objectFit: "cover" }} />
                   </button>
                 </div>
               ))}
