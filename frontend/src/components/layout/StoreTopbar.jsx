@@ -29,9 +29,9 @@ export function StoreTopbar() {
   return (
     <nav className="navbar navbar-expand navbar-dark bg-primary sticky-top">
       <div className="container flex-wrap">
-        <a href={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
+        <Link to={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
           {APP_NAME}
-        </a>
+        </Link>
 
         {/* Inline search — desktop only; on mobile it drops to its own full-width row below. */}
         <div className="d-none d-md-block flex-grow-1 mx-3" style={{ maxWidth: "480px" }}>

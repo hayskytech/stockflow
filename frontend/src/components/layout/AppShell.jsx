@@ -20,6 +20,7 @@ export function AppShell() {
     <div className="wrapper">
       <Topbar onToggleSidebar={() => setSidebarToggled((v) => !v)} />
       <Sidebar />
+      <div id="sidebar-overlay" onClick={() => setSidebarToggled(false)} />
       <div className="content-wrapper">
         <Outlet />
       </div>

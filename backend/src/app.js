@@ -22,6 +22,7 @@ app.use(
   cors({
     origin: ENV.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim()),
     credentials: true,
+    exposedHeaders: ['X-WP-Total', 'X-WP-TotalPages'],
   }),
 );
 app.use(generalLimiter);

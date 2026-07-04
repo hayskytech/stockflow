@@ -33,7 +33,7 @@ export function Topbar({ onToggleSidebar }) {
         <li className="nav-item">
           <a
             id="view-store-link"
-            href={ROUTES.STORE.HOME}
+            href={`/#${ROUTES.STORE.HOME}`}
             target="_blank"
             rel="noopener noreferrer"
             className="nav-link"
