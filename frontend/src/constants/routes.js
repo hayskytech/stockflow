@@ -21,7 +21,11 @@ export const ROUTES = {
   PRODUCTS: {
     LIST: "/products",
     NEW: "/products/new",
+    DETAIL: (id) => `/products/${id}`,
     EDIT: (id) => `/products/${id}/edit`,
+  },
+  STOCK: {
+    LIST: "/stock",
   },
   STOCK_LEDGER: "/stock-ledger",
   MEDIA_LIBRARY: "/media-library",

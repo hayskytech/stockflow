@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/auth.store"
 import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useProductsStore } from "@/features/products/products.store"
 import { useDeleteProduct, useProducts } from "@/features/products/hooks/use-products"
+import { ProductImportModal } from "@/features/products/components/ProductImportModal"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
 
@@ -16,6 +17,8 @@ export function ProductsPage() {
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
   const isStaff = useAuthStore((s) => s.user?.role === "staff")
   const canManage = isAdmin || isStaff
+
+  const [importOpen, setImportOpen] = useState(false)
 
   const search = useProductsStore((s) => s.search)
   const setSearch = useProductsStore((s) => s.setSearch)
@@ -93,29 +96,36 @@ export function ProductsPage() {
         <span className={`badge ${row.isActive ? "badge-success" : "badge-secondary"}`}>{row.isActive ? "Active" : "Inactive"}</span>
       ),
     },
-    ...(canManage
-      ? [
-          {
-            key: "actions",
-            label: "",
-            className: "text-right",
-            render: (row) => (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-primary mr-2"
-                  onClick={() => navigate(ROUTES.PRODUCTS.EDIT(row.id))}
-                >
-                  Edit
-                </button>
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingProduct(row)}>
-                  Delete
-                </button>
-              </>
-            ),
-          },
-        ]
-      : []),
+    {
+      key: "actions",
+      label: "",
+      className: "text-right",
+      render: (row) => (
+        <>
+          <button
+            type="button"
+            className="btn btn-sm btn-outline-secondary mr-2"
+            onClick={() => navigate(ROUTES.PRODUCTS.DETAIL(row.id))}
+          >
+            View
+          </button>
+          {canManage ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-primary mr-2"
+                onClick={() => navigate(ROUTES.PRODUCTS.EDIT(row.id))}
+              >
+                Edit
+              </button>
+              <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingProduct(row)}>
+                Delete
+              </button>
+            </>
+          ) : null}
+        </>
+      ),
+    },
   ]
 
   return (
@@ -125,10 +135,21 @@ export function ProductsPage() {
         description="Manage your product catalog and stock levels"
         actions={
           canManage ? (
-            <button type="button" className="btn btn-primary" onClick={() => navigate(ROUTES.PRODUCTS.NEW)}>
-              <i className="fas fa-plus mr-1" />
-              Add Product
-            </button>
+            <>
+              <button
+                type="button"
+                id="products-import-button"
+                className="btn btn-outline-primary mr-2"
+                onClick={() => setImportOpen(true)}
+              >
+                <i className="fas fa-file-import mr-1" />
+                Import
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => navigate(ROUTES.PRODUCTS.NEW)}>
+                <i className="fas fa-plus mr-1" />
+                Add Product
+              </button>
+            </>
           ) : null
         }
       />
@@ -140,7 +161,7 @@ export function ProductsPage() {
               <input
                 type="search"
                 className="form-control"
-                placeholder="Search by name, code, or barcode…"
+                placeholder="Search by name or code…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -209,6 +230,8 @@ export function ProductsPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeletingProduct(null)}
       />
+
+      <ProductImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </PageWrapper>
   )
 }

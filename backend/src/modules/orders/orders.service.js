@@ -145,28 +145,27 @@ export async function createOrder(input, userId) {
       } else if (product.quantityAvailable < item.quantity) {
         failures.push(`${product.name} — only ${product.quantityAvailable} left in stock`);
       } else {
-        lockedItems.push({ ...item, product });
+        // Picks the actual barcoded units being reserved — oldest invoice first — and locks
+        // them so two concurrent orders can't claim the same unit.
+        const stockRows = await execute(
+          `SELECT id FROM stock WHERE product_id = ? AND status = 'in_stock'
+           ORDER BY invoice_date ASC, created_at ASC LIMIT ? FOR UPDATE`,
+          [item.productId, item.quantity],
+        );
+        if (stockRows.length < item.quantity) {
+          failures.push(`${product.name} — only ${stockRows.length} left in stock`);
+        } else {
+          lockedItems.push({ ...item, product, stockIds: stockRows.map((row) => row.id) });
+        }
       }
     }
 
     // All-or-nothing: report every failing line in one response instead of one at a time.
     if (failures.length > 0) throw new AppError(409, failures.join('; '));
 
-    let totalAmount = 0;
-    for (const { productId, quantity, product } of lockedItems) {
-      await execute(
-        `UPDATE products SET quantity_available = quantity_available - ?, quantity_reserved = quantity_reserved + ?
-         WHERE id = ?`,
-        [quantity, quantity, productId],
-      );
-      await execute(
-        `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-         VALUES (?, 'out', ?, 'order', ?, 'Stock reserved for order')`,
-        [productId, quantity, orderId],
-      );
-      totalAmount += Number(product.wsp) * quantity;
-    }
+    const totalAmount = lockedItems.reduce((sum, { quantity, product }) => sum + Number(product.wsp) * quantity, 0);
 
+    // The order row must exist before stock rows can point their order_id FK at it.
     const maxAttempts = 5;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const orderNumber = generateOrderNumber();
@@ -207,7 +206,21 @@ export async function createOrder(input, userId) {
       }
     }
 
-    for (const { productId, quantity, product } of lockedItems) {
+    for (const { productId, quantity, product, stockIds } of lockedItems) {
+      await execute(
+        `UPDATE products SET quantity_available = quantity_available - ?, quantity_reserved = quantity_reserved + ?
+         WHERE id = ?`,
+        [quantity, quantity, productId],
+      );
+      await execute(
+        `UPDATE stock SET status = 'reserved', order_id = ? WHERE id IN (${stockIds.map(() => '?').join(',')})`,
+        [orderId, ...stockIds],
+      );
+      await execute(
+        `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
+         VALUES (?, 'out', ?, 'order', ?, 'Stock reserved for order')`,
+        [productId, quantity, orderId],
+      );
       await execute(
         `INSERT INTO order_items (id, order_id, product_id, quantity, mrp_at_order, wsp_at_order)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -263,6 +276,7 @@ export async function updateOrderStatus(id, status, requester) {
           [item.productId, item.quantity, id],
         );
       }
+      await execute(`UPDATE stock SET status = 'dispatched' WHERE order_id = ? AND status = 'reserved'`, [id]);
       await execute(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
     });
     return getOrderById(id, requester);
@@ -282,6 +296,7 @@ export async function updateOrderStatus(id, status, requester) {
         [item.productId, item.quantity, id, `Order ${status} — reservation released`],
       );
     }
+    await execute(`UPDATE stock SET status = 'in_stock', order_id = NULL WHERE order_id = ? AND status = 'reserved'`, [id]);
     await execute(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
   });
 

@@ -2,7 +2,9 @@ import crypto from 'crypto';
 import { getCategoryById, getSubCategoryById } from '../catalog/catalog.service.js';
 import { attachUsage, detachUsage, getMediaById } from '../media/media.service.js';
 import { executeQuery } from '../../db/query.js';
+import { withTransaction } from '../../db/transaction.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { parseRowsFromFile } from '../../utils/importFile.js';
 
 const MEDIA_ENTITY_TYPE = 'product';
 export const MAX_GALLERY_IMAGES = 5;
@@ -83,7 +85,7 @@ async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keep
 }
 
 const PRODUCT_COLUMNS = `
-  p.id, p.product_code AS productCode, p.barcode, p.category_id AS categoryId,
+  p.id, p.product_code AS productCode, p.category_id AS categoryId,
   p.sub_category_id AS subCategoryId, p.name, p.description, p.color, p.size,
   p.mrp, p.wsp, p.quantity_available AS quantityAvailable, p.quantity_reserved AS quantityReserved,
   p.reorder_level AS reorderLevel, p.unit, p.product_photo_url AS productPhotoUrl,
@@ -113,10 +115,7 @@ const SORT_COLUMNS = {
 /** Maps a MySQL error into the right AppError, or rethrows if it's not one we handle. */
 function rethrowAsAppError(err) {
   if (err.code === 'ER_DUP_ENTRY') {
-    const message = String(err.sqlMessage ?? '').includes('barcode')
-      ? 'A product with this barcode already exists'
-      : 'A product with this product code already exists';
-    throw new AppError(409, message);
+    throw new AppError(409, 'A product with this product code already exists');
   }
   if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
     throw new AppError(409, 'Cannot delete a product that is referenced by existing orders.');
@@ -139,8 +138,8 @@ export async function listProducts(listQuery, filters) {
   const conditions = [];
   const params = [];
   if (search) {
-    conditions.push('(p.name LIKE ? OR p.product_code LIKE ? OR p.barcode LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    conditions.push('(p.name LIKE ? OR p.product_code LIKE ?)');
+    params.push(`%${search}%`, `%${search}%`);
   }
   if (filters.divisionId) {
     conditions.push('c.division_id = ?');
@@ -197,14 +196,13 @@ export async function createProduct(input) {
   try {
     await executeQuery(
       `INSERT INTO products (
-         id, product_code, barcode, category_id, sub_category_id, name, description,
+         id, product_code, category_id, sub_category_id, name, description,
          color, size, mrp, wsp, quantity_available, reorder_level, unit,
          product_photo_media_id, product_photo_url, is_active
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         input.productCode,
-        input.barcode ?? null,
         input.categoryId,
         input.subCategoryId ?? null,
         input.name,
@@ -261,7 +259,6 @@ export async function updateProduct(id, input) {
 
   const columnMap = {
     productCode: 'product_code',
-    barcode: 'barcode',
     categoryId: 'category_id',
     subCategoryId: 'sub_category_id',
     name: 'name',
@@ -326,4 +323,76 @@ export async function deleteProduct(id) {
   } catch (err) {
     rethrowAsAppError(err);
   }
+}
+
+/**
+ * Bulk-creates products from an uploaded .xlsx/.csv (columns: SubGroupName, Product Code,
+ * Product Name — this is the one-time catalog load, so mrp/wsp/stock aren't in the sheet and
+ * are left at their defaults; edit individual products afterwards). All-or-nothing: if any row
+ * is invalid, has a duplicate code, or its SubGroupName doesn't match an existing category, the
+ * whole file is rejected.
+ */
+export async function importProducts(buffer, originalName) {
+  const rawRows = await parseRowsFromFile(buffer, originalName);
+
+  const errors = [];
+  const parsedRows = [];
+  const seenCodes = new Set();
+
+  for (const { rowNumber, data } of rawRows) {
+    const subGroupName = String(data.SubGroupName ?? '').trim();
+    const productCode = String(data['Product Code'] ?? '').trim();
+    const productName = String(data['Product Name'] ?? '').trim();
+
+    if (!subGroupName || !productCode || !productName) {
+      errors.push(`Row ${rowNumber}: SubGroupName, Product Code and Product Name are required`);
+      continue;
+    }
+    if (seenCodes.has(productCode.toLowerCase())) {
+      errors.push(`Row ${rowNumber}: product code "${productCode}" is duplicated in this file`);
+      continue;
+    }
+    seenCodes.add(productCode.toLowerCase());
+    parsedRows.push({ rowNumber, subGroupName, productCode, productName });
+  }
+
+  if (errors.length > 0) {
+    throw new AppError(400, `Import rejected — fix these rows and re-upload: ${errors.join('; ')}`);
+  }
+  if (parsedRows.length === 0) {
+    throw new AppError(400, 'File has no valid data rows');
+  }
+
+  const codes = parsedRows.map((r) => r.productCode);
+  const existingCodes = await executeQuery(
+    `SELECT product_code AS productCode FROM products WHERE product_code IN (${codes.map(() => '?').join(',')})`,
+    codes,
+  );
+  if (existingCodes.length > 0) {
+    throw new AppError(409, `These product codes already exist: ${existingCodes.map((r) => r.productCode).join(', ')}`);
+  }
+
+  const subGroupNames = [...new Set(parsedRows.map((r) => r.subGroupName.toLowerCase()))];
+  const categories = await executeQuery(
+    `SELECT id, name FROM categories WHERE LOWER(name) IN (${subGroupNames.map(() => '?').join(',')})`,
+    subGroupNames,
+  );
+  const categoryLookup = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+
+  const unmatched = [...new Set(parsedRows.filter((r) => !categoryLookup.has(r.subGroupName.toLowerCase())).map((r) => r.subGroupName))];
+  if (unmatched.length > 0) {
+    throw new AppError(400, `Import rejected — no matching category for: ${unmatched.join(', ')}`);
+  }
+
+  await withTransaction(async (execute) => {
+    for (const row of parsedRows) {
+      await execute(
+        `INSERT INTO products (id, product_code, category_id, name, mrp, wsp, quantity_available, reorder_level, unit, is_active)
+         VALUES (?, ?, ?, ?, 0, 0, 0, 0, 'pc', TRUE)`,
+        [crypto.randomUUID(), row.productCode, categoryLookup.get(row.subGroupName.toLowerCase()), row.productName],
+      );
+    }
+  });
+
+  return { imported: parsedRows.length };
 }

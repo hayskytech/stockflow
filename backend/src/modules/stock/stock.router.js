@@ -6,30 +6,18 @@ import { authenticate } from '../../middleware/auth.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { pagination } from '../../middleware/pagination.js';
 import { requireRole } from '../../middleware/requireRole.js';
-import {
-  createProduct,
-  deleteProduct,
-  getProduct,
-  importProducts,
-  listProducts,
-  updateProduct,
-} from './products.controller.js';
+import { deleteStock, getStock, importStock, listStock } from './stock.controller.js';
 
-export const productsRouter = Router();
+export const stockRouter = Router();
 
-const productsPagination = pagination({
-  sortable: ['name', 'product_code', 'mrp', 'wsp', 'quantity_available', 'created_at'],
-  defaultSort: 'created_at',
-});
+const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.csv']);
 
-const ALLOWED_IMPORT_EXTENSIONS = new Set(['.xlsx', '.csv']);
-
-// Memory storage: the buffer is parsed in-process (never written to disk) by products.service.js.
+// Memory storage: the buffer is parsed in-process (never written to disk) by stock.service.js.
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: ENV.STOCK_IMPORT_MAX_MB * 1024 * 1024, files: 1 },
   fileFilter(_req, file, cb) {
-    if (!ALLOWED_IMPORT_EXTENSIONS.has(path.extname(file.originalname).toLowerCase())) {
+    if (!ALLOWED_EXTENSIONS.has(path.extname(file.originalname).toLowerCase())) {
       cb(new AppError(400, 'Only .xlsx or .csv files are allowed'));
       return;
     }
@@ -49,10 +37,13 @@ function handleUpload(req, res, next) {
   });
 }
 
-// Both roles can view and manage products/stock — see CLAUDE.md permission matrix.
-productsRouter.get('/', authenticate, productsPagination, listProducts);
-productsRouter.get('/:id', authenticate, getProduct);
-productsRouter.post('/', authenticate, requireRole('admin', 'staff'), createProduct);
-productsRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importProducts);
-productsRouter.put('/:id', authenticate, requireRole('admin', 'staff'), updateProduct);
-productsRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteProduct);
+const stockPagination = pagination({
+  sortable: ['barcode', 'invoice_no', 'invoice_date', 'mrp', 'wsp', 'status', 'created_at'],
+  defaultSort: 'created_at',
+});
+
+// Stock is back-office only — see CLAUDE.md permission matrix (customers never see it).
+stockRouter.get('/', authenticate, requireRole('admin', 'staff'), stockPagination, listStock);
+stockRouter.get('/:id', authenticate, requireRole('admin', 'staff'), getStock);
+stockRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importStock);
+stockRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteStock);

@@ -29,6 +29,12 @@ export const API_ENDPOINTS = {
   PRODUCTS: {
     LIST: "/products",
     BY_ID: (id) => `/products/${id}`,
+    IMPORT: "/products/import",
+  },
+  STOCK: {
+    LIST: "/stock",
+    BY_ID: (id) => `/stock/${id}`,
+    IMPORT: "/stock/import",
   },
   MEDIA: {
     LIST: "/media",

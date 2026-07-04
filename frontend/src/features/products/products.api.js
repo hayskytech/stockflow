@@ -32,3 +32,12 @@ export async function updateProductApi(id, input) {
 export async function deleteProductApi(id) {
   await apiClient.delete(API_ENDPOINTS.PRODUCTS.BY_ID(id))
 }
+
+export async function importProductsApi(file) {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post(API_ENDPOINTS.PRODUCTS.IMPORT, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+  return data
+}

@@ -4,7 +4,7 @@ import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
 import { useHomeStore } from "@/features/home/home.store"
-import { APP_NAME } from "@/constants/app"
+import { APP_NAME, ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"
 
 /** Ecommerce top navigation for the customer storefront — brand, search, cart, account menu. */
@@ -69,6 +69,12 @@ export function StoreTopbar() {
               <span className="d-none d-md-inline">{user?.name ?? "Account"}</span>
             </button>
             <div className={`dropdown-menu dropdown-menu-right ${menuOpen ? "show" : ""}`}>
+              {user?.role === ROLES.ADMIN || user?.role === ROLES.STAFF ? (
+                <Link id="store-dashboard-link" to={ROUTES.DASHBOARD} className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                  <i className="fas fa-gauge mr-2" />
+                  Dashboard
+                </Link>
+              ) : null}
               <Link id="store-my-orders-link" to={ROUTES.STORE.ORDERS} className="dropdown-item" onClick={() => setMenuOpen(false)}>
                 <i className="fas fa-receipt mr-2" />
                 My Orders

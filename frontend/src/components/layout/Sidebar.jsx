@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { to: ROUTES.CATALOG.DIVISIONS, icon: "fa-sitemap", label: "Divisions" },
   { to: ROUTES.CATALOG.CATEGORIES, icon: "fa-tags", label: "Categories" },
   { to: ROUTES.PRODUCTS.LIST, icon: "fa-shirt", label: "Products" },
+  { to: ROUTES.STOCK.LIST, icon: "fa-barcode", label: "Stock" },
   { to: ROUTES.STOCK_LEDGER, icon: "fa-book", label: "Stock Ledger" },
   { to: ROUTES.MEDIA_LIBRARY, icon: "fa-images", label: "Media Library" },
   { to: ROUTES.ORDERS.LIST, icon: "fa-cart-shopping", label: "Orders" },

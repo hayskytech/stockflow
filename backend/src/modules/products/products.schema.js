@@ -7,7 +7,6 @@ const moneyField = z.number().nonnegative('Must be zero or greater');
 export const createProductSchema = z
   .object({
     productCode: z.string().trim().min(1, 'Product code is required').max(50, 'Product code is too long'),
-    barcode: z.string().trim().max(50, 'Barcode is too long').optional().nullable(),
     categoryId: uuidField,
     subCategoryId: uuidField.optional().nullable(),
     name: z.string().trim().min(1, 'Name is required').max(150, 'Name is too long'),
@@ -32,7 +31,6 @@ export const createProductSchema = z
 export const updateProductSchema = z
   .object({
     productCode: z.string().trim().min(1).max(50).optional(),
-    barcode: z.string().trim().max(50).optional().nullable(),
     categoryId: uuidField.optional(),
     subCategoryId: uuidField.optional().nullable(),
     name: z.string().trim().min(1).max(150).optional(),

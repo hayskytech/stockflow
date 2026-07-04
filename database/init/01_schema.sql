@@ -45,6 +45,10 @@ USE stockflow;
 --   ALTER TABLE order_items
 --     ADD COLUMN mrp_at_order DECIMAL(10,2) NOT NULL,
 --     ADD COLUMN wsp_at_order DECIMAL(10,2) NOT NULL;
+--
+-- To move to per-unit barcoded stock on an already-provisioned DB, run once:
+--   ALTER TABLE products DROP KEY uq_products_barcode, DROP COLUMN barcode;
+--   -- then create the `stock` table exactly as defined further down in this file.
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
@@ -287,7 +291,6 @@ CREATE TABLE media_usage (
 CREATE TABLE products (
   id                  CHAR(36)      NOT NULL                        COMMENT 'UUID v4 primary key',
   product_code        VARCHAR(50)   NOT NULL                        COMMENT 'Human-readable SKU code, e.g. MW-SHRT-0042',
-  barcode             VARCHAR(50)   NULL                             COMMENT 'Optional - not every SKU is barcoded yet',
   category_id         CHAR(36)      NOT NULL,
   sub_category_id     CHAR(36)      NULL,
   name                VARCHAR(150)  NOT NULL,
@@ -308,7 +311,6 @@ CREATE TABLE products (
 
   PRIMARY KEY (id),
   UNIQUE KEY uq_products_product_code (product_code),
-  UNIQUE KEY uq_products_barcode      (barcode),
   KEY idx_products_category_id        (category_id),
   KEY idx_products_sub_category_id    (sub_category_id),
   KEY idx_products_is_active          (is_active),
@@ -437,6 +439,51 @@ CREATE TABLE order_items (
 
 -- Dispatch is a stage in the orders.status lifecycle (see orders.status ENUM above), not a
 -- separate resource — there is no dispatches/dispatch_items table.
+
+
+-- =============================================================================
+-- TABLE: stock
+-- One row per physical barcoded unit received against a product (imported in bulk from
+-- the client's Excel/CSV exports, or occasionally added by hand). mrp/wsp/size are captured
+-- per unit since they can vary within the same product (e.g. by size) — products.mrp/wsp
+-- remain only as defaults used when a product is first created manually.
+-- order_id is the order currently holding (reserved) or that consumed (dispatched) this
+-- unit; it's cleared back to NULL when a reservation is released.
+-- =============================================================================
+CREATE TABLE stock (
+  id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
+  product_id    CHAR(36)      NOT NULL,
+  barcode       VARCHAR(50)   NOT NULL                              COMMENT 'Unique physical unit barcode',
+  mrp           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  wsp           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  size          VARCHAR(20)   NULL,
+  invoice_no    VARCHAR(100)  NOT NULL                              COMMENT 'Supplier invoice this unit arrived on - shared by many units',
+  invoice_date  DATE          NULL,
+  note          VARCHAR(500)  NULL,
+  status        ENUM('in_stock','reserved','dispatched') NOT NULL DEFAULT 'in_stock',
+  order_id      CHAR(36)      NULL                                  COMMENT 'Order holding (reserved) or that consumed (dispatched) this unit',
+  created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_stock_barcode    (barcode),
+  KEY idx_stock_product_id       (product_id),
+  KEY idx_stock_invoice_no       (invoice_no),
+  KEY idx_stock_status           (status),
+  KEY idx_stock_order_id         (order_id),
+
+  CONSTRAINT fk_stock_product_id
+    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_stock_order_id
+    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT chk_stock_mrp_nonneg   CHECK (mrp >= 0),
+  CONSTRAINT chk_stock_wsp_nonneg   CHECK (wsp >= 0),
+  CONSTRAINT chk_stock_wsp_le_mrp   CHECK (wsp <= mrp)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='One row per physical barcoded stock unit';
 
 
 -- =============================================================================

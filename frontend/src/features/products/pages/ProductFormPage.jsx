@@ -21,7 +21,6 @@ export function ProductFormPage() {
   async function handleSubmit(value) {
     const input = {
       ...value,
-      barcode: value.barcode || undefined,
       subCategoryId: value.subCategoryId || undefined,
       description: value.description || undefined,
       color: value.color || undefined,
@@ -80,7 +79,6 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
   const form = useForm({
     defaultValues: {
       productCode: product?.productCode ?? "",
-      barcode: product?.barcode ?? "",
       categoryId: product?.categoryId ?? "",
       subCategoryId: product?.subCategoryId ?? "",
       name: product?.name ?? "",
@@ -115,48 +113,24 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
         form.handleSubmit()
       }}
     >
-      <div className="row">
-        <div className="col-md-6">
-          <form.Field name="productCode">
-            {(field) => (
-              <div className="form-group">
-                <label htmlFor="product-code">Product Code</label>
-                <input
-                  id="product-code"
-                  className="form-control"
-                  placeholder="e.g. MW-SHRT-0042"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                ) : null}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <div className="col-md-6">
-          <form.Field name="barcode">
-            {(field) => (
-              <div className="form-group">
-                <label htmlFor="product-barcode">Barcode (optional)</label>
-                <input
-                  id="product-barcode"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                ) : null}
-              </div>
-            )}
-          </form.Field>
-        </div>
-      </div>
+      <form.Field name="productCode">
+        {(field) => (
+          <div className="form-group">
+            <label htmlFor="product-code">Product Code</label>
+            <input
+              id="product-code"
+              className="form-control"
+              placeholder="e.g. MW-SHRT-0042"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              onBlur={field.handleBlur}
+            />
+            {field.state.meta.errors.length > 0 ? (
+              <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
+            ) : null}
+          </div>
+        )}
+      </form.Field>
 
       <form.Field name="name">
         {(field) => (

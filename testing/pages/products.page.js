@@ -2,7 +2,7 @@ export class ProductsPage {
   constructor(page) {
     this.page = page
     this.addButton = page.getByRole("button", { name: /add product/i })
-    this.searchInput = page.getByPlaceholder(/search by name, code, or barcode/i)
+    this.searchInput = page.getByPlaceholder(/search by name or code/i)
     this.serverError = page.locator(".alert-danger")
   }
 

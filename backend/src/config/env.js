@@ -38,4 +38,6 @@ export const ENV = {
   MEDIA_MAX_UPLOAD_MB: parseInt(optional('MEDIA_MAX_UPLOAD_MB', '15'), 10),
   MEDIA_MAX_BYTES: parseInt(optional('MEDIA_MAX_BYTES', '512000'), 10),
   MEDIA_ORPHAN_TTL_HOURS: parseInt(optional('MEDIA_ORPHAN_TTL_HOURS', '24'), 10),
+
+  STOCK_IMPORT_MAX_MB: parseInt(optional('STOCK_IMPORT_MAX_MB', '10'), 10),
 };

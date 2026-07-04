@@ -10,6 +10,7 @@ import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
 import { HomePage } from "@/features/home/pages/HomePage"
 import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
+import { ProductDetailPage as AdminProductDetailPage } from "@/features/products/pages/ProductDetailPage"
 import { CartPage } from "@/features/cart/pages/CartPage"
 import { CheckoutPage } from "@/features/checkout/pages/CheckoutPage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
@@ -18,6 +19,7 @@ import { DivisionsPage } from "@/features/catalog/pages/DivisionsPage"
 import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
 import { ProductsPage } from "@/features/products/pages/ProductsPage"
 import { ProductFormPage } from "@/features/products/pages/ProductFormPage"
+import { StockPage } from "@/features/stock/pages/StockPage"
 import { StockLedgerPage } from "@/features/stock-ledger/pages/StockLedgerPage"
 import { MediaLibraryPage } from "@/features/media/pages/MediaLibraryPage"
 import { OrdersPage } from "@/features/orders/pages/OrdersPage"
@@ -122,8 +124,16 @@ export const router = createHashRouter([
         element: <ProductFormPage />,
       },
       {
+        path: "/products/:id",
+        element: <AdminProductDetailPage />,
+      },
+      {
         path: "/products/:id/edit",
         element: <ProductFormPage />,
+      },
+      {
+        path: ROUTES.STOCK.LIST,
+        element: <StockPage />,
       },
       {
         path: ROUTES.STOCK_LEDGER,

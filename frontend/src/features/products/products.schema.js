@@ -9,7 +9,6 @@ const nonNegativeInt = z
 export const productSchema = z
   .object({
     productCode: z.string().trim().min(1, "Product code is required").max(50, "Too long"),
-    barcode: z.string().trim().max(50, "Too long").optional().or(z.literal("")),
     categoryId: z.string().min(1, "Category is required"),
     subCategoryId: z.string().optional().or(z.literal("")),
     name: z.string().trim().min(1, "Name is required").max(150, "Too long"),
@@ -29,3 +28,14 @@ export const productSchema = z
     message: "WSP cannot be greater than MRP",
     path: ["wsp"],
   })
+
+const IMPORT_EXTENSIONS = [".xlsx", ".csv"]
+
+export const productImportSchema = z.object({
+  file: z
+    .instanceof(File, { message: "Please choose a file" })
+    .refine(
+      (file) => IMPORT_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext)),
+      "Only .xlsx or .csv files are allowed"
+    ),
+})

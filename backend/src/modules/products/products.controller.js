@@ -70,3 +70,14 @@ export async function deleteProduct(req, res, next) {
     next(err);
   }
 }
+
+/** POST /api/products/import */
+export async function importProducts(req, res, next) {
+  try {
+    if (!req.file) throw new AppError(400, 'No file uploaded');
+    const result = await productsService.importProducts(req.file.buffer, req.file.originalname);
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
