@@ -1,29 +1,16 @@
-import { useMemo } from "react"
 import { EmptyState } from "@/components/common/EmptyState"
-import { useDivisionOptions } from "@/hooks/use-catalog-options"
 import { useHomeStore } from "@/features/home/home.store"
 import { useStorefrontProducts } from "@/features/home/hooks/use-storefront-products"
-import { CategorySection } from "@/features/home/components/CategorySection"
-
-/** Groups a flat product list into category sections, sorted alphabetically by category name. */
-function groupByCategory(products) {
-  const groups = new Map()
-  for (const product of products) {
-    const key = product.categoryName ?? "Uncategorized"
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key).push(product)
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([categoryName, items]) => ({ categoryName, products: items }))
-}
+import { ProductCard } from "@/features/home/components/ProductCard"
+import { StoreSidebar } from "@/features/home/components/StoreSidebar"
 
 export function HomePage() {
   const search = useHomeStore((s) => s.search)
   const divisionFilter = useHomeStore((s) => s.divisionFilter)
-  const setDivisionFilter = useHomeStore((s) => s.setDivisionFilter)
-
-  const { data: divisions = [] } = useDivisionOptions()
+  const categoryFilter = useHomeStore((s) => s.categoryFilter)
+  const subCategoryFilter = useHomeStore((s) => s.subCategoryFilter)
+  const minPrice = useHomeStore((s) => s.minPrice)
+  const maxPrice = useHomeStore((s) => s.maxPrice)
 
   const { data: products = [], isLoading, isError } = useStorefrontProducts({
     per_page: 100,
@@ -32,9 +19,11 @@ export function HomePage() {
     order: "asc",
     search: search || undefined,
     division_id: divisionFilter || undefined,
+    category_id: categoryFilter || undefined,
+    sub_category_id: subCategoryFilter || undefined,
+    min_price: minPrice,
+    max_price: maxPrice,
   })
-
-  const sections = useMemo(() => groupByCategory(products), [products])
 
   return (
     <div>
@@ -43,43 +32,42 @@ export function HomePage() {
         <p className="text-muted mb-0">Browse the latest dresses, sarees, kidware and menswear.</p>
       </div>
 
-      <div className="mb-4 d-flex flex-wrap" style={{ gap: "0.5rem" }}>
-        <button
-          type="button"
-          className={`btn btn-sm ${divisionFilter === "" ? "btn-primary" : "btn-outline-primary"}`}
-          onClick={() => setDivisionFilter("")}
-        >
-          All
-        </button>
-        {divisions.map((division) => (
-          <button
-            key={division.id}
-            type="button"
-            className={`btn btn-sm ${divisionFilter === division.id ? "btn-primary" : "btn-outline-primary"}`}
-            onClick={() => setDivisionFilter(division.id)}
-          >
-            {division.name}
-          </button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status" />
+      <div className="row">
+        <div className="col-md-3 mb-4">
+          <StoreSidebar />
         </div>
-      ) : isError ? (
-        <div className="alert alert-danger">Could not load products. Please try again.</div>
-      ) : sections.length === 0 ? (
-        <EmptyState
-          icon="fa-shirt"
-          title="No products found"
-          description="Try a different search or category."
-        />
-      ) : (
-        sections.map((section) => (
-          <CategorySection key={section.categoryName} categoryName={section.categoryName} products={section.products} />
-        ))
-      )}
+
+        <div className="col-md-9">
+          {isLoading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status" />
+            </div>
+          ) : isError ? (
+            <div className="alert alert-danger">Could not load products. Please try again.</div>
+          ) : products.length === 0 ? (
+            <EmptyState
+              icon="fa-shirt"
+              title="No products found"
+              description="Try a different search or filter."
+            />
+          ) : (
+            <>
+              <div className="d-flex align-items-center justify-content-end mb-3">
+                <span className="text-muted small">
+                  {products.length} item{products.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <div className="row">
+                {products.map((product) => (
+                  <div key={product.id} className="col-6 col-md-4 col-lg-3 mb-4">
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -15,7 +15,6 @@ export const createProductSchema = z
     size: z.string().trim().max(10, 'Size is too long').optional().nullable(),
     mrp: moneyField,
     wsp: moneyField,
-    quantityAvailable: z.number().int().nonnegative('Must be zero or greater').default(0),
     reorderLevel: z.number().int().nonnegative('Must be zero or greater').default(0),
     unit: z.string().trim().min(1).max(20).default('pc'),
     productPhotoMediaId: uuidField.optional().nullable(),
@@ -39,7 +38,6 @@ export const updateProductSchema = z
     size: z.string().trim().max(10).optional().nullable(),
     mrp: moneyField.optional(),
     wsp: moneyField.optional(),
-    quantityAvailable: z.number().int().nonnegative().optional(),
     reorderLevel: z.number().int().nonnegative().optional(),
     unit: z.string().trim().min(1).max(20).optional(),
     productPhotoMediaId: uuidField.optional().nullable(),
@@ -48,15 +46,22 @@ export const updateProductSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });
 
-/** GET /api/products?category_id=&sub_category_id=&division_id=&is_active= */
-export const listProductsQuerySchema = z.object({
-  divisionId: uuidField.optional(),
-  categoryId: uuidField.optional(),
-  subCategoryId: uuidField.optional(),
-  isActive: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((v) => (v === undefined ? undefined : v === 'true')),
-});
+/** GET /api/products?category_id=&sub_category_id=&division_id=&is_active=&min_price=&max_price= */
+export const listProductsQuerySchema = z
+  .object({
+    divisionId: uuidField.optional(),
+    categoryId: uuidField.optional(),
+    subCategoryId: uuidField.optional(),
+    isActive: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((v) => (v === undefined ? undefined : v === 'true')),
+    minPrice: z.coerce.number().nonnegative('Must be zero or greater').optional(),
+    maxPrice: z.coerce.number().nonnegative('Must be zero or greater').optional(),
+  })
+  .refine((data) => data.minPrice === undefined || data.maxPrice === undefined || data.minPrice <= data.maxPrice, {
+    message: 'minPrice cannot be greater than maxPrice',
+    path: ['minPrice'],
+  });
 
 export const idParamSchema = z.object({ id: uuidField });

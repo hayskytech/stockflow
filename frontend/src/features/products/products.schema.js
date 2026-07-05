@@ -17,7 +17,6 @@ export const productSchema = z
     size: z.string().trim().max(10, "Too long").optional().or(z.literal("")),
     mrp: money,
     wsp: money,
-    quantityAvailable: nonNegativeInt,
     reorderLevel: nonNegativeInt,
     unit: z.string().trim().min(1, "Required").max(20, "Too long"),
     productPhotoMediaId: z.string().optional().nullable(),

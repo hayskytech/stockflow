@@ -87,7 +87,6 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       size: product?.size ?? "",
       mrp: product?.mrp !== undefined ? Number(product.mrp) : 0,
       wsp: product?.wsp !== undefined ? Number(product.wsp) : 0,
-      quantityAvailable: product?.quantityAvailable ?? 0,
       reorderLevel: product?.reorderLevel ?? 0,
       unit: product?.unit ?? "pc",
       productPhotoMediaId: product?.productPhotoMediaId ?? null,
@@ -331,26 +330,17 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
           </form.Field>
         </div>
         <div className="col-md-3">
-          <form.Field name="quantityAvailable">
-            {(field) => (
-              <div className="form-group">
-                <label htmlFor="product-stock">Stock</label>
-                <input
-                  id="product-stock"
-                  type="number"
-                  step="1"
-                  min="0"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.valueAsNumber || 0)}
-                  onBlur={field.handleBlur}
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                ) : null}
-              </div>
-            )}
-          </form.Field>
+          <div className="form-group">
+            <label htmlFor="product-stock">Stock</label>
+            <input
+              id="product-stock"
+              className="form-control"
+              value={product ? `${product.quantityAvailable} available` : "Starts at 0"}
+              disabled
+              readOnly
+            />
+            <small className="form-text text-muted">Add inventory via Stock Import.</small>
+          </div>
         </div>
         <div className="col-md-3">
           <form.Field name="reorderLevel">

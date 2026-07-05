@@ -17,6 +17,8 @@ export async function listProducts(req, res, next) {
       categoryId: req.query.category_id,
       subCategoryId: req.query.sub_category_id,
       isActive: req.query.is_active,
+      minPrice: req.query.min_price,
+      maxPrice: req.query.max_price,
     });
     const { rows, total } = await productsService.listProducts(req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);

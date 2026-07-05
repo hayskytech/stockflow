@@ -157,6 +157,14 @@ export async function listProducts(listQuery, filters) {
     conditions.push('p.is_active = ?');
     params.push(filters.isActive);
   }
+  if (filters.minPrice !== undefined) {
+    conditions.push('p.wsp >= ?');
+    params.push(filters.minPrice);
+  }
+  if (filters.maxPrice !== undefined) {
+    conditions.push('p.wsp <= ?');
+    params.push(filters.maxPrice);
+  }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const orderColumn = SORT_COLUMNS[orderby] ?? SORT_COLUMNS.created_at;
 
@@ -211,7 +219,7 @@ export async function createProduct(input) {
         input.size ?? null,
         input.mrp,
         input.wsp,
-        input.quantityAvailable ?? 0,
+        0, // quantity_available always starts at 0 — only Stock Import, order reserve/release, and dispatch move it
         input.reorderLevel ?? 0,
         input.unit ?? 'pc',
         photoMedia?.id ?? null,
@@ -267,7 +275,6 @@ export async function updateProduct(id, input) {
     size: 'size',
     mrp: 'mrp',
     wsp: 'wsp',
-    quantityAvailable: 'quantity_available',
     reorderLevel: 'reorder_level',
     unit: 'unit',
     isActive: 'is_active',
