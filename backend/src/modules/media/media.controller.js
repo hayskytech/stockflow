@@ -1,6 +1,6 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
-import { attachUsageSchema, detachUsageSchema, idParamSchema, listMediaQuerySchema } from './media.schema.js';
+import { attachUsageSchema, detachUsageSchema, idParamSchema, listMediaQuerySchema, renameMediaSchema } from './media.schema.js';
 import * as mediaService from './media.service.js';
 
 function parseOrThrow(schema, data) {
@@ -41,6 +41,18 @@ export async function getMedia(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const media = await mediaService.getMediaById(id);
+    res.status(200).json(media);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** PATCH /api/media/:id — renames the file's display name only, does not touch storage_path. */
+export async function renameMedia(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    const { originalName } = parseOrThrow(renameMediaSchema, req.body);
+    const media = await mediaService.renameMedia(id, originalName);
     res.status(200).json(media);
   } catch (err) {
     next(err);

@@ -8,6 +8,11 @@ export const MEDIA_ENTITY_TYPES = ['product'];
 
 export const idParamSchema = z.object({ id: uuidField });
 
+/** PATCH /api/media/:id */
+export const renameMediaSchema = z.object({
+  originalName: z.string().trim().min(1, 'File name is required').max(255, 'File name is too long'),
+});
+
 /** GET /api/media?search= */
 export const listMediaQuerySchema = z.object({
   unusedOnly: z

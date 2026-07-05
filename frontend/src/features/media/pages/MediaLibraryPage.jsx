@@ -1,42 +1,66 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { EmptyState } from "@/components/common/EmptyState"
-import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { UppyUploader } from "@/components/common/UppyUploader"
-import { useMediaList, useDeleteMedia } from "@/features/media/hooks/use-media"
+import { MEDIA_QUERY_KEY, useMediaList } from "@/features/media/hooks/use-media"
 import { useMediaStore } from "@/features/media/media.store"
 import { resolveMediaUrl } from "@/lib/media"
+import { ROUTES } from "@/constants/routes"
 
 export function MediaLibraryPage() {
   const { search, setSearch, page, setPage } = useMediaStore()
   const [unusedOnly, setUnusedOnly] = useState(false)
-  const [pendingDeleteId, setPendingDeleteId] = useState(null)
-  const [deleteError, setDeleteError] = useState("")
+  const [showUploader, setShowUploader] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data, isLoading, isError } = useMediaList({ search, page, per_page: 24, unused_only: unusedOnly })
-  const deleteMedia = useDeleteMedia()
   const items = data?.items ?? []
 
-  async function handleConfirmDelete() {
-    setDeleteError("")
-    try {
-      await deleteMedia.mutateAsync(pendingDeleteId)
-      setPendingDeleteId(null)
-    } catch (err) {
-      setDeleteError(err.response?.data?.message ?? "Could not delete this media item")
-    }
+  function handleUploaded() {
+    setPage(1)
+    queryClient.invalidateQueries({ queryKey: [MEDIA_QUERY_KEY] })
   }
 
   return (
     <PageWrapper>
-      <PageHeader title="Media Library" description="Images uploaded across StockFlow — reuse them or remove what's no longer needed" />
+      <PageHeader
+        title="Media Library"
+        description="Images uploaded across StockFlow — reuse them or remove what's no longer needed"
+        actions={
+          <button
+            id="media-upload-toggle"
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowUploader((prev) => !prev)}
+          >
+            <i className="fas fa-upload mr-1" /> Upload
+          </button>
+        }
+      />
 
-      <div className="card mb-3">
-        <div className="card-body">
-          <UppyUploader onUploaded={() => setPage(1)} />
+      {showUploader ? (
+        <div className="card mb-3">
+          <div className="card-header">
+            <h3 className="card-title">Upload files</h3>
+            <div className="card-tools">
+              <button
+                id="media-upload-close"
+                type="button"
+                className="btn btn-tool"
+                onClick={() => setShowUploader(false)}
+              >
+                <i className="fas fa-times" />
+              </button>
+            </div>
+          </div>
+          <div className="card-body">
+            <UppyUploader onUploaded={handleUploaded} />
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="card">
         <div className="card-body">
@@ -70,8 +94,6 @@ export function MediaLibraryPage() {
             </div>
           </div>
 
-          {deleteError ? <div className="alert alert-danger">{deleteError}</div> : null}
-
           {isLoading ? (
             <div className="text-center py-5">
               <div className="spinner-border text-primary" role="status" />
@@ -84,22 +106,15 @@ export function MediaLibraryPage() {
             <div className="row">
               {items.map((media) => (
                 <div key={media.id} className="col-6 col-md-3 col-lg-2 mb-4">
-                  <div className="card h-100">
+                  <Link to={ROUTES.MEDIA_LIBRARY.DETAIL(media.id)} className="card h-100 text-decoration-none">
                     <img src={resolveMediaUrl(media.url)} alt={media.originalName ?? ""} className="card-img-top" style={{ aspectRatio: "1 / 1", objectFit: "cover" }} />
                     <div className="card-body p-2">
                       <p className="small text-muted mb-1 text-truncate" title={media.originalName ?? ""}>
                         {media.originalName ?? "Untitled"}
                       </p>
-                      <p className="small text-muted mb-2">{Math.round(media.sizeBytes / 1024)} KB</p>
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm btn-block"
-                        onClick={() => setPendingDeleteId(media.id)}
-                      >
-                        Delete
-                      </button>
+                      <p className="small text-muted mb-0">{Math.round(media.sizeBytes / 1024)} KB</p>
                     </div>
-                  </div>
+                  </Link>
                 </div>
               ))}
             </div>
@@ -133,14 +148,6 @@ export function MediaLibraryPage() {
           ) : null}
         </div>
       </div>
-
-      <ConfirmDialog
-        open={Boolean(pendingDeleteId)}
-        title="Delete media item?"
-        message="This permanently removes the file. It can't be undone, and it's blocked if anything still uses it."
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setPendingDeleteId(null)}
-      />
     </PageWrapper>
   )
 }

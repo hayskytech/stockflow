@@ -5,6 +5,7 @@ import {
   detachMediaUsageApi,
   getMediaApi,
   listMediaApi,
+  renameMediaApi,
 } from "@/features/media/media.api"
 
 export const MEDIA_QUERY_KEY = "media"
@@ -21,6 +22,14 @@ export function useMediaItem(id) {
     queryKey: [MEDIA_QUERY_KEY, id],
     queryFn: () => getMediaApi(id),
     enabled: Boolean(id),
+  })
+}
+
+export function useRenameMedia() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, originalName }) => renameMediaApi(id, originalName),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [MEDIA_QUERY_KEY] }),
   })
 }
 

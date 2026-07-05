@@ -19,6 +19,11 @@ export async function getMediaApi(id) {
   return data
 }
 
+export async function renameMediaApi(id, originalName) {
+  const { data } = await apiClient.patch(API_ENDPOINTS.MEDIA.BY_ID(id), { originalName })
+  return data
+}
+
 export async function deleteMediaApi(id) {
   await apiClient.delete(API_ENDPOINTS.MEDIA.BY_ID(id))
 }

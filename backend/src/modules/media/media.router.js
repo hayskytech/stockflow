@@ -11,6 +11,7 @@ import {
   detachUsage,
   getMedia,
   listMedia,
+  renameMedia,
   sweepOrphans,
   uploadMedia,
 } from './media.controller.js';
@@ -53,6 +54,7 @@ function handleUpload(req, res, next) {
 mediaRouter.get('/', authenticate, mediaPagination, listMedia);
 mediaRouter.get('/:id', authenticate, getMedia);
 mediaRouter.post('/', authenticate, requireRole('admin', 'staff'), handleUpload, uploadMedia);
+mediaRouter.patch('/:id', authenticate, requireRole('admin', 'staff'), renameMedia);
 mediaRouter.post('/:id/usage', authenticate, requireRole('admin', 'staff'), attachUsage);
 mediaRouter.delete('/:id/usage', authenticate, requireRole('admin', 'staff'), detachUsage);
 mediaRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteMedia);

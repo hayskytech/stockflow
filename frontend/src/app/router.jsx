@@ -22,6 +22,7 @@ import { ProductFormPage } from "@/features/products/pages/ProductFormPage"
 import { StockPage } from "@/features/stock/pages/StockPage"
 import { StockLedgerPage } from "@/features/stock-ledger/pages/StockLedgerPage"
 import { MediaLibraryPage } from "@/features/media/pages/MediaLibraryPage"
+import { MediaDetailPage } from "@/features/media/pages/MediaDetailPage"
 import { OrdersPage } from "@/features/orders/pages/OrdersPage"
 import { OrderDetailPage } from "@/features/orders/pages/OrderDetailPage"
 import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
@@ -140,8 +141,12 @@ export const router = createHashRouter([
         element: <StockLedgerPage />,
       },
       {
-        path: ROUTES.MEDIA_LIBRARY,
+        path: ROUTES.MEDIA_LIBRARY.LIST,
         element: <MediaLibraryPage />,
+      },
+      {
+        path: "/media-library/:id",
+        element: <MediaDetailPage />,
       },
       {
         path: ROUTES.ORDERS.LIST,

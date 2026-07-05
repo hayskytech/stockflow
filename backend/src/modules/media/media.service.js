@@ -144,6 +144,12 @@ export async function getMediaById(id) {
   return withUrl(row);
 }
 
+export async function renameMedia(id, originalName) {
+  await getMediaById(id); // 404s if it doesn't exist
+  await executeQuery(`UPDATE media SET original_name = ? WHERE id = ?`, [originalName, id]);
+  return getMediaById(id);
+}
+
 export async function attachUsage(mediaId, entityType, entityId) {
   await getMediaById(mediaId); // 404s if it doesn't exist
   await executeQuery(

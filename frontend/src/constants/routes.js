@@ -28,7 +28,10 @@ export const ROUTES = {
     LIST: "/stock",
   },
   STOCK_LEDGER: "/stock-ledger",
-  MEDIA_LIBRARY: "/media-library",
+  MEDIA_LIBRARY: {
+    LIST: "/media-library",
+    DETAIL: (id) => `/media-library/${id}`,
+  },
   ORDERS: {
     LIST: "/orders",
     DETAIL: (id) => `/orders/${id}`,
