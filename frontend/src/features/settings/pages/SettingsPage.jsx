@@ -10,6 +10,9 @@ const DELETED_LABELS = {
   orders: "Orders",
   stock: "Stock units",
   stockLedger: "Stock ledger entries",
+  divisions: "Divisions",
+  categories: "Categories",
+  subCategories: "Sub-categories",
   media: "Media uploads",
   users: "Users",
 }
@@ -50,9 +53,9 @@ export function SettingsPage() {
           <div className="card-body">
             <p>
               <strong>Delete All Data</strong> removes every product, order, stock unit, stock ledger entry,
-              media upload (including files on disk) and all users except the seeded admin/staff accounts.
-              Warehouse settings and the catalog (divisions, categories, sub-categories) are kept.
-              This cannot be undone.
+              the whole catalog (divisions, categories, sub-categories), media uploads (including files on
+              disk) and all users except the seeded admin/staff accounts. Only warehouse settings and the
+              seed users are kept. This cannot be undone.
             </p>
 
             {result ? (
@@ -116,7 +119,7 @@ export function SettingsPage() {
       <ConfirmDialog
         open={confirmOpen}
         title="Delete all data?"
-        message="This permanently deletes all products, orders, stock, ledger entries, media files and non-seed users. There is no way to undo this."
+        message="This permanently deletes all products, orders, stock, ledger entries, the catalog tree, media files and non-seed users. There is no way to undo this."
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />

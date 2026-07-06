@@ -12,22 +12,27 @@ const SEED_USER_IDS = [
 
 /**
  * Dev-only wipe of all transactional data: stock, stock ledger, orders (+items via
- * cascade), products (+gallery rows via cascade), media (+usage rows via cascade,
- * plus the files on disk) and every non-seed user (their sessions cascade).
- * Warehouse settings and the catalog tree (divisions/categories/sub-categories) are kept.
+ * cascade), products (+gallery rows via cascade), the catalog tree (sub-categories,
+ * categories, divisions), media (+usage rows via cascade, plus the files on disk)
+ * and every non-seed user (their sessions cascade). Only warehouse settings and the
+ * seed users are kept.
  */
 export async function deleteAllData() {
   const { deleted, mediaPaths } = await withTransaction(async (execute) => {
     const mediaRows = await execute(`SELECT storage_path AS storagePath FROM media`);
 
-    // Child tables first: stock/stock_ledger RESTRICT products; orders RESTRICT users;
-    // media RESTRICT users. order_items, product_gallery_images, media_usage and
+    // Child tables first: stock/stock_ledger RESTRICT products; products RESTRICT
+    // categories/sub-categories, which RESTRICT up the catalog tree; orders and media
+    // RESTRICT users. order_items, product_gallery_images, media_usage and
     // refresh_tokens all cascade from their parents.
     const deleted = {
       stock: (await execute(`DELETE FROM stock`)).affectedRows,
       stockLedger: (await execute(`DELETE FROM stock_ledger`)).affectedRows,
       orders: (await execute(`DELETE FROM orders`)).affectedRows,
       products: (await execute(`DELETE FROM products`)).affectedRows,
+      subCategories: (await execute(`DELETE FROM sub_categories`)).affectedRows,
+      categories: (await execute(`DELETE FROM categories`)).affectedRows,
+      divisions: (await execute(`DELETE FROM divisions`)).affectedRows,
       media: (await execute(`DELETE FROM media`)).affectedRows,
       users: (
         await execute(
