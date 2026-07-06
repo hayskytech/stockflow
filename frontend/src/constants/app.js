@@ -18,6 +18,7 @@ export const MEDIA = {
 export const STORAGE_KEYS = {
   CART: "stockflow-cart",
   SCAN_SESSION: "stockflow-scan-session",
+  DISPATCH_SCAN_SESSION: "stockflow-dispatch-scan-session",
 }
 
 /** Barcode-scan stock intake (see features/stock/pages/ScanStockPage.jsx). */

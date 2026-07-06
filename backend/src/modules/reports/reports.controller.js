@@ -1,5 +1,5 @@
 import { AppError } from '../../middleware/errorHandler.js';
-import { orderHistoryQuerySchema } from './reports.schema.js';
+import { orderHistoryQuerySchema, stockMovementQuerySchema } from './reports.schema.js';
 import * as reportsService from './reports.service.js';
 
 function parseOrThrow(schema, data) {
@@ -13,6 +13,17 @@ export async function getStockSummary(req, res, next) {
   try {
     const summary = await reportsService.getStockSummary();
     res.status(200).json(summary);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/reports/stock-movement */
+export async function getStockMovement(req, res, next) {
+  try {
+    const { days } = parseOrThrow(stockMovementQuerySchema, { days: req.query.days });
+    const movement = await reportsService.getStockMovement(days);
+    res.status(200).json(movement);
   } catch (err) {
     next(err);
   }

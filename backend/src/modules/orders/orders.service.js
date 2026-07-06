@@ -96,7 +96,7 @@ export async function getOrderById(id, requester) {
   );
 
   let duplicateTransactionCount = 0;
-  if (requester?.role !== 'customer') {
+  if (requester?.role !== 'customer' && order.transactionId) {
     const [dupRow] = await executeQuery(`SELECT COUNT(*) AS count FROM orders WHERE transaction_id = ? AND id != ?`, [
       order.transactionId,
       id,
@@ -108,11 +108,20 @@ export async function getOrderById(id, requester) {
 }
 
 export async function createOrder(input, userId) {
+  // Manual order: admin/staff place the order on behalf of a customer — the order belongs to
+  // that customer (requested_by) exactly as if they had placed it themselves.
+  const ownerId = input.requestedFor ?? userId;
+  if (input.requestedFor) {
+    const [owner] = await executeQuery(`SELECT id, is_active AS isActive FROM users WHERE id = ?`, [input.requestedFor]);
+    if (!owner) throw new AppError(404, 'Selected customer not found');
+    if (!owner.isActive) throw new AppError(409, 'Selected customer account is deactivated');
+  }
+
   // Idempotency: a repeat submit with the same key (double-click, retry, back-button) returns
   // the order already created for it instead of reserving stock a second time.
   const [existingByKey] = await executeQuery(`SELECT id FROM orders WHERE idempotency_key = ? AND requested_by = ?`, [
     input.idempotencyKey,
-    userId,
+    ownerId,
   ]);
   if (existingByKey) return getOrderById(existingByKey.id);
 
@@ -175,12 +184,13 @@ export async function createOrder(input, userId) {
              id, order_number, requested_by, status, payment_method, transaction_id, payment_status,
              total_amount, shipping_name, shipping_phone, shipping_address_line1, shipping_address_line2,
              shipping_city, shipping_state, shipping_pincode, idempotency_key, notes
-           ) VALUES (?, ?, ?, 'pending', 'bank_transfer', ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           ) VALUES (?, ?, ?, 'pending', ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             orderId,
             orderNumber,
-            userId,
-            input.transactionId,
+            ownerId,
+            input.paymentMethod ?? 'bank_transfer',
+            input.transactionId ?? null,
             totalAmount.toFixed(2),
             input.shippingName,
             input.shippingPhone,
@@ -233,11 +243,11 @@ export async function createOrder(input, userId) {
 }
 
 // Order lifecycle: pending -> accepted -> dispatched -> completed, with rejected/cancelled
-// as terminal exits from pending. Dispatch is just another status on this timeline — there's
-// no separate dispatches resource.
+// as terminal exits from pending. The accepted -> dispatched transition is NOT allowed here:
+// it only happens inside the dispatches module (POST /dispatches), which scan-verifies the
+// physical units before flipping the status in the same transaction.
 const ALLOWED_TRANSITIONS = {
   pending: ['accepted', 'rejected', 'cancelled'],
-  accepted: ['dispatched'],
   dispatched: ['completed'],
 };
 
@@ -260,27 +270,6 @@ export async function updateOrderStatus(id, status, requester) {
   const items = await executeQuery(`SELECT product_id AS productId, quantity FROM order_items WHERE order_id = ?`, [
     id,
   ]);
-
-  if (status === 'dispatched') {
-    // Stock already left quantity_available when the order was placed — dispatch only
-    // consumes the reservation, it never touches quantity_available.
-    await withTransaction(async (execute) => {
-      for (const item of items) {
-        await execute(`UPDATE products SET quantity_reserved = quantity_reserved - ? WHERE id = ?`, [
-          item.quantity,
-          item.productId,
-        ]);
-        await execute(
-          `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-           VALUES (?, 'out', ?, 'order', ?, 'Order dispatched — reserved stock consumed')`,
-          [item.productId, item.quantity, id],
-        );
-      }
-      await execute(`UPDATE stock SET status = 'dispatched' WHERE order_id = ? AND status = 'reserved'`, [id]);
-      await execute(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
-    });
-    return getOrderById(id, requester);
-  }
 
   // rejected / cancelled — release the stock this order had reserved.
   await withTransaction(async (execute) => {

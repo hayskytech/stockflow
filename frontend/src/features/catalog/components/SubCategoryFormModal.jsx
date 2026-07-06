@@ -18,6 +18,7 @@ export function SubCategoryFormModal({ open, subCategory, categories, onClose, o
       open={open}
       title={subCategory ? "Edit Sub-category" : "Add Sub-category"}
       onClose={onClose}
+      closeOnBackdrop={false}
       footer={
         <>
           <button type="button" className="btn btn-secondary" onClick={onClose}>

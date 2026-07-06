@@ -10,7 +10,8 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "format": "prettier --write src",
-    "format:check": "prettier --check src"
+    "format:check": "prettier --check src",
+    "import:stock": "node --env-file=.env scripts/import-stock-csv.js"
   },
   "keywords": [],
   "author": "",

@@ -43,6 +43,7 @@ export function UserFormModal({ open, user, onClose, onSubmit, isSubmitting, ser
       open={open}
       title={isEdit ? "Edit User" : "Add User"}
       onClose={onClose}
+      closeOnBackdrop={false}
       footer={
         <>
           <button type="button" className="btn btn-secondary" onClick={onClose}>

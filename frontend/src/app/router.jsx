@@ -26,6 +26,10 @@ import { MediaLibraryPage } from "@/features/media/pages/MediaLibraryPage"
 import { MediaDetailPage } from "@/features/media/pages/MediaDetailPage"
 import { OrdersPage } from "@/features/orders/pages/OrdersPage"
 import { OrderDetailPage } from "@/features/orders/pages/OrderDetailPage"
+import { NewOrderPage } from "@/features/orders/pages/NewOrderPage"
+import { DispatchesPage } from "@/features/dispatches/pages/DispatchesPage"
+import { DispatchDetailPage } from "@/features/dispatches/pages/DispatchDetailPage"
+import { DispatchOrderPage } from "@/features/dispatches/pages/DispatchOrderPage"
 import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
 import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
@@ -159,8 +163,24 @@ export const router = createHashRouter([
         element: <OrdersPage />,
       },
       {
+        path: ROUTES.ORDERS.NEW,
+        element: <NewOrderPage />,
+      },
+      {
         path: "/orders/:id",
         element: <OrderDetailPage />,
+      },
+      {
+        path: "/orders/:id/dispatch",
+        element: <DispatchOrderPage />,
+      },
+      {
+        path: ROUTES.DISPATCHES.LIST,
+        element: <DispatchesPage />,
+      },
+      {
+        path: "/dispatches/:id",
+        element: <DispatchDetailPage />,
       },
       {
         path: ROUTES.REPORTS,

@@ -98,7 +98,21 @@ export function OrdersPage() {
 
   return (
     <PageWrapper>
-      <PageHeader title="Orders" description="Orders placed against the warehouse" />
+      <PageHeader
+        title="Orders"
+        description="Orders placed against the warehouse"
+        actions={
+          <button
+            type="button"
+            id="orders-new-button"
+            className="btn btn-primary"
+            onClick={() => navigate(ROUTES.ORDERS.NEW)}
+          >
+            <i className="fas fa-plus mr-1" />
+            New Order
+          </button>
+        }
+      />
 
       <div className="card">
         <div className="card-body">

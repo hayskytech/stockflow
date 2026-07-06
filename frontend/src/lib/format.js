@@ -16,6 +16,21 @@ export function stockBadge(quantityAvailable, reorderLevel) {
  * treat them as *local* time instead of UTC. Normalize to ISO-with-`Z` first so the browser
  * always interprets them as UTC before converting to IST.
  */
+/**
+ * Formats a date-only string ("YYYY-MM-DD") for display. No timezone conversion — a plain
+ * date has no time component to shift, so converting would move it across midnight.
+ */
+export function formatDateIST(value) {
+  if (!value) return ""
+  const [year, month, day] = value.split("-").map(Number)
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-IN", {
+    timeZone: "UTC",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  })
+}
+
 export function formatDateTimeIST(value) {
   if (!value) return ""
   const isoUtc = value.includes("T") ? value : `${value.replace(" ", "T")}Z`

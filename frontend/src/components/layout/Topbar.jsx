@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
@@ -6,9 +6,22 @@ import { ROUTES } from "@/constants/routes"
 
 export function Topbar({ onToggleSidebar }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const navigate = useNavigate()
+
+  // Clicking anywhere outside the dropdown closes it (mirrors Bootstrap's own behavior).
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    function handleOutsideClick(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick)
+    return () => document.removeEventListener("mousedown", handleOutsideClick)
+  }, [menuOpen])
 
   async function handleLogout() {
     try {
@@ -42,7 +55,7 @@ export function Topbar({ onToggleSidebar }) {
             View Store
           </a>
         </li>
-        <li className={`nav-item dropdown ${menuOpen ? "show" : ""}`}>
+        <li ref={menuRef} className={`nav-item dropdown ${menuOpen ? "show" : ""}`}>
           <button
             type="button"
             className="nav-link btn btn-link"
@@ -54,6 +67,18 @@ export function Topbar({ onToggleSidebar }) {
           <div className={`dropdown-menu dropdown-menu-lg dropdown-menu-right ${menuOpen ? "show" : ""}`}>
             {user?.role === "admin" ? (
               <>
+                <button
+                  type="button"
+                  id="topbar-warehouse-link"
+                  className="dropdown-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate(ROUTES.WAREHOUSE)
+                  }}
+                >
+                  <i className="fas fa-warehouse mr-2" />
+                  Warehouse
+                </button>
                 <button
                   type="button"
                   id="topbar-settings-link"

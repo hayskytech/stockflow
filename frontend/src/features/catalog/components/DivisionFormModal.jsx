@@ -14,6 +14,7 @@ export function DivisionFormModal({ open, division, onClose, onSubmit, isSubmitt
       open={open}
       title={division ? "Edit Division" : "Add Division"}
       onClose={onClose}
+      closeOnBackdrop={false}
       footer={
         <>
           <button type="button" className="btn btn-secondary" onClick={onClose}>

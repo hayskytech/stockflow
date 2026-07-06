@@ -47,13 +47,22 @@ export const API_ENDPOINTS = {
   STOCK_LEDGER: "/stock-ledger",
   ORDERS: {
     LIST: "/orders",
+    CREATE: "/orders",
     BY_ID: (id) => `/orders/${id}`,
     STATUS: (id) => `/orders/${id}/status`,
     PAYMENT_STATUS: (id) => `/orders/${id}/payment-status`,
   },
+  DISPATCHES: {
+    LIST: "/dispatches",
+    CREATE: "/dispatches",
+    BY_ID: (id) => `/dispatches/${id}`,
+    BARCODE_STATUS: "/dispatches/barcode-status",
+    IMPORT: "/dispatches/import",
+  },
   REPORTS: {
     STOCK_SUMMARY: "/reports/stock-summary",
     ORDER_HISTORY: "/reports/order-history",
+    STOCK_MOVEMENT: "/reports/stock-movement",
   },
   SETTINGS: {
     DELETE_ALL_DATA: "/settings/delete-all-data",

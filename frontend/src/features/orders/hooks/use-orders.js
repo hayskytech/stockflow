@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  createOrderApi,
   getOrderApi,
   listOrdersApi,
   updateOrderStatusApi,
@@ -26,6 +27,20 @@ export function useOrder(id) {
     queryKey: [ORDERS_QUERY_KEY, id],
     queryFn: () => getOrderApi(id),
     enabled: Boolean(id),
+  })
+}
+
+/** Manual order placement by admin/staff — reserves stock, so stock/products caches change too. */
+export function useCreateOrder() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createOrderApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ORDERS_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
+    },
   })
 }
 

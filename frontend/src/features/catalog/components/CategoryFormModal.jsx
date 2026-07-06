@@ -18,6 +18,7 @@ export function CategoryFormModal({ open, category, divisions, onClose, onSubmit
       open={open}
       title={category ? "Edit Category" : "Add Category"}
       onClose={onClose}
+      closeOnBackdrop={false}
       footer={
         <>
           <button type="button" className="btn btn-secondary" onClick={onClose}>

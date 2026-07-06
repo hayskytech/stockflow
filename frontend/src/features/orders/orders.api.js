@@ -20,6 +20,12 @@ export async function getOrderApi(id) {
   return data
 }
 
+/** Manual order entered by admin/staff on behalf of a customer (offline or bank transfer). */
+export async function createOrderApi(payload) {
+  const { data } = await apiClient.post(API_ENDPOINTS.ORDERS.CREATE, payload)
+  return data
+}
+
 export async function updateOrderStatusApi(id, status) {
   const { data } = await apiClient.patch(API_ENDPOINTS.ORDERS.STATUS(id), { status })
   return data

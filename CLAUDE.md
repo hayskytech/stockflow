@@ -54,9 +54,10 @@ backend/src/
     warehouse/   ...
     catalog/     ...   # divisions, categories, sub_categories
     products/    ...
-    inward/      ...
+    stock/       ...   # per-unit barcoded stock: manual scan-add + xlsx/csv import
     stockLedger/ ...
     orders/      ...
+    dispatches/  ...   # scan-verified outward dispatch of accepted orders
     reports/     ...
     settings/    ...   # system administration (dev-only delete-all-data reset)
   utils/jwt.js, logger.js
@@ -255,10 +256,11 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 - **Warehouse** — `GET /warehouse`, `PUT /warehouse` — single-record settings (name, address, contact); admin only for write.
 - **Catalog** — `divisions`, `categories`, `sub_categories` — `GET /divisions`, `GET /categories` (`division_id`), `GET /sub-categories` (`category_id`), CRUD on each — admin only for write; staff read-only. Deleting a division/category/sub-category that still has children or products is rejected (`ON DELETE RESTRICT`) — deactivate (`is_active=false`) instead.
 - **Products** — `GET /products` (`search`, `division_id`, `category_id`, `sub_category_id`, `brand_id`, `is_active`), CRUD — admin/staff for write. `mrp`/`wsp` validated `wsp <= mrp`; `product_code`/`barcode` unique.
-- **Inward** — `POST /inward` (receive stock against a product: qty, supplier, invoice) — admin/staff; increments `products.quantity_available` and writes a `stock_ledger` row.
-- **Stock Ledger** — `GET /stock-ledger` (`product_id`, `movement_type`, `date_from`, `date_to`) — read-only, append-only log of every stock movement (inward, order reserve/release, dispatch, adjustment).
-- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`), `POST /orders` (reserves stock per line, all-or-nothing), `PATCH /orders/:id/status`. Status is a single lifecycle field, not a separate resource: `pending` → `accepted` → `dispatched` → `completed`, with `rejected`/`cancelled` as terminal exits from `pending`. Reject/cancel releases reserved stock; dispatch consumes the reservation (never touches `quantity_available` directly, since that was already decremented when the order was placed).
-- **Reports** — `GET /reports/stock-summary` (includes low-stock: `quantity_available <= reorder_level`), `GET /reports/order-history` (`date_from`, `date_to`) — aggregate queries.
+- **Stock** — `GET /stock` (`search`, `product_id`, `status`, `invoice_no`, `order_id`, `date_from`, `date_to`), `GET /stock/:id`, `POST /stock` (manual barcode scan-add against a product), `POST /stock/import` (bulk `.xlsx`/`.csv`), `POST /stock/barcode-status` (advisory pre-check while scanning), `DELETE /stock/:id` — admin/staff; one row per physical barcoded unit (`in_stock` → `reserved` → `dispatched`); every create/delete writes a `stock_ledger` row and keeps `products.quantity_available` in sync.
+- **Stock Ledger** — `GET /stock-ledger` (`product_id`, `movement_type`, `date_from`, `date_to`) — read-only, append-only log of every stock movement (import, order reserve/release, dispatch, adjustment).
+- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`), `POST /orders` (reserves specific stock units per line, all-or-nothing; admin/staff may pass `requestedFor` + `paymentMethod: 'offline'` for manual walk-in/phone orders), `PATCH /orders/:id/status`. Lifecycle: `pending` → `accepted` → `dispatched` → `completed`, with `rejected`/`cancelled` as terminal exits from `pending`. Reject/cancel releases reserved stock. The `accepted` → `dispatched` transition is NOT allowed via PATCH — it only happens through `POST /dispatches` (scan-verified).
+- **Dispatches** — `GET /dispatches`, `GET /dispatches/:id`, `POST /dispatches` (orderId + scanned barcodes: every unit is verified before the order leaves; scanning a different in_stock unit of an ordered product swaps it in and releases the auto-reserved one), `POST /dispatches/barcode-status` (advisory per-barcode check: matched/swap/wrong_product/unavailable/unknown), `POST /dispatches/import` (barcode file instead of live scanning) — admin/staff. Creates a `dispatches` row + one `dispatch_items` row per unit (audit of exactly which barcodes left) and flips the order to `dispatched` in the same transaction.
+- **Reports** — `GET /reports/stock-summary` (includes low-stock: `quantity_available <= reorder_level`), `GET /reports/order-history` (`days`), `GET /reports/stock-movement` (`days` — daily physical in/out from `stock_ledger`, counting only `import`/`adjustment`/`dispatch` rows) — aggregate queries.
 - **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Plus session endpoints above.
 
 All write routes (`POST`/`PUT`/`PATCH`/`DELETE`) go through `authenticate` + `requireRole(...)`; list/read routes go through `authenticate` + `pagination`.

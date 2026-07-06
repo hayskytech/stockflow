@@ -33,8 +33,16 @@ export function ProductImportModal({ open, onClose }) {
   if (!open) return null
 
   return (
-    <div className="modal d-block" tabIndex={-1} role="dialog" style={{ background: "rgba(0,0,0,0.5)" }}>
-      <div className="modal-dialog" role="document">
+    <div
+      className="modal d-block"
+      tabIndex={-1}
+      role="dialog"
+      style={{ background: "rgba(0,0,0,0.5)", overflowY: "auto" }}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !importProducts.isPending) handleClose()
+      }}
+    >
+      <div className="modal-dialog modal-dialog-scrollable" role="document">
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">Import Products</h5>

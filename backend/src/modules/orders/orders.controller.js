@@ -47,6 +47,10 @@ export async function getOrder(req, res, next) {
 export async function createOrder(req, res, next) {
   try {
     const input = parseOrThrow(createOrderSchema, req.body);
+    const isManualOrder = input.requestedFor !== undefined || input.paymentMethod === 'offline';
+    if (isManualOrder && req.user.role !== 'admin' && req.user.role !== 'staff') {
+      throw new AppError(403, 'Only admin or staff can create manual orders');
+    }
     const order = await ordersService.createOrder(input, req.user.sub);
     res.status(201).json(order);
   } catch (err) {

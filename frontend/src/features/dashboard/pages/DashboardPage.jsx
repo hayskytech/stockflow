@@ -28,39 +28,63 @@ export function DashboardPage() {
         <>
           <div className="row">
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-info">
-                <div className="inner">
-                  <h3 id="dashboard-products-count">{stockSummary.activeProducts}</h3>
-                  <p>Products</p>
+              <div className="card stat-card">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-info-subtle text-info">
+                    <i className="fas fa-shirt" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Products</span>
+                    <h3 id="dashboard-products-count" className="stat-card-value">
+                      {stockSummary.activeProducts}
+                    </h3>
+                  </div>
                 </div>
-                <i className="small-box-icon fas fa-shirt" />
               </div>
             </div>
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-success">
-                <div className="inner">
-                  <h3 id="dashboard-pending-orders-count">{orderHistory.byStatus.pending}</h3>
-                  <p>Pending Orders</p>
+              <div className="card stat-card">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-success-subtle text-success">
+                    <i className="fas fa-cart-shopping" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Pending Orders</span>
+                    <h3 id="dashboard-pending-orders-count" className="stat-card-value">
+                      {orderHistory.byStatus.pending}
+                    </h3>
+                  </div>
                 </div>
-                <i className="small-box-icon fas fa-cart-shopping" />
               </div>
             </div>
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-warning">
-                <div className="inner">
-                  <h3 id="dashboard-dispatches-today-count">{orderHistory.dispatchesToday}</h3>
-                  <p>Dispatches Today</p>
+              <div className="card stat-card">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-warning-subtle text-warning">
+                    <i className="fas fa-truck" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Dispatches Today</span>
+                    <h3 id="dashboard-dispatches-today-count" className="stat-card-value">
+                      {orderHistory.dispatchesToday}
+                    </h3>
+                  </div>
                 </div>
-                <i className="small-box-icon fas fa-truck" />
               </div>
             </div>
             <div className="col-lg-3 col-6">
-              <div className="small-box bg-danger">
-                <div className="inner">
-                  <h3 id="dashboard-low-stock-count">{stockSummary.lowStockCount}</h3>
-                  <p>Low Stock Items</p>
+              <div className="card stat-card">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-danger-subtle text-danger">
+                    <i className="fas fa-triangle-exclamation" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Low Stock Items</span>
+                    <h3 id="dashboard-low-stock-count" className="stat-card-value">
+                      {stockSummary.lowStockCount}
+                    </h3>
+                  </div>
                 </div>
-                <i className="small-box-icon fas fa-triangle-exclamation" />
               </div>
             </div>
           </div>

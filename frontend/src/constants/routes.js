@@ -35,7 +35,13 @@ export const ROUTES = {
   },
   ORDERS: {
     LIST: "/orders",
+    NEW: "/orders/new",
     DETAIL: (id) => `/orders/${id}`,
+    DISPATCH: (id) => `/orders/${id}/dispatch`,
+  },
+  DISPATCHES: {
+    LIST: "/dispatches",
+    DETAIL: (id) => `/dispatches/${id}`,
   },
   REPORTS: "/reports",
   USERS: {

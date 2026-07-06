@@ -11,19 +11,30 @@ const orderItemSchema = z.object({
 });
 
 /** POST /api/orders */
-export const createOrderSchema = z.object({
-  items: z.array(orderItemSchema).min(1, 'At least one item is required'),
-  transactionId: z.string().trim().min(6, 'Enter a valid transaction id').max(100, 'Transaction id is too long'),
-  shippingName: z.string().trim().min(2, 'Full name is required').max(100, 'Too long'),
-  shippingPhone: phoneField,
-  shippingAddressLine1: z.string().trim().min(3, 'Address is required').max(200, 'Too long'),
-  shippingAddressLine2: z.string().trim().max(200, 'Too long').optional().or(z.literal('')),
-  shippingCity: z.string().trim().min(2, 'City is required').max(100, 'Too long'),
-  shippingState: z.string().trim().min(2, 'State is required').max(100, 'Too long'),
-  shippingPincode: pincodeField,
-  notes: z.string().trim().max(500, 'Too long').optional().or(z.literal('')),
-  idempotencyKey: z.string().uuid('Invalid idempotency key'),
-});
+export const createOrderSchema = z
+  .object({
+    items: z.array(orderItemSchema).min(1, 'At least one item is required'),
+    // 'offline' = manual order entered by admin/staff, payment settled outside the app —
+    // no transaction id. The controller enforces that only admin/staff may use it.
+    paymentMethod: z.enum(['bank_transfer', 'offline']).default('bank_transfer'),
+    transactionId: z.string().trim().min(6, 'Enter a valid transaction id').max(100, 'Transaction id is too long').optional(),
+    // Admin/staff only: place the order on behalf of this customer (controller enforces role).
+    requestedFor: uuidField.optional(),
+    shippingName: z.string().trim().min(2, 'Full name is required').max(100, 'Too long'),
+    shippingPhone: phoneField,
+    shippingAddressLine1: z.string().trim().min(3, 'Address is required').max(200, 'Too long'),
+    shippingAddressLine2: z.string().trim().max(200, 'Too long').optional().or(z.literal('')),
+    shippingCity: z.string().trim().min(2, 'City is required').max(100, 'Too long'),
+    shippingState: z.string().trim().min(2, 'State is required').max(100, 'Too long'),
+    shippingPincode: pincodeField,
+    notes: z.string().trim().max(500, 'Too long').optional().or(z.literal('')),
+    idempotencyKey: z.string().uuid('Invalid idempotency key'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.paymentMethod === 'bank_transfer' && !data.transactionId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['transactionId'], message: 'Enter a valid transaction id' });
+    }
+  });
 
 /** PATCH /api/orders/:id/status */
 export const updateOrderStatusSchema = z.object({

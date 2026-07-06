@@ -377,8 +377,8 @@ CREATE TABLE orders (
   status        ENUM('pending','accepted','rejected','dispatched','completed','cancelled')
                 NOT NULL DEFAULT 'pending',
 
-  payment_method  ENUM('bank_transfer') NOT NULL DEFAULT 'bank_transfer',
-  transaction_id  VARCHAR(100)  NOT NULL                            COMMENT 'Bank transfer reference/UTR number entered by the customer',
+  payment_method  ENUM('bank_transfer','offline') NOT NULL DEFAULT 'bank_transfer' COMMENT 'offline = manual order entered by admin/staff, payment settled outside the app',
+  transaction_id  VARCHAR(100)  NULL                                COMMENT 'Bank transfer reference/UTR number entered by the customer - NULL for offline orders',
   payment_status  ENUM('pending','verified','rejected') NOT NULL DEFAULT 'pending',
   total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0.00                COMMENT 'Sum of wsp_at_order * quantity - the amount owed',
 
@@ -441,10 +441,6 @@ CREATE TABLE order_items (
   COMMENT='Line items for an order';
 
 
--- Dispatch is a stage in the orders.status lifecycle (see orders.status ENUM above), not a
--- separate resource — there is no dispatches/dispatch_items table.
-
-
 -- =============================================================================
 -- TABLE: stock
 -- One row per physical barcoded unit received against a product (imported in bulk from
@@ -475,6 +471,7 @@ CREATE TABLE stock (
   KEY idx_stock_invoice_no       (invoice_no),
   KEY idx_stock_status           (status),
   KEY idx_stock_order_id         (order_id),
+  KEY idx_stock_created_at       (created_at),
 
   CONSTRAINT fk_stock_product_id
     FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -500,7 +497,7 @@ CREATE TABLE stock_ledger (
   product_id      CHAR(36)        NOT NULL,
   change_type     ENUM('in','out') NOT NULL                         COMMENT 'Stock coming in or going out',
   quantity        INT             NOT NULL                         COMMENT 'Always positive - direction comes from change_type',
-  reference_type  ENUM('order','adjustment','import') NOT NULL,
+  reference_type  ENUM('order','adjustment','import','dispatch') NOT NULL,
   reference_id    CHAR(36)        NULL                              COMMENT 'ID of the order that caused this movement (NULL for imports/adjustments)',
   note            VARCHAR(500)    NULL,
   created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -517,3 +514,67 @@ CREATE TABLE stock_ledger (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Append-only stock movement history';
+
+
+-- =============================================================================
+-- TABLE: dispatches
+-- One row per dispatch event — the scan-verified moment an order's reserved units
+-- physically left the warehouse. The order's status flip to 'dispatched' happens in
+-- the same transaction that creates this row.
+-- =============================================================================
+CREATE TABLE dispatches (
+  id               CHAR(36)     NOT NULL                             COMMENT 'UUID v4 primary key',
+  dispatch_number  VARCHAR(30)  NOT NULL                             COMMENT 'Human-readable dispatch code (e.g. DSP-20260706-A1B2C)',
+  order_id         CHAR(36)     NOT NULL                             COMMENT 'Order this dispatch fulfils (full-order dispatch, one per order)',
+  dispatched_by    CHAR(36)     NOT NULL                             COMMENT 'Admin/staff user who performed the dispatch',
+  courier_name     VARCHAR(100) NULL,
+  awb_number       VARCHAR(100) NULL                                 COMMENT 'Courier tracking / airway bill number',
+  note             VARCHAR(500) NULL,
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_dispatches_dispatch_number (dispatch_number),
+  UNIQUE KEY uq_dispatches_order_id        (order_id),
+  KEY idx_dispatches_created_at            (created_at),
+
+  CONSTRAINT fk_dispatches_order_id
+    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_dispatches_dispatched_by
+    FOREIGN KEY (dispatched_by) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE CASCADE
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='One row per scan-verified dispatch event against an order';
+
+
+-- =============================================================================
+-- TABLE: dispatch_items
+-- One row per physical stock unit that left in a dispatch — the audit trail of
+-- exactly which barcodes went out. barcode is snapshotted so the record stands
+-- alone even though stock rows are never deleted.
+-- =============================================================================
+CREATE TABLE dispatch_items (
+  id           CHAR(36)    NOT NULL                                  COMMENT 'UUID v4 primary key',
+  dispatch_id  CHAR(36)    NOT NULL,
+  stock_id     CHAR(36)    NOT NULL                                  COMMENT 'The stock unit that was dispatched',
+  product_id   CHAR(36)    NOT NULL,
+  barcode      VARCHAR(50) NOT NULL                                  COMMENT 'Snapshot of the unit barcode at dispatch time',
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_dispatch_items_stock_id (stock_id),
+  KEY idx_dispatch_items_dispatch_id    (dispatch_id),
+  KEY idx_dispatch_items_product_id     (product_id),
+  KEY idx_dispatch_items_barcode        (barcode),
+
+  CONSTRAINT fk_dispatch_items_dispatch_id
+    FOREIGN KEY (dispatch_id) REFERENCES dispatches (id) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_dispatch_items_stock_id
+    FOREIGN KEY (stock_id) REFERENCES stock (id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_dispatch_items_product_id
+    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Per-unit audit trail of which barcodes left in a dispatch';

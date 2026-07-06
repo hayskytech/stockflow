@@ -7,7 +7,9 @@ export const useStockStore = create((set) => ({
   search: "",
   setSearch: (search) => set({ search }),
 
-  statusFilter: "",
+  // Defaults to in_stock so the day-to-day view shows only what's physically in the
+  // warehouse — dispatched history is one filter change away, never deleted.
+  statusFilter: "in_stock",
   setStatusFilter: (statusFilter) => set({ statusFilter }),
 
   productFilter: "",

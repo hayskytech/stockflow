@@ -7,6 +7,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
 import { authRouter } from "./modules/auth/auth.router.js";
 import { catalogRouter } from "./modules/catalog/catalog.router.js";
+import { dispatchesRouter } from "./modules/dispatches/dispatches.router.js";
 import { mediaRouter } from "./modules/media/media.router.js";
 import { ordersRouter } from "./modules/orders/orders.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
@@ -53,6 +54,7 @@ app.use("/api/media", mediaRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/warehouse", warehouseRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/dispatches", dispatchesRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/settings", settingsRouter);
 

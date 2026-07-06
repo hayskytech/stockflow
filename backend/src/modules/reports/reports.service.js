@@ -54,6 +54,56 @@ export async function getStockSummary() {
   };
 }
 
+/**
+ * Physical warehouse movement — how much stock came in and went out per day. Counts only
+ * ledger rows that represent units physically entering/leaving ('import', 'adjustment',
+ * 'dispatch'); order reserve/release rows are reservation bookkeeping, not movement.
+ */
+export async function getStockMovement(days) {
+  const [onHand] = await executeQuery(
+    `SELECT
+       COALESCE(SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END), 0) AS availableUnits,
+       COALESCE(SUM(CASE WHEN status = 'reserved' THEN 1 ELSE 0 END), 0) AS reservedUnits
+     FROM stock`,
+  );
+
+  const dailyRows = await executeQuery(
+    `SELECT DATE(created_at) AS date,
+            COALESCE(SUM(CASE WHEN change_type = 'in' THEN quantity ELSE 0 END), 0) AS inQty,
+            COALESCE(SUM(CASE WHEN change_type = 'out' THEN quantity ELSE 0 END), 0) AS outQty
+     FROM stock_ledger
+     WHERE reference_type IN ('import', 'adjustment', 'dispatch')
+       AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+     GROUP BY DATE(created_at)
+     ORDER BY date ASC`,
+    [days - 1],
+  );
+  const dailyByDate = new Map(dailyRows.map((row) => [row.date, row]));
+
+  // Fills in zero-movement days so the trend shows a continuous series, not just active days.
+  const dailyMovement = [];
+  let totalIn = 0;
+  let totalOut = 0;
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() - i);
+    const existing = dailyByDate.get(toDateOnly(date));
+    const inQty = Number(existing?.inQty ?? 0);
+    const outQty = Number(existing?.outQty ?? 0);
+    totalIn += inQty;
+    totalOut += outQty;
+    dailyMovement.push({ date: toDateOnly(date), inQty, outQty });
+  }
+
+  return {
+    availableUnits: Number(onHand.availableUnits),
+    reservedUnits: Number(onHand.reservedUnits),
+    totalIn,
+    totalOut,
+    dailyMovement,
+  };
+}
+
 export async function getOrderHistory(days) {
   const [totals] = await executeQuery(`SELECT COUNT(*) AS totalOrders FROM orders`);
 

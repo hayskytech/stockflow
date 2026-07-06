@@ -148,10 +148,11 @@ export function OrderDetailPage() {
             <div className="card-body">
               <h5 className="card-title">Payment</h5>
               <p className="mb-1">
-                Method: <strong>Bank Transfer</strong>
+                Method: <strong>{order.paymentMethod === "offline" ? "Offline (settled outside the app)" : "Bank Transfer"}</strong>
               </p>
               <p className="mb-1">
-                Transaction ID: <strong id="order-transaction-id">{order.transactionId}</strong>
+                Transaction ID:{" "}
+                <strong id="order-transaction-id">{order.transactionId ?? "—"}</strong>
               </p>
               <p className="mb-2">
                 Status: <PaymentStatusBadge status={order.paymentStatus} />
@@ -202,13 +203,19 @@ export function OrderDetailPage() {
                   </button>
                 </div>
               ) : order.status === "accepted" ? (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => handleStatusChange("dispatched")}
-                >
-                  Mark as Dispatched
-                </button>
+                <>
+                  <Link
+                    to={ROUTES.ORDERS.DISPATCH(order.id)}
+                    id="order-dispatch-button"
+                    className="btn btn-primary btn-block"
+                  >
+                    <i className="fas fa-truck mr-1" />
+                    Dispatch — scan items
+                  </Link>
+                  <p className="text-muted small mb-0">
+                    Each physical unit is scan-verified before the order leaves the warehouse.
+                  </p>
+                </>
               ) : order.status === "dispatched" ? (
                 <button
                   type="button"
