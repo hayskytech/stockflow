@@ -25,10 +25,12 @@ export function useStock(id) {
   })
 }
 
-// Import/delete change products.quantity_available too — invalidated by the products feature's
-// query key string directly (see PRODUCTS_QUERY_KEY in products/hooks/use-products.js) since
-// features never import each other's modules.
+// Import/delete change products.quantity_available and write stock_ledger rows too —
+// invalidated by those features' query key strings directly (see PRODUCTS_QUERY_KEY in
+// products/hooks/use-products.js and STOCK_LEDGER_QUERY_KEY in stock-ledger/hooks/
+// use-stock-ledger.js) since features never import each other's modules.
 const PRODUCTS_QUERY_KEY = "products"
+const STOCK_LEDGER_QUERY_KEY = "stockLedger"
 
 export function useImportStock() {
   const queryClient = useQueryClient()
@@ -37,6 +39,7 @@ export function useImportStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
     },
   })
 }
@@ -49,6 +52,7 @@ export function useCreateStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
     },
   })
 }
@@ -65,6 +69,7 @@ export function useDeleteStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
     },
   })
 }

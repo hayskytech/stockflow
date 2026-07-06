@@ -8,6 +8,12 @@ import {
 
 export const ORDERS_QUERY_KEY = "orders"
 
+// Status changes move stock (reserve/release/dispatch) and write ledger rows — invalidated
+// by key string since features never import each other's modules.
+const STOCK_QUERY_KEY = "stock"
+const STOCK_LEDGER_QUERY_KEY = "stockLedger"
+const PRODUCTS_QUERY_KEY = "products"
+
 export function useOrders(params) {
   return useQuery({
     queryKey: [ORDERS_QUERY_KEY, params],
@@ -27,7 +33,12 @@ export function useUpdateOrderStatus() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ id, status }) => updateOrderStatusApi(id, status),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_QUERY_KEY] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ORDERS_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
+    },
   })
 }
 

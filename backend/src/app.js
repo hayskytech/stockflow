@@ -13,6 +13,7 @@ import { productsRouter } from "./modules/products/products.router.js";
 import { reportsRouter } from "./modules/reports/reports.router.js";
 import { settingsRouter } from "./modules/settings/settings.router.js";
 import { stockRouter } from "./modules/stock/stock.router.js";
+import { stockLedgerRouter } from "./modules/stockLedger/stockLedger.router.js";
 import { usersRouter } from "./modules/users/users.router.js";
 import { warehouseRouter } from "./modules/warehouse/warehouse.router.js";
 
@@ -47,6 +48,7 @@ app.use("/api/auth", authRouter);
 app.use("/api", catalogRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/stock", stockRouter);
+app.use("/api/stock-ledger", stockLedgerRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/warehouse", warehouseRouter);
