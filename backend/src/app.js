@@ -11,6 +11,7 @@ import { mediaRouter } from "./modules/media/media.router.js";
 import { ordersRouter } from "./modules/orders/orders.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
 import { reportsRouter } from "./modules/reports/reports.router.js";
+import { settingsRouter } from "./modules/settings/settings.router.js";
 import { stockRouter } from "./modules/stock/stock.router.js";
 import { usersRouter } from "./modules/users/users.router.js";
 import { warehouseRouter } from "./modules/warehouse/warehouse.router.js";
@@ -51,6 +52,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/warehouse", warehouseRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/settings", settingsRouter);
 
 app.use(errorHandler);
 

@@ -55,4 +55,7 @@ export const API_ENDPOINTS = {
     STOCK_SUMMARY: "/reports/stock-summary",
     ORDER_HISTORY: "/reports/order-history",
   },
+  SETTINGS: {
+    DELETE_ALL_DATA: "/settings/delete-all-data",
+  },
 }

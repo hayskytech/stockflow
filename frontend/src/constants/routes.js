@@ -41,6 +41,7 @@ export const ROUTES = {
   USERS: {
     LIST: "/users",
   },
+  SETTINGS: "/settings",
 }
 
 /** The landing route for a user after login/registration, based on their role. */

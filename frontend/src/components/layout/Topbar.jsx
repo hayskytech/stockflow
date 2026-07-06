@@ -52,6 +52,23 @@ export function Topbar({ onToggleSidebar }) {
             {user?.name ?? "Account"}
           </button>
           <div className={`dropdown-menu dropdown-menu-lg dropdown-menu-right ${menuOpen ? "show" : ""}`}>
+            {user?.role === "admin" ? (
+              <>
+                <button
+                  type="button"
+                  id="topbar-settings-link"
+                  className="dropdown-item"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    navigate(ROUTES.SETTINGS)
+                  }}
+                >
+                  <i className="fas fa-cog mr-2" />
+                  Settings
+                </button>
+                <div className="dropdown-divider" />
+              </>
+            ) : null}
             <button type="button" className="dropdown-item" onClick={handleLogout}>
               <i className="fas fa-sign-out-alt mr-2" />
               Logout

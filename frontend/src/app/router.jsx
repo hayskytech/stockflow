@@ -30,6 +30,7 @@ import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
 import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
+import { SettingsPage } from "@/features/settings/pages/SettingsPage"
 import { UppyUploader } from "@/components/common/UppyUploader"
 
 export const router = createHashRouter([
@@ -168,6 +169,14 @@ export const router = createHashRouter([
       {
         path: ROUTES.USERS.LIST,
         element: <UsersPage />,
+      },
+      {
+        path: ROUTES.SETTINGS,
+        element: (
+          <ProtectedRoute allow={[ROLES.ADMIN]}>
+            <SettingsPage />
+          </ProtectedRoute>
+        ),
       },
     ],
   },
