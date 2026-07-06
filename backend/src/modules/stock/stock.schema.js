@@ -13,3 +13,30 @@ export const listStockQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: uuidField });
+
+const barcodeField = z
+  .string()
+  .trim()
+  .min(1, 'Barcode cannot be empty')
+  .max(50, 'Barcode must be 50 characters or less');
+
+const moneyField = z.coerce.number().min(0, 'Must be a number ≥ 0');
+
+/** POST /api/stock — bulk-create scanned units against one product/invoice. */
+export const scanImportSchema = z
+  .object({
+    productId: uuidField,
+    invoiceNo: z.string().trim().min(1, 'Invoice number is required').max(100, 'Invoice number must be 100 characters or less'),
+    invoiceDate: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invoice date must be YYYY-MM-DD').optional(),
+    mrp: moneyField,
+    wsp: moneyField,
+    size: z.string().trim().max(20, 'Size must be 20 characters or less').optional(),
+    note: z.string().trim().max(500, 'Note must be 500 characters or less').optional(),
+    barcodes: z.array(barcodeField).min(1, 'Scan at least one barcode').max(500, 'A single import is capped at 500 barcodes'),
+  })
+  .refine((data) => data.wsp <= data.mrp, { message: 'WSP cannot be greater than MRP', path: ['wsp'] });
+
+/** POST /api/stock/barcode-status — advisory duplicate check while scanning. */
+export const barcodeStatusSchema = z.object({
+  barcodes: z.array(barcodeField).min(1).max(100),
+});

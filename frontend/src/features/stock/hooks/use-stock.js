@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { deleteStockApi, getStockApi, importStockApi, listStockApi } from "@/features/stock/stock.api"
+import {
+  checkBarcodesApi,
+  createStockApi,
+  deleteStockApi,
+  getStockApi,
+  importStockApi,
+  listStockApi,
+} from "@/features/stock/stock.api"
 
 export const STOCK_QUERY_KEY = "stock"
 
@@ -32,6 +39,23 @@ export function useImportStock() {
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
     },
   })
+}
+
+/** Commits a scan session — bulk-creates one stock row per scanned barcode. */
+export function useCreateStock() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createStockApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
+      queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
+    },
+  })
+}
+
+/** Advisory duplicate check for a batch of freshly scanned barcodes. */
+export function useCheckBarcodes() {
+  return useMutation({ mutationFn: checkBarcodesApi })
 }
 
 export function useDeleteStock() {

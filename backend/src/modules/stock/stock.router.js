@@ -6,7 +6,7 @@ import { authenticate } from '../../middleware/auth.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { pagination } from '../../middleware/pagination.js';
 import { requireRole } from '../../middleware/requireRole.js';
-import { deleteStock, getStock, importStock, listStock } from './stock.controller.js';
+import { barcodeStatus, createStock, deleteStock, getStock, importStock, listStock } from './stock.controller.js';
 
 export const stockRouter = Router();
 
@@ -45,5 +45,7 @@ const stockPagination = pagination({
 // Stock is back-office only — see CLAUDE.md permission matrix (customers never see it).
 stockRouter.get('/', authenticate, requireRole('admin', 'staff'), stockPagination, listStock);
 stockRouter.get('/:id', authenticate, requireRole('admin', 'staff'), getStock);
+stockRouter.post('/', authenticate, requireRole('admin', 'staff'), createStock);
+stockRouter.post('/barcode-status', authenticate, requireRole('admin', 'staff'), barcodeStatus);
 stockRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importStock);
 stockRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteStock);

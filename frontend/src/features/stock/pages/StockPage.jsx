@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -9,6 +10,7 @@ import { useStockStore } from "@/features/stock/stock.store"
 import { useDeleteStock, useStockList } from "@/features/stock/hooks/use-stock"
 import { StockImportModal } from "@/features/stock/components/StockImportModal"
 import { formatMoney } from "@/lib/format"
+import { ROUTES } from "@/constants/routes"
 
 const STATUS_LABELS = {
   in_stock: { label: "In Stock", className: "badge-success" },
@@ -109,10 +111,16 @@ export function StockPage() {
         description="Barcoded physical inventory received against products"
         actions={
           canManage ? (
-            <button type="button" id="stock-import-button" className="btn btn-primary" onClick={() => setImportOpen(true)}>
-              <i className="fas fa-file-import mr-1" />
-              Import
-            </button>
+            <>
+              <Link to={ROUTES.STOCK.SCAN} id="stock-scan-button" className="btn btn-outline-primary mr-2">
+                <i className="fas fa-barcode mr-1" />
+                Scan Items
+              </Link>
+              <button type="button" id="stock-import-button" className="btn btn-primary" onClick={() => setImportOpen(true)}>
+                <i className="fas fa-file-import mr-1" />
+                Import
+              </button>
+            </>
           ) : null
         }
       />

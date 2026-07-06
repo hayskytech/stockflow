@@ -35,6 +35,8 @@ export const API_ENDPOINTS = {
     LIST: "/stock",
     BY_ID: (id) => `/stock/${id}`,
     IMPORT: "/stock/import",
+    CREATE: "/stock",
+    BARCODE_STATUS: "/stock/barcode-status",
   },
   MEDIA: {
     LIST: "/media",

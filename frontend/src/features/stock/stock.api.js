@@ -31,3 +31,15 @@ export async function importStockApi(file) {
 export async function deleteStockApi(id) {
   await apiClient.delete(API_ENDPOINTS.STOCK.BY_ID(id))
 }
+
+/** Bulk-creates scanned stock units — { productId, invoiceNo, ..., barcodes: [] }. */
+export async function createStockApi(payload) {
+  const { data } = await apiClient.post(API_ENDPOINTS.STOCK.CREATE, payload)
+  return data
+}
+
+/** Returns the subset of `barcodes` that already exist in stock (with product/status). */
+export async function checkBarcodesApi(barcodes) {
+  const { data } = await apiClient.post(API_ENDPOINTS.STOCK.BARCODE_STATUS, { barcodes })
+  return data.existing
+}

@@ -1,6 +1,6 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
-import { idParamSchema, listStockQuerySchema } from './stock.schema.js';
+import { barcodeStatusSchema, idParamSchema, listStockQuerySchema, scanImportSchema } from './stock.schema.js';
 import * as stockService from './stock.service.js';
 
 function parseOrThrow(schema, data) {
@@ -45,6 +45,28 @@ export async function importStock(req, res, next) {
     if (!req.file) throw new AppError(400, 'No file uploaded');
     const result = await stockService.importStock(req.file.buffer, req.file.originalname);
     res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** POST /api/stock — bulk-create scanned stock units against one product/invoice */
+export async function createStock(req, res, next) {
+  try {
+    const input = parseOrThrow(scanImportSchema, req.body);
+    const result = await stockService.createStockUnits(input);
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** POST /api/stock/barcode-status — reports which of the given barcodes already exist */
+export async function barcodeStatus(req, res, next) {
+  try {
+    const { barcodes } = parseOrThrow(barcodeStatusSchema, req.body);
+    const existing = await stockService.checkBarcodes(barcodes);
+    res.status(200).json({ existing });
   } catch (err) {
     next(err);
   }

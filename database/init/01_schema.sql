@@ -49,6 +49,10 @@ USE stockflow;
 -- To move to per-unit barcoded stock on an already-provisioned DB, run once:
 --   ALTER TABLE products DROP KEY uq_products_barcode, DROP COLUMN barcode;
 --   -- then create the `stock` table exactly as defined further down in this file.
+--
+-- To record stock intake (file import / barcode-scan import) in the ledger on an
+-- already-provisioned DB, run once:
+--   ALTER TABLE stock_ledger MODIFY reference_type ENUM('order','adjustment','import') NOT NULL;
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
@@ -496,8 +500,8 @@ CREATE TABLE stock_ledger (
   product_id      CHAR(36)        NOT NULL,
   change_type     ENUM('in','out') NOT NULL                         COMMENT 'Stock coming in or going out',
   quantity        INT             NOT NULL                         COMMENT 'Always positive - direction comes from change_type',
-  reference_type  ENUM('order','adjustment') NOT NULL,
-  reference_id    CHAR(36)        NULL                              COMMENT 'ID of the order that caused this movement',
+  reference_type  ENUM('order','adjustment','import') NOT NULL,
+  reference_id    CHAR(36)        NULL                              COMMENT 'ID of the order that caused this movement (NULL for imports/adjustments)',
   note            VARCHAR(500)    NULL,
   created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

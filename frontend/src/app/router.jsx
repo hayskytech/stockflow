@@ -20,6 +20,7 @@ import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
 import { ProductsPage } from "@/features/products/pages/ProductsPage"
 import { ProductFormPage } from "@/features/products/pages/ProductFormPage"
 import { StockPage } from "@/features/stock/pages/StockPage"
+import { ScanStockPage } from "@/features/stock/pages/ScanStockPage"
 import { StockLedgerPage } from "@/features/stock-ledger/pages/StockLedgerPage"
 import { MediaLibraryPage } from "@/features/media/pages/MediaLibraryPage"
 import { MediaDetailPage } from "@/features/media/pages/MediaDetailPage"
@@ -135,6 +136,10 @@ export const router = createHashRouter([
       {
         path: ROUTES.STOCK.LIST,
         element: <StockPage />,
+      },
+      {
+        path: ROUTES.STOCK.SCAN,
+        element: <ScanStockPage />,
       },
       {
         path: ROUTES.STOCK_LEDGER,
