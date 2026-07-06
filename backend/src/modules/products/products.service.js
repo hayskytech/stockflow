@@ -332,12 +332,16 @@ export async function deleteProduct(id) {
   }
 }
 
+// Division that receives categories auto-created during a product import — created on
+// demand if it doesn't exist. Admin can move the categories to real divisions afterwards.
+const DEFAULT_IMPORT_DIVISION = 'GENERAL';
+
 /**
  * Bulk-creates products from an uploaded .xlsx/.csv (columns: SubGroupName, Product Code,
  * Product Name — this is the one-time catalog load, so mrp/wsp/stock aren't in the sheet and
- * are left at their defaults; edit individual products afterwards). All-or-nothing: if any row
- * is invalid, has a duplicate code, or its SubGroupName doesn't match an existing category, the
- * whole file is rejected.
+ * are left at their defaults; edit individual products afterwards). A SubGroupName with no
+ * matching category auto-creates that category under the GENERAL division. All-or-nothing:
+ * if any row is invalid or has a duplicate code, the whole file is rejected.
  */
 export async function importProducts(buffer, originalName) {
   const rawRows = await parseRowsFromFile(buffer, originalName);
@@ -386,12 +390,33 @@ export async function importProducts(buffer, originalName) {
   );
   const categoryLookup = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
 
-  const unmatched = [...new Set(parsedRows.filter((r) => !categoryLookup.has(r.subGroupName.toLowerCase())).map((r) => r.subGroupName))];
-  if (unmatched.length > 0) {
-    throw new AppError(400, `Import rejected — no matching category for: ${unmatched.join(', ')}`);
+  // SubGroupNames with no matching category are auto-created (first spelling in the file
+  // wins for display casing) under the GENERAL division inside the same transaction.
+  const missingCategories = new Map();
+  for (const row of parsedRows) {
+    const key = row.subGroupName.toLowerCase();
+    if (!categoryLookup.has(key) && !missingCategories.has(key)) {
+      missingCategories.set(key, row.subGroupName);
+    }
   }
 
   await withTransaction(async (execute) => {
+    if (missingCategories.size > 0) {
+      const [division] = await execute(
+        `SELECT id FROM divisions WHERE LOWER(name) = ? LIMIT 1`,
+        [DEFAULT_IMPORT_DIVISION.toLowerCase()],
+      );
+      let divisionId = division?.id;
+      if (!divisionId) {
+        divisionId = crypto.randomUUID();
+        await execute(`INSERT INTO divisions (id, name, is_active) VALUES (?, ?, TRUE)`, [divisionId, DEFAULT_IMPORT_DIVISION]);
+      }
+      for (const [key, name] of missingCategories) {
+        const categoryId = crypto.randomUUID();
+        await execute(`INSERT INTO categories (id, division_id, name, is_active) VALUES (?, ?, ?, TRUE)`, [categoryId, divisionId, name]);
+        categoryLookup.set(key, categoryId);
+      }
+    }
     for (const row of parsedRows) {
       await execute(
         `INSERT INTO products (id, product_code, category_id, name, mrp, wsp, quantity_available, reorder_level, unit, is_active)
@@ -401,5 +426,5 @@ export async function importProducts(buffer, originalName) {
     }
   });
 
-  return { imported: parsedRows.length };
+  return { imported: parsedRows.length, createdCategories: [...missingCategories.values()] };
 }

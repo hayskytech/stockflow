@@ -41,9 +41,18 @@ export function ProductImportModal({ open, onClose }) {
           </div>
           <div className="modal-body">
             {result ? (
-              <div className="alert alert-success mb-0">
-                Imported {result.imported} product{result.imported === 1 ? "" : "s"}.
-              </div>
+              <>
+                <div className={`alert alert-success ${result.createdCategories?.length ? "" : "mb-0"}`}>
+                  Imported {result.imported} product{result.imported === 1 ? "" : "s"}.
+                </div>
+                {result.createdCategories?.length > 0 ? (
+                  <div className="alert alert-info mb-0" id="product-import-created-categories">
+                    Created {result.createdCategories.length} new{" "}
+                    {result.createdCategories.length === 1 ? "category" : "categories"} under the GENERAL
+                    division: {result.createdCategories.join(", ")}
+                  </div>
+                ) : null}
+              </>
             ) : (
               <form
                 id="product-import-form"
@@ -54,7 +63,8 @@ export function ProductImportModal({ open, onClose }) {
               >
                 <p className="text-muted">
                   Upload the product catalog excel/CSV (columns: SubGroupName, Product Code, Product Name).
-                  Each SubGroupName must match an existing category exactly.
+                  SubGroupName becomes the product&apos;s category — categories that don&apos;t exist yet are
+                  created automatically under the GENERAL division.
                 </p>
                 <form.Field name="file">
                   {(field) => (
