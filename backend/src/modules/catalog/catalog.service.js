@@ -4,7 +4,8 @@ import { AppError } from '../../middleware/errorHandler.js';
 
 const DIVISION_COLUMNS = 'id, name, is_active AS isActive, created_at AS createdAt, updated_at AS updatedAt';
 const CATEGORY_COLUMNS =
-  'id, division_id AS divisionId, name, is_active AS isActive, created_at AS createdAt, updated_at AS updatedAt';
+  'c.id, c.division_id AS divisionId, d.name AS divisionName, c.name, c.is_active AS isActive, c.created_at AS createdAt, c.updated_at AS updatedAt';
+const CATEGORY_FROM = 'categories c JOIN divisions d ON d.id = c.division_id';
 const SUB_CATEGORY_COLUMNS =
   'id, category_id AS categoryId, name, is_active AS isActive, created_at AS createdAt, updated_at AS updatedAt';
 
@@ -101,28 +102,28 @@ export async function listCategories(listQuery, filters) {
   const conditions = [];
   const params = [];
   if (search) {
-    conditions.push('name LIKE ?');
+    conditions.push('c.name LIKE ?');
     params.push(`%${search}%`);
   }
   if (filters.divisionId) {
-    conditions.push('division_id = ?');
+    conditions.push('c.division_id = ?');
     params.push(filters.divisionId);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const [rows, countRows] = await Promise.all([
     executeQuery(
-      `SELECT ${CATEGORY_COLUMNS} FROM categories ${where} ORDER BY ${orderby} ${order} LIMIT ? OFFSET ?`,
+      `SELECT ${CATEGORY_COLUMNS} FROM ${CATEGORY_FROM} ${where} ORDER BY c.${orderby} ${order} LIMIT ? OFFSET ?`,
       [...params, perPage, offset],
     ),
-    executeQuery(`SELECT COUNT(*) AS total FROM categories ${where}`, params),
+    executeQuery(`SELECT COUNT(*) AS total FROM ${CATEGORY_FROM} ${where}`, params),
   ]);
 
   return { rows, total: countRows[0].total };
 }
 
 export async function getCategoryById(id) {
-  const [row] = await executeQuery(`SELECT ${CATEGORY_COLUMNS} FROM categories WHERE id = ?`, [id]);
+  const [row] = await executeQuery(`SELECT ${CATEGORY_COLUMNS} FROM ${CATEGORY_FROM} WHERE c.id = ?`, [id]);
   if (!row) throw new AppError(404, 'Category not found');
   return row;
 }
