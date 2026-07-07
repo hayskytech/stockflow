@@ -16,7 +16,7 @@ export function CheckoutPage() {
 
   // Stable for the lifetime of this checkout attempt — a resubmit (double-click, retry,
   // back-button) reuses the same key so the server returns the original order instead of
-  // reserving stock twice.
+  // creating a duplicate.
   const [idempotencyKey] = useState(() => crypto.randomUUID())
   const [serverError, setServerError] = useState("")
 

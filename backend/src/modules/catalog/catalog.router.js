@@ -23,20 +23,20 @@ const divisionPagination = pagination({ sortable: ['name', 'created_at', 'update
 const categoryPagination = pagination({ sortable: ['name', 'created_at', 'updated_at'], defaultSort: 'name' });
 const subCategoryPagination = pagination({ sortable: ['name', 'created_at', 'updated_at'], defaultSort: 'name' });
 
-// Divisions — read for any authenticated user, write restricted to admin.
-catalogRouter.get('/divisions', authenticate, divisionPagination, listDivisions);
+// Divisions — reads are public (storefront filter sidebar needs no login), writes admin-only.
+catalogRouter.get('/divisions', divisionPagination, listDivisions);
 catalogRouter.post('/divisions', authenticate, requireRole('admin'), createDivision);
 catalogRouter.put('/divisions/:id', authenticate, requireRole('admin'), updateDivision);
 catalogRouter.delete('/divisions/:id', authenticate, requireRole('admin'), deleteDivision);
 
 // Categories
-catalogRouter.get('/categories', authenticate, categoryPagination, listCategories);
+catalogRouter.get('/categories', categoryPagination, listCategories);
 catalogRouter.post('/categories', authenticate, requireRole('admin'), createCategory);
 catalogRouter.put('/categories/:id', authenticate, requireRole('admin'), updateCategory);
 catalogRouter.delete('/categories/:id', authenticate, requireRole('admin'), deleteCategory);
 
 // Sub-categories
-catalogRouter.get('/sub-categories', authenticate, subCategoryPagination, listSubCategories);
+catalogRouter.get('/sub-categories', subCategoryPagination, listSubCategories);
 catalogRouter.post('/sub-categories', authenticate, requireRole('admin'), createSubCategory);
 catalogRouter.put('/sub-categories/:id', authenticate, requireRole('admin'), updateSubCategory);
 catalogRouter.delete('/sub-categories/:id', authenticate, requireRole('admin'), deleteSubCategory);

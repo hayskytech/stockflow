@@ -49,9 +49,9 @@ function handleUpload(req, res, next) {
   });
 }
 
-// Both roles can view and manage products/stock — see CLAUDE.md permission matrix.
-productsRouter.get('/', authenticate, productsPagination, listProducts);
-productsRouter.get('/:id', authenticate, getProduct);
+// Reads are public (storefront browsing needs no login); writes stay admin/staff-only.
+productsRouter.get('/', productsPagination, listProducts);
+productsRouter.get('/:id', getProduct);
 productsRouter.post('/', authenticate, requireRole('admin', 'staff'), createProduct);
 productsRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importProducts);
 productsRouter.put('/:id', authenticate, requireRole('admin', 'staff'), updateProduct);

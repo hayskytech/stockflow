@@ -118,7 +118,7 @@ export async function createOrder(input, userId) {
   }
 
   // Idempotency: a repeat submit with the same key (double-click, retry, back-button) returns
-  // the order already created for it instead of reserving stock a second time.
+  // the order already created for it instead of creating a duplicate.
   const [existingByKey] = await executeQuery(`SELECT id FROM orders WHERE idempotency_key = ? AND requested_by = ?`, [
     input.idempotencyKey,
     ownerId,
@@ -139,12 +139,14 @@ export async function createOrder(input, userId) {
 
   await withTransaction(async (execute) => {
     const failures = [];
-    const lockedItems = [];
+    const validItems = [];
 
+    // Placing an order does not reserve stock — it's only a soft availability check.
+    // Specific barcoded units get locked and reserved when the order is accepted.
     for (const item of sortedItems) {
       const [product] = await execute(
         `SELECT id, name, mrp, wsp, quantity_available AS quantityAvailable, is_active AS isActive
-         FROM products WHERE id = ? FOR UPDATE`,
+         FROM products WHERE id = ?`,
         [item.productId],
       );
       if (!product) {
@@ -154,27 +156,16 @@ export async function createOrder(input, userId) {
       } else if (product.quantityAvailable < item.quantity) {
         failures.push(`${product.name} — only ${product.quantityAvailable} left in stock`);
       } else {
-        // Picks the actual barcoded units being reserved — oldest invoice first — and locks
-        // them so two concurrent orders can't claim the same unit.
-        const stockRows = await execute(
-          `SELECT id FROM stock WHERE product_id = ? AND status = 'in_stock'
-           ORDER BY invoice_date ASC, created_at ASC LIMIT ? FOR UPDATE`,
-          [item.productId, item.quantity],
-        );
-        if (stockRows.length < item.quantity) {
-          failures.push(`${product.name} — only ${stockRows.length} left in stock`);
-        } else {
-          lockedItems.push({ ...item, product, stockIds: stockRows.map((row) => row.id) });
-        }
+        validItems.push({ ...item, product });
       }
     }
 
     // All-or-nothing: report every failing line in one response instead of one at a time.
     if (failures.length > 0) throw new AppError(409, failures.join('; '));
 
-    const totalAmount = lockedItems.reduce((sum, { quantity, product }) => sum + Number(product.wsp) * quantity, 0);
+    const totalAmount = validItems.reduce((sum, { quantity, product }) => sum + Number(product.wsp) * quantity, 0);
 
-    // The order row must exist before stock rows can point their order_id FK at it.
+    // The order row must exist before order_items can point their order_id FK at it.
     const maxAttempts = 5;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const orderNumber = generateOrderNumber();
@@ -216,21 +207,7 @@ export async function createOrder(input, userId) {
       }
     }
 
-    for (const { productId, quantity, product, stockIds } of lockedItems) {
-      await execute(
-        `UPDATE products SET quantity_available = quantity_available - ?, quantity_reserved = quantity_reserved + ?
-         WHERE id = ?`,
-        [quantity, quantity, productId],
-      );
-      await execute(
-        `UPDATE stock SET status = 'reserved', order_id = ? WHERE id IN (${stockIds.map(() => '?').join(',')})`,
-        [orderId, ...stockIds],
-      );
-      await execute(
-        `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-         VALUES (?, 'out', ?, 'order', ?, 'Stock reserved for order')`,
-        [productId, quantity, orderId],
-      );
+    for (const { productId, quantity, product } of validItems) {
       await execute(
         `INSERT INTO order_items (id, order_id, product_id, quantity, mrp_at_order, wsp_at_order)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -262,33 +239,76 @@ export async function updateOrderStatus(id, status, requester) {
     throw new AppError(409, `Order is ${order.status} and cannot be changed to ${status}`);
   }
 
-  if (status === 'accepted' || status === 'completed') {
+  if (status === 'completed') {
     await executeQuery(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
     return getOrderById(id, requester);
   }
 
-  const items = await executeQuery(`SELECT product_id AS productId, quantity FROM order_items WHERE order_id = ?`, [
-    id,
-  ]);
+  if (status === 'accepted') {
+    const items = await executeQuery(`SELECT product_id AS productId, quantity FROM order_items WHERE order_id = ?`, [
+      id,
+    ]);
+    // Lock rows in a consistent order so two concurrent acceptances sharing products can't deadlock.
+    const sortedItems = [...items].sort((a, b) => a.productId.localeCompare(b.productId));
 
-  // rejected / cancelled — release the stock this order had reserved.
-  await withTransaction(async (execute) => {
-    for (const item of items) {
-      await execute(
-        `UPDATE products SET quantity_available = quantity_available + ?, quantity_reserved = quantity_reserved - ?
-         WHERE id = ?`,
-        [item.quantity, item.quantity, item.productId],
-      );
-      await execute(
-        `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-         VALUES (?, 'in', ?, 'order', ?, ?)`,
-        [item.productId, item.quantity, id, `Order ${status} — reservation released`],
-      );
-    }
-    await execute(`UPDATE stock SET status = 'in_stock', order_id = NULL WHERE order_id = ? AND status = 'reserved'`, [id]);
-    await execute(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
-  });
+    // Stock is only committed at acceptance — this is the moment the reserved quantity/units
+    // are actually claimed against this order.
+    await withTransaction(async (execute) => {
+      const failures = [];
+      const lockedItems = [];
 
+      for (const item of sortedItems) {
+        const [product] = await execute(
+          `SELECT id, name, quantity_available AS quantityAvailable FROM products WHERE id = ? FOR UPDATE`,
+          [item.productId],
+        );
+        if (!product || product.quantityAvailable < item.quantity) {
+          failures.push(`${product?.name ?? 'A product'} — only ${product?.quantityAvailable ?? 0} left in stock`);
+          continue;
+        }
+        // Picks the actual barcoded units being reserved — oldest invoice first — and locks
+        // them so two concurrent acceptances can't claim the same unit.
+        const stockRows = await execute(
+          `SELECT id FROM stock WHERE product_id = ? AND status = 'in_stock'
+           ORDER BY invoice_date ASC, created_at ASC LIMIT ? FOR UPDATE`,
+          [item.productId, item.quantity],
+        );
+        if (stockRows.length < item.quantity) {
+          failures.push(`${product.name} — only ${stockRows.length} left in stock`);
+        } else {
+          lockedItems.push({ ...item, stockIds: stockRows.map((row) => row.id) });
+        }
+      }
+
+      // All-or-nothing: report every failing line in one response instead of one at a time.
+      if (failures.length > 0) throw new AppError(409, failures.join('; '));
+
+      for (const { productId, quantity, stockIds } of lockedItems) {
+        await execute(
+          `UPDATE products SET quantity_available = quantity_available - ?, quantity_reserved = quantity_reserved + ?
+           WHERE id = ?`,
+          [quantity, quantity, productId],
+        );
+        await execute(
+          `UPDATE stock SET status = 'reserved', order_id = ? WHERE id IN (${stockIds.map(() => '?').join(',')})`,
+          [id, ...stockIds],
+        );
+        await execute(
+          `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
+           VALUES (?, 'out', ?, 'order', ?, 'Stock reserved for order')`,
+          [productId, quantity, id],
+        );
+      }
+
+      await execute(`UPDATE orders SET status = 'accepted' WHERE id = ?`, [id]);
+    });
+
+    return getOrderById(id, requester);
+  }
+
+  // rejected / cancelled — always from pending, before any stock has been reserved, so there's
+  // nothing to release.
+  await executeQuery(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
   return getOrderById(id, requester);
 }
 

@@ -59,12 +59,10 @@ export const router = createHashRouter([
     ),
   },
   {
+    // Public storefront layout — browsing (home + product detail) needs no login;
+    // cart/checkout/order-history are gated per-child below since they're account-owned.
     path: ROUTES.STORE.HOME,
-    element: (
-      <ProtectedRoute allow={[ROLES.CUSTOMER, ROLES.ADMIN, ROLES.STAFF]}>
-        <StoreShell />
-      </ProtectedRoute>
-    ),
+    element: <StoreShell />,
     errorElement: <RouteErrorPage />,
     children: [
       {
@@ -77,24 +75,45 @@ export const router = createHashRouter([
       },
       {
         path: "cart",
-        element: <CartPage />,
+        element: (
+          <ProtectedRoute>
+            <CartPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "checkout",
-        element: <CheckoutPage />,
+        element: (
+          <ProtectedRoute>
+            <CheckoutPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "orders",
-        element: <MyOrdersPage />,
+        element: (
+          <ProtectedRoute>
+            <MyOrdersPage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "orders/:id",
-        element: <MyOrderDetailPage />,
+        element: (
+          <ProtectedRoute>
+            <MyOrderDetailPage />
+          </ProtectedRoute>
+        ),
       },
     ],
   },
   {
+    // Home URL always lands on the public store — dashboard is reached via the
+    // account dropdown (admin/staff only), never the default landing page.
     path: "/",
+    element: <Navigate to={ROUTES.STORE.HOME} replace />,
+  },
+  {
     element: (
       <ProtectedRoute allow={[ROLES.ADMIN, ROLES.STAFF]}>
         <AppShell />
@@ -102,10 +121,6 @@ export const router = createHashRouter([
     ),
     errorElement: <RouteErrorPage />,
     children: [
-      {
-        index: true,
-        element: <Navigate to={ROUTES.DASHBOARD} replace />,
-      },
       {
         path: ROUTES.DASHBOARD,
         element: <DashboardPage />,

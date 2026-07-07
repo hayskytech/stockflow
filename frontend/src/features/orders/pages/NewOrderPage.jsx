@@ -35,8 +35,9 @@ function TextField({ form, name, label, id, ...inputProps }) {
 
 /**
  * Manual order entry for walk-in/phone customers — admin/staff pick the customer, add the
- * product lines, and choose how payment was settled. Stock is reserved exactly as if the
- * customer had ordered through the storefront.
+ * product lines, and choose how payment was settled. Stock is checked for availability but
+ * only reserved once the order is accepted, exactly as if the customer had ordered through
+ * the storefront.
  */
 export function NewOrderPage() {
   const navigate = useNavigate()
@@ -45,7 +46,7 @@ export function NewOrderPage() {
   const [serverError, setServerError] = useState("")
   const createOrder = useCreateOrder()
 
-  // One idempotency key per page visit — a double-clicked submit can't double-reserve stock.
+  // One idempotency key per page visit — a double-clicked submit can't create a duplicate order.
   const [idempotencyKey] = useState(() => crypto.randomUUID())
 
   const activeUsers = useMemo(() => users.filter((u) => u.isActive), [users])
@@ -96,7 +97,7 @@ export function NewOrderPage() {
     <PageWrapper>
       <PageHeader
         title="New Order"
-        description="Manual order for a walk-in or phone customer — reserves stock immediately"
+        description="Manual order for a walk-in or phone customer — stock is reserved once accepted"
         actions={
           <Link to={ROUTES.ORDERS.LIST} className="btn btn-outline-secondary">
             <i className="fas fa-arrow-left mr-1" />
@@ -309,7 +310,7 @@ export function NewOrderPage() {
               className="btn btn-success btn-block"
               disabled={createOrder.isPending}
             >
-              {createOrder.isPending ? "Creating order…" : "Create order & reserve stock"}
+              {createOrder.isPending ? "Creating order…" : "Create order"}
             </button>
           </div>
         </div>

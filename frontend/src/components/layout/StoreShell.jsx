@@ -30,8 +30,8 @@ export function StoreShell() {
           id="store-staff-banner"
           className="alert alert-warning alert-dismissible text-center mb-0 py-2 rounded-0"
         >
-          You&rsquo;re viewing the storefront as {role}. Orders placed here reserve real stock and require a real
-          bank transfer, just like a customer order.
+          You&rsquo;re viewing the storefront as {role}. Orders placed here go through the real order flow and
+          require a real bank transfer, just like a customer order.
           <button
             type="button"
             id="store-staff-banner-dismiss"

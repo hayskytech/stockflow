@@ -9,8 +9,8 @@ import {
 
 export const ORDERS_QUERY_KEY = "orders"
 
-// Status changes move stock (reserve/release/dispatch) and write ledger rows — invalidated
-// by key string since features never import each other's modules.
+// Status changes move stock (accept reserves, dispatch ships) and write ledger rows —
+// invalidated by key string since features never import each other's modules.
 const STOCK_QUERY_KEY = "stock"
 const STOCK_LEDGER_QUERY_KEY = "stockLedger"
 const PRODUCTS_QUERY_KEY = "products"
@@ -30,17 +30,12 @@ export function useOrder(id) {
   })
 }
 
-/** Manual order placement by admin/staff — reserves stock, so stock/products caches change too. */
+/** Manual order placement by admin/staff — doesn't touch stock until the order is accepted. */
 export function useCreateOrder() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: createOrderApi,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [ORDERS_QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [ORDERS_QUERY_KEY] }),
   })
 }
 
