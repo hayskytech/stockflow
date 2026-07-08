@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
-import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { useAuthStore } from "@/store/auth.store"
 import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useProductsStore } from "@/features/products/products.store"
-import { useDeleteProduct, useProducts } from "@/features/products/hooks/use-products"
+import { useProducts } from "@/features/products/hooks/use-products"
 import { ProductImportModal } from "@/features/products/components/ProductImportModal"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
@@ -28,8 +27,6 @@ export function ProductsPage() {
   const setCategoryFilter = useProductsStore((s) => s.setCategoryFilter)
 
   const [page, setPage] = useState(1)
-  const [deletingProduct, setDeletingProduct] = useState(null)
-  const [serverError, setServerError] = useState("")
 
   const { data: divisions = [] } = useDivisionOptions()
   const { data: categories = [] } = useCategoryOptions(divisionFilter)
@@ -41,18 +38,6 @@ export function ProductsPage() {
     division_id: divisionFilter || undefined,
     category_id: categoryFilter || undefined,
   })
-
-  const deleteProduct = useDeleteProduct()
-
-  async function handleDelete() {
-    try {
-      await deleteProduct.mutateAsync(deletingProduct.id)
-      setDeletingProduct(null)
-    } catch (err) {
-      setServerError(err.response?.data?.message ?? "Could not delete product")
-      setDeletingProduct(null)
-    }
-  }
 
   const columns = [
     {
@@ -76,8 +61,16 @@ export function ProductsPage() {
         ),
     },
     { key: "productCode", label: "Code" },
-    { key: "name", label: "Name" },
-    { key: "categoryName", label: "Category" },
+    {
+      key: "name",
+      label: "Name",
+      render: (row) => (
+        <div>
+          <div>{row.name}</div>
+          <small className="text-muted">{row.categoryName}</small>
+        </div>
+      ),
+    },
     { key: "mrp", label: "MRP", render: (row) => `₹${Number(row.mrp).toFixed(2)}` },
     { key: "wsp", label: "WSP", render: (row) => `₹${Number(row.wsp).toFixed(2)}` },
     {
@@ -110,18 +103,13 @@ export function ProductsPage() {
             View
           </button>
           {canManage ? (
-            <>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-primary mr-2"
-                onClick={() => navigate(ROUTES.PRODUCTS.EDIT(row.id))}
-              >
-                Edit
-              </button>
-              <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingProduct(row)}>
-                Delete
-              </button>
-            </>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary"
+              onClick={() => navigate(ROUTES.PRODUCTS.EDIT(row.id))}
+            >
+              Edit
+            </button>
           ) : null}
         </>
       ),
@@ -206,8 +194,6 @@ export function ProductsPage() {
             </div>
           </div>
 
-          {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
-
           <DataTable
             columns={columns}
             rows={data?.items ?? []}
@@ -222,14 +208,6 @@ export function ProductsPage() {
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        open={Boolean(deletingProduct)}
-        title="Delete product?"
-        message={`Are you sure you want to delete "${deletingProduct?.name}"? This cannot be undone.`}
-        onConfirm={handleDelete}
-        onCancel={() => setDeletingProduct(null)}
-      />
 
       <ProductImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </PageWrapper>

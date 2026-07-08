@@ -3,11 +3,12 @@ import { useNavigate, useParams } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
 import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
 import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
 import { productSchema } from "@/features/products/products.schema"
-import { useCreateProduct, useProduct, useUpdateProduct } from "@/features/products/hooks/use-products"
+import { useCreateProduct, useDeleteProduct, useProduct, useUpdateProduct } from "@/features/products/hooks/use-products"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductFormPage() {
@@ -17,6 +18,10 @@ export function ProductFormPage() {
   const { data: product, isLoading: isLoadingProduct } = useProduct(id)
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
+  const deleteProduct = useDeleteProduct()
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleteError, setDeleteError] = useState("")
 
   async function handleSubmit(value) {
     const input = {
@@ -34,6 +39,16 @@ export function ProductFormPage() {
     navigate(ROUTES.PRODUCTS.LIST)
   }
 
+  async function handleDelete() {
+    try {
+      await deleteProduct.mutateAsync(id)
+      navigate(ROUTES.PRODUCTS.LIST)
+    } catch (err) {
+      setDeleteError(err.response?.data?.message ?? "Could not delete product")
+      setConfirmingDelete(false)
+    }
+  }
+
   if (id && isLoadingProduct) {
     return (
       <PageWrapper>
@@ -46,7 +61,19 @@ export function ProductFormPage() {
 
   return (
     <PageWrapper>
-      <PageHeader title={id ? "Edit Product" : "Add Product"} description={id ? "Update an existing product" : "Create a new product"} />
+      <PageHeader
+        title={id ? "Edit Product" : "Add Product"}
+        description={id ? "Update an existing product" : "Create a new product"}
+        actions={
+          id ? (
+            <button type="button" className="btn btn-outline-danger" onClick={() => setConfirmingDelete(true)}>
+              Delete
+            </button>
+          ) : null
+        }
+      />
+
+      {deleteError ? <div className="alert alert-danger">{deleteError}</div> : null}
 
       <div className="card">
         <div className="card-body">
@@ -59,6 +86,14 @@ export function ProductFormPage() {
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title="Delete product?"
+        message={`Are you sure you want to delete "${product?.name}"? This cannot be undone.`}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </PageWrapper>
   )
 }
