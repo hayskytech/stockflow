@@ -51,8 +51,8 @@ export function Topbar({ onToggleSidebar }) {
             rel="noopener noreferrer"
             className="nav-link"
           >
-            <i className="fas fa-store mr-1" />
-            View Store
+            <i className="fas fa-store mr-md-1" />
+            <span className="d-none d-md-inline">View Store</span>
           </a>
         </li>
         <li ref={menuRef} className={`nav-item dropdown ${menuOpen ? "show" : ""}`}>
@@ -61,8 +61,8 @@ export function Topbar({ onToggleSidebar }) {
             className="nav-link btn btn-link"
             onClick={() => setMenuOpen((v) => !v)}
           >
-            <i className="far fa-user mr-1" />
-            {user?.name ?? "Account"}
+            <i className="far fa-user mr-md-1" />
+            <span className="d-none d-md-inline">{user?.name ?? "Account"}</span>
           </button>
           <div className={`dropdown-menu dropdown-menu-lg dropdown-menu-right ${menuOpen ? "show" : ""}`}>
             {user?.role === "admin" ? (

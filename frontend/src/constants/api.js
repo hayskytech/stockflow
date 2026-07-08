@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     BY_ID: (id) => `/users/${id}`,
   },
   WAREHOUSE: "/warehouse",
+  WAREHOUSE_PUBLIC: "/warehouse/public",
   DIVISIONS: {
     LIST: "/divisions",
     BY_ID: (id) => `/divisions/${id}`,

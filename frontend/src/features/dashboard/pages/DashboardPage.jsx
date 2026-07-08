@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useOrderHistory, useStockSummary } from "@/features/dashboard/hooks/use-dashboard"
@@ -6,6 +7,7 @@ import { OrdersTrendChart } from "@/features/dashboard/components/OrdersTrendCha
 import { StockByDivisionChart } from "@/features/dashboard/components/StockByDivisionChart"
 import { LowStockTable } from "@/features/dashboard/components/LowStockTable"
 import { formatMoney } from "@/lib/format"
+import { ROUTES } from "@/constants/routes"
 
 export function DashboardPage() {
   const { data: stockSummary, isLoading: isLoadingStock, isError: isStockError } = useStockSummary()
@@ -28,7 +30,7 @@ export function DashboardPage() {
         <>
           <div className="row">
             <div className="col-lg-3 col-6">
-              <div className="card stat-card">
+              <Link to={ROUTES.PRODUCTS.LIST} className="card stat-card text-decoration-none text-dark d-block">
                 <div className="card-body d-flex align-items-center">
                   <div className="stat-card-icon bg-info-subtle text-info">
                     <i className="fas fa-shirt" />
@@ -40,10 +42,10 @@ export function DashboardPage() {
                     </h3>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
             <div className="col-lg-3 col-6">
-              <div className="card stat-card">
+              <Link to={ROUTES.ORDERS.LIST} className="card stat-card text-decoration-none text-dark d-block">
                 <div className="card-body d-flex align-items-center">
                   <div className="stat-card-icon bg-success-subtle text-success">
                     <i className="fas fa-cart-shopping" />
@@ -55,10 +57,10 @@ export function DashboardPage() {
                     </h3>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
             <div className="col-lg-3 col-6">
-              <div className="card stat-card">
+              <Link to={ROUTES.DISPATCHES.LIST} className="card stat-card text-decoration-none text-dark d-block">
                 <div className="card-body d-flex align-items-center">
                   <div className="stat-card-icon bg-warning-subtle text-warning">
                     <i className="fas fa-truck" />
@@ -70,10 +72,10 @@ export function DashboardPage() {
                     </h3>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
             <div className="col-lg-3 col-6">
-              <div className="card stat-card">
+              <Link to={ROUTES.REPORTS} className="card stat-card text-decoration-none text-dark d-block">
                 <div className="card-body d-flex align-items-center">
                   <div className="stat-card-icon bg-danger-subtle text-danger">
                     <i className="fas fa-triangle-exclamation" />
@@ -85,7 +87,7 @@ export function DashboardPage() {
                     </h3>
                   </div>
                 </div>
-              </div>
+              </Link>
             </div>
           </div>
 

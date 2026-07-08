@@ -4,13 +4,14 @@ import { useForm } from "@tanstack/react-form"
 import { changePasswordApi } from "@/features/auth/auth.api"
 import { changePasswordSchema } from "@/features/auth/auth.schema"
 import { useAuthStore } from "@/store/auth.store"
-import { APP_NAME } from "@/constants/app"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
 export function ChangePasswordPage() {
   const [serverError, setServerError] = useState("")
   const clearMustChangePassword = useAuthStore((s) => s.clearMustChangePassword)
   const navigate = useNavigate()
+  const siteTitle = useSiteTitle()
 
   const form = useForm({
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
@@ -31,7 +32,7 @@ export function ChangePasswordPage() {
     <div className="login-page">
       <div className="login-box">
         <div className="login-logo">
-          <b>{APP_NAME}</b>
+          <b>{siteTitle}</b>
         </div>
 
         <div className="card">

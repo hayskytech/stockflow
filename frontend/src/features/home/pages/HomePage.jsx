@@ -27,11 +27,6 @@ export function HomePage() {
 
   return (
     <div>
-      <div className="jumbotron jumbotron-fluid bg-white rounded shadow-sm py-4 px-4 mb-4">
-        <h1 className="h3 mb-1">Shop our collection</h1>
-        <p className="text-muted mb-0">Browse the latest dresses, sarees, kidware and menswear.</p>
-      </div>
-
       <div className="row">
         <div className="col-md-3 mb-4">
           <StoreSidebar />

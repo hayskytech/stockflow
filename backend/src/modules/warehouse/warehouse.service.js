@@ -26,6 +26,12 @@ export async function getWarehouse() {
   return row;
 }
 
+/** Public subset for unauthenticated screens (e.g. login/register site title) — name only, never bank details. */
+export async function getPublicWarehouseInfo() {
+  const [row] = await executeQuery(`SELECT name FROM warehouse WHERE id = 1`);
+  return { name: row?.name ?? null };
+}
+
 export async function updateWarehouse(input) {
   await getWarehouse(); // 404s if the single settings row doesn't exist yet
 

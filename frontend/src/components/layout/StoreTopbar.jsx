@@ -4,7 +4,8 @@ import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
 import { useHomeStore } from "@/features/home/home.store"
-import { APP_NAME, ROLES } from "@/constants/app"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"
 
 /** Ecommerce top navigation for the customer storefront — brand, search, cart, account menu. */
@@ -15,6 +16,7 @@ export function StoreTopbar() {
   const search = useHomeStore((s) => s.search)
   const setSearch = useHomeStore((s) => s.setSearch)
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0))
+  const siteTitle = useSiteTitle()
   const navigate = useNavigate()
 
   async function handleLogout() {
@@ -30,7 +32,7 @@ export function StoreTopbar() {
     <nav className="navbar navbar-expand navbar-dark bg-primary sticky-top">
       <div className="container flex-wrap">
         <Link to={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
-          {APP_NAME}
+          {siteTitle}
         </Link>
 
         {/* Inline search — desktop only; on mobile it drops to its own full-width row below. */}
@@ -69,20 +71,35 @@ export function StoreTopbar() {
               <span className="d-none d-md-inline">{user?.name ?? "Account"}</span>
             </button>
             <div className={`dropdown-menu dropdown-menu-right ${menuOpen ? "show" : ""}`}>
-              {user?.role === ROLES.ADMIN || user?.role === ROLES.STAFF ? (
-                <Link id="store-dashboard-link" to={ROUTES.DASHBOARD} className="dropdown-item" onClick={() => setMenuOpen(false)}>
-                  <i className="fas fa-gauge mr-2" />
-                  Dashboard
-                </Link>
-              ) : null}
-              <Link id="store-my-orders-link" to={ROUTES.STORE.ORDERS} className="dropdown-item" onClick={() => setMenuOpen(false)}>
-                <i className="fas fa-receipt mr-2" />
-                My Orders
-              </Link>
-              <button type="button" className="dropdown-item" onClick={handleLogout}>
-                <i className="fas fa-sign-out-alt mr-2" />
-                Logout
-              </button>
+              {user ? (
+                <>
+                  {user.role === ROLES.ADMIN || user.role === ROLES.STAFF ? (
+                    <Link id="store-dashboard-link" to={ROUTES.DASHBOARD} className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                      <i className="fas fa-gauge mr-2" />
+                      Dashboard
+                    </Link>
+                  ) : null}
+                  <Link id="store-my-orders-link" to={ROUTES.STORE.ORDERS} className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <i className="fas fa-receipt mr-2" />
+                    My Orders
+                  </Link>
+                  <button type="button" className="dropdown-item" onClick={handleLogout}>
+                    <i className="fas fa-sign-out-alt mr-2" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link id="store-login-link" to={ROUTES.AUTH.LOGIN} className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <i className="fas fa-sign-in-alt mr-2" />
+                    Login
+                  </Link>
+                  <Link id="store-register-link" to={ROUTES.AUTH.REGISTER} className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                    <i className="fas fa-user-plus mr-2" />
+                    Register
+                  </Link>
+                </>
+              )}
             </div>
           </li>
         </ul>

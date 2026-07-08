@@ -5,13 +5,15 @@ import { registerApi } from "@/features/auth/auth.api"
 import { registerSchema } from "@/features/auth/auth.schema"
 import { PasswordField } from "@/features/auth/components/PasswordField"
 import { useAuthStore } from "@/store/auth.store"
-import { APP_NAME, APP_TAGLINE } from "@/constants/app"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { APP_TAGLINE } from "@/constants/app"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
 
 export function RegisterPage() {
   const [serverError, setServerError] = useState("")
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
+  const siteTitle = useSiteTitle()
 
   const form = useForm({
     defaultValues: {
@@ -47,7 +49,9 @@ export function RegisterPage() {
     <div className="register-page">
       <div className="register-box">
         <div className="register-logo">
-          <b>{APP_NAME}</b>
+          <Link to={ROUTES.STORE.HOME}>
+            <b>{siteTitle}</b>
+          </Link>
         </div>
         <p className="text-center text-muted">{APP_TAGLINE}</p>
 
@@ -318,6 +322,9 @@ export function RegisterPage() {
 
             <p className="text-center mt-3 mb-0">
               Already have an account? <Link to={ROUTES.AUTH.LOGIN}>Sign in</Link>
+            </p>
+            <p className="text-center mt-2 mb-0">
+              <Link id="register-back-to-home" to={ROUTES.STORE.HOME}>Back to Homepage</Link>
             </p>
           </div>
         </div>

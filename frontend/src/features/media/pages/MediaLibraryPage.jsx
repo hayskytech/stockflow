@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/common/EmptyState"
 import { UppyUploader } from "@/components/common/UppyUploader"
 import { MEDIA_QUERY_KEY, useMediaList } from "@/features/media/hooks/use-media"
 import { useMediaStore } from "@/features/media/media.store"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
 
@@ -15,6 +16,7 @@ export function MediaLibraryPage() {
   const [unusedOnly, setUnusedOnly] = useState(false)
   const [showUploader, setShowUploader] = useState(false)
   const queryClient = useQueryClient()
+  const siteTitle = useSiteTitle()
 
   const { data, isLoading, isError } = useMediaList({ search, page, per_page: 24, unused_only: unusedOnly })
   const items = data?.items ?? []
@@ -28,7 +30,7 @@ export function MediaLibraryPage() {
     <PageWrapper>
       <PageHeader
         title="Media Library"
-        description="Images uploaded across StockFlow — reuse them or remove what's no longer needed"
+        description={`Images uploaded across ${siteTitle} — reuse them or remove what's no longer needed`}
         actions={
           <button
             id="media-upload-toggle"

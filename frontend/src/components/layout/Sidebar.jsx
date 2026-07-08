@@ -1,7 +1,8 @@
 import { Link, NavLink } from "react-router-dom"
 import { useAuthStore } from "@/store/auth.store"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
-import { APP_NAME, ROLES } from "@/constants/app"
+import { ROLES } from "@/constants/app"
 
 // Warehouse settings live in the topbar user dropdown (see Topbar.jsx), not here.
 const NAV_ITEMS = [
@@ -21,11 +22,12 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
   const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
+  const siteTitle = useSiteTitle()
 
   return (
     <aside className="main-sidebar sidebar-dark-primary elevation-4">
       <Link to={ROUTES.DASHBOARD} className="brand-link">
-        <span className="brand-text font-weight-light ml-2">{APP_NAME}</span>
+        <span className="brand-text font-weight-light ml-2">{siteTitle}</span>
       </Link>
 
       <div className="sidebar">

@@ -5,13 +5,15 @@ import { loginApi } from "@/features/auth/auth.api"
 import { loginSchema } from "@/features/auth/auth.schema"
 import { PasswordField } from "@/features/auth/components/PasswordField"
 import { useAuthStore } from "@/store/auth.store"
-import { APP_NAME, APP_TAGLINE } from "@/constants/app"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { APP_TAGLINE } from "@/constants/app"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
 
 export function LoginPage() {
   const [serverError, setServerError] = useState("")
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
+  const siteTitle = useSiteTitle()
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
@@ -34,7 +36,9 @@ export function LoginPage() {
     <div className="login-page">
       <div className="login-box">
         <div className="login-logo">
-          <b>{APP_NAME}</b>
+          <Link to={ROUTES.STORE.HOME}>
+            <b>{siteTitle}</b>
+          </Link>
         </div>
         <p className="text-center text-muted">{APP_TAGLINE}</p>
 
@@ -88,6 +92,9 @@ export function LoginPage() {
 
             <p className="text-center mt-3 mb-0">
               Don&apos;t have an account? <Link to={ROUTES.AUTH.REGISTER}>Create one</Link>
+            </p>
+            <p className="text-center mt-2 mb-0">
+              <Link id="login-back-to-home" to={ROUTES.STORE.HOME}>Back to Homepage</Link>
             </p>
           </div>
         </div>

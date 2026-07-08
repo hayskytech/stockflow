@@ -18,6 +18,16 @@ export async function getWarehouse(req, res, next) {
   }
 }
 
+/** GET /api/warehouse/public — unauthenticated, name only (no bank/contact details) */
+export async function getPublicWarehouse(req, res, next) {
+  try {
+    const info = await warehouseService.getPublicWarehouseInfo();
+    res.status(200).json(info);
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** PUT /api/warehouse */
 export async function updateWarehouse(req, res, next) {
   try {

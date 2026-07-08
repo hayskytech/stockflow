@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router-dom"
 import { router } from "@/app/router"
 import { refreshApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
 
 /**
  * On mount, attempts a silent token refresh using the HttpOnly cookie left from
@@ -18,6 +19,7 @@ export function App() {
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const setInitialized = useAuthStore((s) => s.setInitialized)
   const refreshed = useRef(false)
+  const siteTitle = useSiteTitle()
 
   useEffect(() => {
     if (refreshed.current) return
@@ -34,6 +36,10 @@ export function App() {
         setInitialized()
       })
   }, [setAuth, clearAuth, setInitialized])
+
+  useEffect(() => {
+    document.title = siteTitle
+  }, [siteTitle])
 
   return <RouterProvider router={router} />
 }
