@@ -323,7 +323,14 @@ export function CheckoutPage() {
                   <span>
                     {item.name} × {item.quantity}
                   </span>
-                  <span>{formatMoney(item.wsp * item.quantity)}</span>
+                  <span className="text-right">
+                    {Number(item.mrp) > Number(item.wsp) ? (
+                      <span className="text-muted mr-1">
+                        <s>{formatMoney(item.mrp * item.quantity)}</s>
+                      </span>
+                    ) : null}
+                    <span>{formatMoney(item.wsp * item.quantity)}</span>
+                  </span>
                 </div>
               ))}
               <hr />

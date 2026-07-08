@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
+import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
 export function Topbar({ onToggleSidebar }) {
@@ -10,6 +11,7 @@ export function Topbar({ onToggleSidebar }) {
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const navigate = useNavigate()
+  const siteTitle = useSiteTitle()
 
   // Clicking anywhere outside the dropdown closes it (mirrors Bootstrap's own behavior).
   useEffect(() => {
@@ -39,6 +41,11 @@ export function Topbar({ onToggleSidebar }) {
           <button type="button" className="nav-link btn btn-link" onClick={onToggleSidebar}>
             <i className="fas fa-bars" />
           </button>
+        </li>
+        <li className="nav-item d-md-none">
+          <Link id="topbar-site-title-link" to={ROUTES.DASHBOARD} className="nav-link font-weight-bold">
+            {siteTitle}
+          </Link>
         </li>
       </ul>
 

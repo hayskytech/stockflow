@@ -36,7 +36,7 @@ export function ProductsPage() {
 
   const { data, isLoading, isError } = useProducts({
     page,
-    per_page: 10,
+    per_page: 50,
     search,
     division_id: divisionFilter || undefined,
     category_id: categoryFilter || undefined,

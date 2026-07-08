@@ -58,12 +58,24 @@ export function CartPage() {
                   <div style={{ minWidth: 0 }}>
                     <h6 className="mb-1 text-truncate">{item.name}</h6>
                     <p className="text-muted small mb-1">{[item.color, item.size].filter(Boolean).join(" · ")}</p>
-                    <div className="font-weight-bold d-sm-none">{formatMoney(item.wsp)}</div>
+                    <div className="d-sm-none">
+                      {Number(item.mrp) > Number(item.wsp) ? (
+                        <span className="text-muted small mr-1">
+                          <s>{formatMoney(item.mrp)}</s>
+                        </span>
+                      ) : null}
+                      <span className="font-weight-bold">{formatMoney(item.wsp)}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="d-none d-sm-block text-center font-weight-bold mx-3" style={{ minWidth: "80px" }}>
-                  {formatMoney(item.wsp)}
+                <div className="d-none d-sm-block text-center mx-3" style={{ minWidth: "80px" }}>
+                  {Number(item.mrp) > Number(item.wsp) ? (
+                    <div className="text-muted small">
+                      <s>{formatMoney(item.mrp)}</s>
+                    </div>
+                  ) : null}
+                  <div className="font-weight-bold">{formatMoney(item.wsp)}</div>
                 </div>
 
                 <div className="d-flex align-items-center justify-content-between justify-content-sm-end">

@@ -1,20 +1,30 @@
 import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
-import { useOrderHistory, useStockSummary } from "@/features/dashboard/hooks/use-dashboard"
+import {
+  useOrderHistory,
+  useStaffCount,
+  useStockMovement,
+  useStockSummary,
+} from "@/features/dashboard/hooks/use-dashboard"
 import { OrdersByStatusChart } from "@/features/dashboard/components/OrdersByStatusChart"
 import { OrdersTrendChart } from "@/features/dashboard/components/OrdersTrendChart"
 import { StockByDivisionChart } from "@/features/dashboard/components/StockByDivisionChart"
 import { LowStockTable } from "@/features/dashboard/components/LowStockTable"
 import { formatMoney } from "@/lib/format"
+import { useAuthStore } from "@/store/auth.store"
+import { ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"
 
 export function DashboardPage() {
+  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
   const { data: stockSummary, isLoading: isLoadingStock, isError: isStockError } = useStockSummary()
   const { data: orderHistory, isLoading: isLoadingOrders, isError: isOrdersError } = useOrderHistory(14)
+  const { data: stockMovement, isLoading: isLoadingMovement, isError: isMovementError } = useStockMovement(14)
+  const { data: staffCount, isLoading: isLoadingStaff, isError: isStaffError } = useStaffCount({ enabled: isAdmin })
 
-  const isLoading = isLoadingStock || isLoadingOrders
-  const isError = isStockError || isOrdersError
+  const isLoading = isLoadingStock || isLoadingOrders || isLoadingMovement || (isAdmin && isLoadingStaff)
+  const isError = isStockError || isOrdersError || isMovementError || (isAdmin && isStaffError)
 
   return (
     <PageWrapper>
@@ -66,7 +76,7 @@ export function DashboardPage() {
                     <i className="fas fa-truck" />
                   </div>
                   <div className="stat-card-text">
-                    <span className="stat-card-label">Dispatches Today</span>
+                    <span className="stat-card-label">Dispatches</span>
                     <h3 id="dashboard-dispatches-today-count" className="stat-card-value">
                       {orderHistory.dispatchesToday}
                     </h3>
@@ -89,6 +99,71 @@ export function DashboardPage() {
                 </div>
               </Link>
             </div>
+          </div>
+
+          <div className="row">
+            <div className="col-lg-3 col-6">
+              <Link to={ROUTES.ORDERS.LIST} className="card stat-card text-decoration-none text-dark d-block">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-primary-subtle text-primary">
+                    <i className="fas fa-clipboard-check" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Accepted Orders</span>
+                    <h3 id="dashboard-accepted-orders-count" className="stat-card-value">
+                      {orderHistory.byStatus.accepted}
+                    </h3>
+                  </div>
+                </div>
+              </Link>
+            </div>
+            <div className="col-lg-3 col-6">
+              <Link to={ROUTES.ORDERS.LIST} className="card stat-card text-decoration-none text-dark d-block">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-secondary-subtle text-secondary">
+                    <i className="fas fa-flag-checkered" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Completed Orders</span>
+                    <h3 id="dashboard-completed-orders-count" className="stat-card-value">
+                      {orderHistory.byStatus.completed}
+                    </h3>
+                  </div>
+                </div>
+              </Link>
+            </div>
+            <div className="col-lg-3 col-6">
+              <Link to={ROUTES.STOCK.LIST} className="card stat-card text-decoration-none text-dark d-block">
+                <div className="card-body d-flex align-items-center">
+                  <div className="stat-card-icon bg-dark-subtle text-dark">
+                    <i className="fas fa-lock" />
+                  </div>
+                  <div className="stat-card-text">
+                    <span className="stat-card-label">Reserved Units</span>
+                    <h3 id="dashboard-reserved-units-count" className="stat-card-value">
+                      {stockMovement.reservedUnits}
+                    </h3>
+                  </div>
+                </div>
+              </Link>
+            </div>
+            {isAdmin ? (
+              <div className="col-lg-3 col-6">
+                <Link to={ROUTES.USERS.LIST} className="card stat-card text-decoration-none text-dark d-block">
+                  <div className="card-body d-flex align-items-center">
+                    <div className="stat-card-icon bg-info-subtle text-info">
+                      <i className="fas fa-users" />
+                    </div>
+                    <div className="stat-card-text">
+                      <span className="stat-card-label">Staff &amp; Admins</span>
+                      <h3 id="dashboard-staff-count" className="stat-card-value">
+                        {staffCount}
+                      </h3>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ) : null}
           </div>
 
           <div className="row">
