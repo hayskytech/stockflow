@@ -1,14 +1,26 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
-import { useMediaItem, useDeleteMedia, useRenameMedia } from "@/features/media/hooks/use-media"
+import {
+  useDeleteMedia,
+  useMediaItem,
+  useMediaList,
+  useRelatedMedia,
+  useRenameMedia,
+  useReplaceMediaFile,
+} from "@/features/media/hooks/use-media"
+import { MediaLightbox } from "@/features/media/components/MediaLightbox"
+import { ReplaceImageDropzone } from "@/features/media/components/ReplaceImageDropzone"
 import { renameMediaSchema } from "@/features/media/media.schema"
-import { resolveMediaUrl } from "@/lib/media"
+import { downloadMediaFile, resolveMediaUrl } from "@/lib/media"
 import { formatDateTimeIST } from "@/lib/format"
 import { ROUTES } from "@/constants/routes"
+
+// Browsing order for Prev/Next covers only the most recent 100 items (the per_page cap) — fine at this app's scale.
+const BROWSE_LIST_PARAMS = { page: 1, per_page: 100 }
 
 function RenameForm({ media, onSaved, onCancel }) {
   const renameMedia = useRenameMedia()
@@ -86,9 +98,31 @@ export function MediaDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleteError, setDeleteError] = useState("")
   const [isEditingName, setIsEditingName] = useState(false)
+  const [renameSuccess, setRenameSuccess] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [replaceError, setReplaceError] = useState("")
 
   const { data: media, isLoading, isError } = useMediaItem(id)
+  const { data: browseList } = useMediaList(BROWSE_LIST_PARAMS)
+  const { data: relatedItems = [] } = useRelatedMedia(id)
   const deleteMedia = useDeleteMedia()
+  const replaceMediaFile = useReplaceMediaFile()
+
+  useEffect(() => {
+    if (!renameSuccess) return undefined
+    const timer = setTimeout(() => setRenameSuccess(false), 3000)
+    return () => clearTimeout(timer)
+  }, [renameSuccess])
+
+  const browseItems = browseList?.items ?? []
+  const currentIndex = browseItems.findIndex((item) => item.id === id)
+  const prevItem = currentIndex > 0 ? browseItems[currentIndex - 1] : null
+  const nextItem = currentIndex >= 0 && currentIndex < browseItems.length - 1 ? browseItems[currentIndex + 1] : null
+
+  function goToMedia(newId) {
+    navigate(ROUTES.MEDIA_LIBRARY.DETAIL(newId), { replace: true })
+  }
 
   async function handleConfirmDelete() {
     setDeleteError("")
@@ -98,6 +132,21 @@ export function MediaDetailPage() {
     } catch (err) {
       setDeleteError(err.response?.data?.message ?? "Could not delete this media item")
       setConfirmOpen(false)
+    }
+  }
+
+  async function handleCopyUrl() {
+    await navigator.clipboard.writeText(resolveMediaUrl(media.url))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  async function handleReplaceFile(file) {
+    setReplaceError("")
+    try {
+      await replaceMediaFile.mutateAsync({ id, file })
+    } catch (err) {
+      setReplaceError(err.response?.data?.message ?? "Could not replace this image")
     }
   }
 
@@ -120,6 +169,8 @@ export function MediaDetailPage() {
     )
   }
 
+  const format = (media.mimeType ?? "").split("/")[1]?.toUpperCase() ?? media.mimeType
+
   return (
     <PageWrapper>
       <PageHeader
@@ -130,6 +181,12 @@ export function MediaDetailPage() {
             <Link to={ROUTES.MEDIA_LIBRARY.LIST} className="btn btn-outline-secondary mr-2">
               Back to Media Library
             </Link>
+            <button id="media-detail-download" type="button" className="btn btn-outline-secondary mr-2" onClick={() => downloadMediaFile(media)}>
+              <i className="fas fa-download mr-1" /> Download
+            </button>
+            <button id="media-detail-copy-url" type="button" className="btn btn-outline-secondary mr-2" onClick={handleCopyUrl}>
+              <i className="fas fa-link mr-1" /> {copied ? "Copied!" : "Copy Image URL"}
+            </button>
             <button
               id="media-detail-delete-button"
               type="button"
@@ -143,17 +200,76 @@ export function MediaDetailPage() {
       />
 
       {deleteError ? <div className="alert alert-danger">{deleteError}</div> : null}
+      {renameSuccess ? <div className="alert alert-success">File name updated.</div> : null}
 
       <div className="row">
         <div className="col-md-5">
           <div className="card">
             <div className="card-body text-center">
               <img
+                id="media-detail-preview"
                 src={resolveMediaUrl(media.url)}
                 alt={media.originalName ?? ""}
                 className="img-fluid rounded"
-                style={{ maxHeight: 360, objectFit: "contain" }}
+                style={{ maxHeight: 360, objectFit: "contain", cursor: "zoom-in" }}
+                onClick={() => setLightboxOpen(true)}
               />
+              <div className="mt-2">
+                <span className="badge badge-secondary mr-2">{format}</span>
+                <span className="badge badge-secondary mr-2">
+                  {media.width} × {media.height}
+                </span>
+              </div>
+              <p className="text-muted small mb-0 mt-1">{Math.round(media.sizeBytes / 1024)} KB</p>
+
+              <div className="d-flex justify-content-between mt-3">
+                <button
+                  id="media-detail-prev"
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  disabled={!prevItem}
+                  onClick={() => prevItem && goToMedia(prevItem.id)}
+                >
+                  <i className="fas fa-chevron-left mr-1" /> Previous
+                </button>
+                <button
+                  id="media-detail-next"
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  disabled={!nextItem}
+                  onClick={() => nextItem && goToMedia(nextItem.id)}
+                >
+                  Next <i className="fas fa-chevron-right ml-1" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {relatedItems.length > 0 ? (
+            <div className="card mt-3">
+              <div className="card-body">
+                <h6 className="card-title">Related images</h6>
+                <div className="d-flex flex-wrap" style={{ gap: 8 }}>
+                  {relatedItems.map((item) => (
+                    <img
+                      key={item.id}
+                      src={resolveMediaUrl(item.url)}
+                      alt={item.originalName ?? ""}
+                      className="rounded"
+                      style={{ width: 56, height: 56, objectFit: "cover", cursor: "pointer" }}
+                      onClick={() => goToMedia(item.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="card mt-3">
+            <div className="card-body">
+              <h6 className="card-title">Replace image</h6>
+              {replaceError ? <div className="alert alert-danger py-2">{replaceError}</div> : null}
+              <ReplaceImageDropzone onFileSelected={handleReplaceFile} isSubmitting={replaceMediaFile.isPending} />
             </div>
           </div>
         </div>
@@ -166,7 +282,14 @@ export function MediaDetailPage() {
                 <dt className="col-sm-4">File name</dt>
                 <dd className="col-sm-8">
                   {isEditingName ? (
-                    <RenameForm media={media} onSaved={() => setIsEditingName(false)} onCancel={() => setIsEditingName(false)} />
+                    <RenameForm
+                      media={media}
+                      onSaved={() => {
+                        setIsEditingName(false)
+                        setRenameSuccess(true)
+                      }}
+                      onCancel={() => setIsEditingName(false)}
+                    />
                   ) : (
                     <>
                       {media.originalName ?? "Untitled"}
@@ -182,16 +305,8 @@ export function MediaDetailPage() {
                   )}
                 </dd>
 
-                <dt className="col-sm-4">Type</dt>
-                <dd className="col-sm-8">{media.mimeType}</dd>
-
-                <dt className="col-sm-4">Size</dt>
-                <dd className="col-sm-8">{Math.round(media.sizeBytes / 1024)} KB</dd>
-
-                <dt className="col-sm-4">Dimensions</dt>
-                <dd className="col-sm-8">
-                  {media.width} × {media.height}
-                </dd>
+                <dt className="col-sm-4">Uploaded by</dt>
+                <dd className="col-sm-8">{media.uploadedByName ?? "Unknown"}</dd>
 
                 <dt className="col-sm-4">Uploaded</dt>
                 <dd className="col-sm-8">{formatDateTimeIST(media.createdAt)}</dd>
@@ -210,6 +325,22 @@ export function MediaDetailPage() {
         message="This permanently removes the file. It can't be undone, and it's blocked if anything still uses it."
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      <MediaLightbox
+        open={lightboxOpen}
+        media={media}
+        onClose={() => setLightboxOpen(false)}
+        onPrev={() => prevItem && goToMedia(prevItem.id)}
+        onNext={() => nextItem && goToMedia(nextItem.id)}
+        hasPrev={Boolean(prevItem)}
+        hasNext={Boolean(nextItem)}
+        onDelete={() => {
+          setLightboxOpen(false)
+          setConfirmOpen(true)
+        }}
+        relatedItems={relatedItems}
+        onSelectRelated={goToMedia}
       />
     </PageWrapper>
   )

@@ -35,3 +35,22 @@ export async function attachMediaUsageApi(id, entityType, entityId) {
 export async function detachMediaUsageApi(id, entityType, entityId) {
   await apiClient.delete(API_ENDPOINTS.MEDIA.USAGE(id), { data: { entityType, entityId } })
 }
+
+export async function getMediaUsageApi(id) {
+  const { data } = await apiClient.get(API_ENDPOINTS.MEDIA.USAGE(id))
+  return data
+}
+
+export async function getRelatedMediaApi(id) {
+  const { data } = await apiClient.get(API_ENDPOINTS.MEDIA.RELATED(id))
+  return data
+}
+
+export async function replaceMediaFileApi(id, file) {
+  const formData = new FormData()
+  formData.append("file", file)
+  const { data } = await apiClient.post(API_ENDPOINTS.MEDIA.FILE(id), formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+  return data
+}

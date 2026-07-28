@@ -4,8 +4,11 @@ import {
   deleteMediaApi,
   detachMediaUsageApi,
   getMediaApi,
+  getMediaUsageApi,
+  getRelatedMediaApi,
   listMediaApi,
   renameMediaApi,
+  replaceMediaFileApi,
 } from "@/features/media/media.api"
 
 export const MEDIA_QUERY_KEY = "media"
@@ -37,6 +40,30 @@ export function useDeleteMedia() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteMediaApi,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [MEDIA_QUERY_KEY] }),
+  })
+}
+
+export function useMediaUsage(id) {
+  return useQuery({
+    queryKey: [MEDIA_QUERY_KEY, id, "usage"],
+    queryFn: () => getMediaUsageApi(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useRelatedMedia(id) {
+  return useQuery({
+    queryKey: [MEDIA_QUERY_KEY, id, "related"],
+    queryFn: () => getRelatedMediaApi(id),
+    enabled: Boolean(id),
+  })
+}
+
+export function useReplaceMediaFile() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, file }) => replaceMediaFileApi(id, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [MEDIA_QUERY_KEY] }),
   })
 }

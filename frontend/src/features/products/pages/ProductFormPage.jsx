@@ -4,6 +4,7 @@ import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { InfoTooltip } from "@/components/ui/InfoTooltip"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
 import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
 import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
@@ -324,7 +325,10 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
           <form.Field name="mrp">
             {(field) => (
               <div className="form-group">
-                <label htmlFor="product-mrp">MRP</label>
+                <label htmlFor="product-mrp">
+                  MRP
+                  <InfoTooltip text="Maximum Retail Price — the listed selling price shown to customers." />
+                </label>
                 <input
                   id="product-mrp"
                   type="number"
@@ -346,7 +350,10 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
           <form.Field name="wsp">
             {(field) => (
               <div className="form-group">
-                <label htmlFor="product-wsp">WSP</label>
+                <label htmlFor="product-wsp">
+                  WSP
+                  <InfoTooltip text="Wholesale Price — must be less than or equal to the MRP." />
+                </label>
                 <input
                   id="product-wsp"
                   type="number"
@@ -366,7 +373,10 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
         </div>
         <div className="col-md-3">
           <div className="form-group">
-            <label htmlFor="product-stock">Stock</label>
+            <label htmlFor="product-stock">
+              Stock
+              <InfoTooltip text="Units currently available to sell — this comes from scanned/imported barcoded stock, not entered here." />
+            </label>
             <input
               id="product-stock"
               className="form-control"

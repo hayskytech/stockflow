@@ -44,6 +44,8 @@ export const API_ENDPOINTS = {
     UPLOAD: "/media",
     BY_ID: (id) => `/media/${id}`,
     USAGE: (id) => `/media/${id}/usage`,
+    RELATED: (id) => `/media/${id}/related`,
+    FILE: (id) => `/media/${id}/file`,
   },
   STOCK_LEDGER: "/stock-ledger",
   ORDERS: {

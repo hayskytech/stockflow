@@ -18,6 +18,11 @@ function mediaColumns(alias = '') {
 }
 const MEDIA_COLUMNS = mediaColumns();
 
+/** Same as mediaColumns() plus the uploader's display name — requires `LEFT JOIN users u ON u.id = <alias>.uploaded_by`. */
+function mediaColumnsWithUploader(alias) {
+  return `${mediaColumns(alias)}, u.name AS uploadedByName`;
+}
+
 // Guards against decompression-bomb style inputs before sharp does any real work.
 const MAX_INPUT_DIMENSION = 8000;
 const MAX_OUTPUT_DIMENSION = 2000;
@@ -129,7 +134,7 @@ export async function listMedia(listQuery, filters) {
 
   const [rows, countRows] = await Promise.all([
     executeQuery(
-      `SELECT ${mediaColumns('m')} FROM media m ${joins} ${where} ORDER BY ${orderColumn} ${order} LIMIT ? OFFSET ?`,
+      `SELECT ${mediaColumnsWithUploader('m')} FROM media m LEFT JOIN users u ON u.id = m.uploaded_by ${joins} ${where} ORDER BY ${orderColumn} ${order} LIMIT ? OFFSET ?`,
       [...params, perPage, offset],
     ),
     executeQuery(`SELECT COUNT(DISTINCT m.id) AS total FROM media m ${joins} ${where}`, params),
@@ -139,7 +144,10 @@ export async function listMedia(listQuery, filters) {
 }
 
 export async function getMediaById(id) {
-  const [row] = await executeQuery(`SELECT ${MEDIA_COLUMNS} FROM media WHERE id = ?`, [id]);
+  const [row] = await executeQuery(
+    `SELECT ${mediaColumnsWithUploader('m')} FROM media m LEFT JOIN users u ON u.id = m.uploaded_by WHERE m.id = ?`,
+    [id],
+  );
   if (!row) throw new AppError(404, 'Media not found');
   return withUrl(row);
 }
@@ -167,18 +175,93 @@ export async function detachUsage(mediaId, entityType, entityId) {
   ]);
 }
 
+/** Which entities currently reference this media item — used to explain a blocked delete. */
+export async function getMediaUsage(mediaId) {
+  await getMediaById(mediaId); // 404s if it doesn't exist
+  return executeQuery(
+    `SELECT mu.entity_type AS entityType, mu.entity_id AS entityId, p.name AS productName, p.product_code AS productCode
+       FROM media_usage mu
+       LEFT JOIN products p ON p.id = mu.entity_id AND mu.entity_type = 'product'
+      WHERE mu.media_id = ?`,
+    [mediaId],
+  );
+}
+
+/** Other media items that share a usage entity with this one (e.g. another photo of the same product). */
+export async function getRelatedMedia(mediaId) {
+  await getMediaById(mediaId); // 404s if it doesn't exist
+  const rows = await executeQuery(
+    `SELECT DISTINCT ${mediaColumns('m2')}
+       FROM media_usage mu1
+       JOIN media_usage mu2 ON mu2.entity_type = mu1.entity_type AND mu2.entity_id = mu1.entity_id AND mu2.media_id != mu1.media_id
+       JOIN media m2 ON m2.id = mu2.media_id
+      WHERE mu1.media_id = ?
+      ORDER BY m2.created_at DESC
+      LIMIT 12`,
+    [mediaId],
+  );
+  return rows.map(withUrl);
+}
+
 /** Deletes the DB row and the on-disk file. Refuses if any entity still references this media. */
 export async function deleteMedia(id) {
   const media = await getMediaById(id);
-  const [usageRows] = await executeQuery(`SELECT COUNT(*) AS total FROM media_usage WHERE media_id = ?`, [id]);
-  if (usageRows.total > 0) {
-    throw new AppError(409, 'This media item is still in use and cannot be deleted');
+  const usages = await getMediaUsage(id);
+  if (usages.length > 0) {
+    const names = usages.map((u) => u.productName ?? `${u.entityType} ${u.entityId}`).join(', ');
+    throw new AppError(409, `This media item is still used by: ${names}`, { usages });
   }
 
   await executeQuery(`DELETE FROM media WHERE id = ?`, [id]);
   await fs.unlink(path.join(ENV.MEDIA_UPLOAD_DIR, media.storagePath)).catch((err) => {
     logger.error({ err, mediaId: id }, 'Failed to remove media file from disk after row deletion');
   });
+}
+
+/** Re-processes and stores a new file for an existing media row, keeping the same id (and all its usages intact). */
+export async function replaceMediaFile(id, buffer, originalName) {
+  const existing = await getMediaById(id);
+
+  let metadata;
+  try {
+    metadata = await sharp(buffer, { limitInputPixels: MAX_INPUT_DIMENSION * MAX_INPUT_DIMENSION }).metadata();
+  } catch {
+    throw new AppError(400, 'File is not a valid image');
+  }
+  if (!metadata.width || !metadata.height) {
+    throw new AppError(400, 'File is not a valid image');
+  }
+
+  const webpBuffer = await compressToWebp(buffer, metadata);
+  const fileHash = crypto.createHash('sha256').update(webpBuffer).digest('hex');
+
+  if (fileHash === existing.fileHash) {
+    // Identical content — just allow the name to change, nothing else to do.
+    if (originalName) await executeQuery(`UPDATE media SET original_name = ? WHERE id = ?`, [originalName, id]);
+    return getMediaById(id);
+  }
+
+  const [collision] = await executeQuery(`SELECT id FROM media WHERE file_hash = ? AND id != ?`, [fileHash, id]);
+  if (collision) {
+    throw new AppError(409, 'This exact image already exists in the media library as another file');
+  }
+
+  const finalMetadata = await sharp(webpBuffer).metadata();
+  const storagePath = shardedPath(fileHash);
+  const absolutePath = path.join(ENV.MEDIA_UPLOAD_DIR, storagePath);
+  await writeFileAtomic(absolutePath, webpBuffer);
+
+  await executeQuery(
+    `UPDATE media SET file_hash = ?, original_name = COALESCE(?, original_name), storage_path = ?,
+       size_bytes = ?, width = ?, height = ? WHERE id = ?`,
+    [fileHash, originalName ?? null, storagePath, webpBuffer.byteLength, finalMetadata.width, finalMetadata.height, id],
+  );
+
+  await fs.unlink(path.join(ENV.MEDIA_UPLOAD_DIR, existing.storagePath)).catch((err) => {
+    logger.error({ err, mediaId: id }, 'Failed to remove old media file from disk after replace');
+  });
+
+  return getMediaById(id);
 }
 
 /** Deletes media rows with no usage rows, older than MEDIA_ORPHAN_TTL_HOURS — catches abandoned uploads. */

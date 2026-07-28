@@ -7,3 +7,17 @@ export function resolveMediaUrl(url) {
   if (!url) return url
   return /^https?:\/\//.test(url) ? url : `${MEDIA_ORIGIN}${url}`
 }
+
+/** Fetches a media file as a blob and triggers a same-origin download — a cross-origin `<a download>` would just open it instead. */
+export async function downloadMediaFile(media) {
+  const res = await fetch(resolveMediaUrl(media.url))
+  const blob = await res.blob()
+  const blobUrl = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = blobUrl
+  a.download = media.originalName || "image"
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(blobUrl)
+}

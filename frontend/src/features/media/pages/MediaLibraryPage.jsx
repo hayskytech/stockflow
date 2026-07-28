@@ -66,6 +66,11 @@ export function MediaLibraryPage() {
 
       <div className="card">
         <div className="card-body">
+          {data ? (
+            <p id="media-total-count" className="text-muted mb-2">
+              {data.total} {data.total === 1 ? "file" : "files"} total
+            </p>
+          ) : null}
           <div className="d-flex justify-content-between align-items-center mb-3">
             <input
               id="media-search"

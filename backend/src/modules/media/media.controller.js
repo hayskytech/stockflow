@@ -70,6 +70,40 @@ export async function deleteMedia(req, res, next) {
   }
 }
 
+/** POST /api/media/:id/file — multipart upload, replaces the stored image but keeps the same id/usages. */
+export async function replaceMediaFile(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    if (!req.file) throw new AppError(400, 'No file was uploaded');
+    const media = await mediaService.replaceMediaFile(id, req.file.buffer, req.file.originalname);
+    res.status(200).json(media);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/media/:id/usage — which entities (e.g. products) currently reference this media item. */
+export async function getMediaUsage(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    const usages = await mediaService.getMediaUsage(id);
+    res.status(200).json(usages);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/media/:id/related — other media items sharing a usage entity with this one. */
+export async function getRelatedMedia(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    const related = await mediaService.getRelatedMedia(id);
+    res.status(200).json(related);
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** POST /api/media/:id/usage — records that an entity now references this media item. */
 export async function attachUsage(req, res, next) {
   try {
