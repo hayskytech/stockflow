@@ -160,7 +160,6 @@ export function DispatchOrderPage() {
     return (
       <PageWrapper>
         <div className="alert alert-danger">Order not found.</div>
-        <Link to={ROUTES.ORDERS.LIST}>Back to Orders</Link>
       </PageWrapper>
     )
   }

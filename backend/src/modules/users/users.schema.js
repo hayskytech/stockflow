@@ -12,14 +12,27 @@ const passwordPolicy = z
   .regex(/[0-9]/, 'Password must contain at least one number')
   .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
 
-/** POST /api/users — admin creates a user of any role with a temporary password. */
+// Same optional profile fields collected at self-registration (auth.schema.js registerSchema),
+// kept optional here since they're only meaningful for the `customer` role — admin/staff
+// accounts have no shipping address to speak of.
+const profileFields = {
+  phone: z.string().trim().regex(/^[0-9]{10}$/, 'Enter a valid 10-digit phone number').optional().or(z.literal('')),
+  businessName: z.string().trim().max(150, 'Business name is too long').optional().or(z.literal('')),
+  address: z.string().trim().max(255, 'Address is too long').optional().or(z.literal('')),
+  town: z.string().trim().max(100, 'Town is too long').optional().or(z.literal('')),
+  district: z.string().trim().max(100, 'District is too long').optional().or(z.literal('')),
+  state: z.string().trim().max(100, 'State is too long').optional().or(z.literal('')),
+  pincode: z.string().trim().regex(/^[0-9]{6}$/, 'Enter a valid 6-digit pincode').optional().or(z.literal('')),
+};
+
+/** POST /api/users — admin creates a user of any role with a permanent password. */
 export const createUserSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(100, 'Name is too long'),
   email: z.string().email('Invalid email address'),
   role: roleField,
   password: passwordPolicy,
   isActive: z.boolean().optional(),
-  mustChangePassword: z.boolean().optional(),
+  ...profileFields,
 });
 
 /** PUT /api/users/:id — partial update; `password`, when present, resets the login password. */
@@ -30,7 +43,7 @@ export const updateUserSchema = z
     role: roleField.optional(),
     password: passwordPolicy.optional(),
     isActive: z.boolean().optional(),
-    mustChangePassword: z.boolean().optional(),
+    ...profileFields,
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });
 
@@ -40,3 +53,4 @@ export const listUsersQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: uuidField });
+export const sessionIdParamSchema = z.object({ sessionId: uuidField });

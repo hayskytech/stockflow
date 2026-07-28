@@ -3,25 +3,26 @@ import { useNavigate } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { changePasswordApi } from "@/features/auth/auth.api"
 import { changePasswordSchema } from "@/features/auth/auth.schema"
+import { PasswordField } from "@/features/auth/components/PasswordField"
+import { PasswordRequirements } from "@/features/auth/components/PasswordRequirements"
 import { useAuthStore } from "@/store/auth.store"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
 export function ChangePasswordPage() {
   const [serverError, setServerError] = useState("")
-  const clearMustChangePassword = useAuthStore((s) => s.clearMustChangePassword)
+  const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const siteTitle = useSiteTitle()
 
   const form = useForm({
-    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
+    defaultValues: { currentPassword: "", newPassword: "" },
     validators: { onSubmit: changePasswordSchema },
     onSubmit: async ({ value }) => {
       setServerError("")
       try {
         await changePasswordApi(value)
-        clearMustChangePassword()
-        navigate(ROUTES.DASHBOARD, { replace: true })
+        navigate(user?.role === "customer" ? ROUTES.STORE.HOME : ROUTES.PROFILE, { replace: true })
       } catch (err) {
         setServerError(err.response?.data?.message ?? "Could not change password")
       }
@@ -37,7 +38,7 @@ export function ChangePasswordPage() {
 
         <div className="card">
           <div className="card-body login-card-body">
-            <p className="login-box-msg">You must set a new password before continuing</p>
+            <p className="login-box-msg">Change your password</p>
 
             <form
               onSubmit={(e) => {
@@ -47,55 +48,16 @@ export function ChangePasswordPage() {
             >
               <form.Field name="currentPassword">
                 {(field) => (
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className="form-control"
-                      placeholder="Current password"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    {field.state.meta.errors.length > 0 ? (
-                      <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                    ) : null}
-                  </div>
+                  <PasswordField id="current-password" placeholder="Current password" field={field} />
                 )}
               </form.Field>
 
               <form.Field name="newPassword">
                 {(field) => (
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className="form-control"
-                      placeholder="New password"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    {field.state.meta.errors.length > 0 ? (
-                      <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                    ) : null}
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field name="confirmPassword">
-                {(field) => (
-                  <div className="mb-3">
-                    <input
-                      type="password"
-                      className="form-control"
-                      placeholder="Confirm new password"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    {field.state.meta.errors.length > 0 ? (
-                      <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                    ) : null}
-                  </div>
+                  <>
+                    <PasswordField id="new-password" placeholder="New password" field={field} />
+                    <PasswordRequirements value={field.state.value} />
+                  </>
                 )}
               </form.Field>
 

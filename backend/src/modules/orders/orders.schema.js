@@ -55,6 +55,8 @@ export const listOrdersQuerySchema = z.object({
   // storefront "My Orders" screen when an admin/staff account browses the store as a shopper.
   // A `customer` requester is always restricted to their own orders regardless of this value.
   scope: z.enum(['own', 'all']).optional(),
+  // Admin/staff only — the UserView "Orders"/"Payments" tabs filter to one specific user's orders.
+  customerId: uuidField.optional(),
 });
 
 export const idParamSchema = z.object({ id: uuidField });

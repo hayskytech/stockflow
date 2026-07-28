@@ -3,7 +3,11 @@ import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney, stockBadge } from "@/lib/format"
 import { ROUTES } from "@/constants/routes"
 
-/** Ecommerce product tile: photo, name, WSP price (with MRP struck-through), stock badge. Links to the product detail page. */
+/**
+ * Ecommerce product tile: photo, name, WSP price (with MRP struck-through), stock badge.
+ * Links to the product detail page. Shared across storefront features (home + product-detail's
+ * related products), so it lives here rather than inside a single feature (CLAUDE.md).
+ */
 export function ProductCard({ product }) {
   const badge = stockBadge(product.quantityAvailable, product.reorderLevel)
   const hasDiscount = Number(product.mrp) > Number(product.wsp)

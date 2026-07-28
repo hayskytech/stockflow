@@ -5,6 +5,7 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { InfoTooltip } from "@/components/ui/InfoTooltip"
+import { NumberField } from "@/components/ui/NumberField"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
 import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
 import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
@@ -329,19 +330,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
                   MRP
                   <InfoTooltip text="Maximum Retail Price — the listed selling price shown to customers." />
                 </label>
-                <input
-                  id="product-mrp"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.valueAsNumber || 0)}
-                  onBlur={field.handleBlur}
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                ) : null}
+                <NumberField id="product-mrp" field={field} step="0.01" min="0" max="10000000" />
               </div>
             )}
           </form.Field>
@@ -354,19 +343,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
                   WSP
                   <InfoTooltip text="Wholesale Price — must be less than or equal to the MRP." />
                 </label>
-                <input
-                  id="product-wsp"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.valueAsNumber || 0)}
-                  onBlur={field.handleBlur}
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                ) : null}
+                <NumberField id="product-wsp" field={field} step="0.01" min="0" max="10000000" />
               </div>
             )}
           </form.Field>
@@ -392,16 +369,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
             {(field) => (
               <div className="form-group">
                 <label htmlFor="product-reorder-level">Reorder Level</label>
-                <input
-                  id="product-reorder-level"
-                  type="number"
-                  step="1"
-                  min="0"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.valueAsNumber || 0)}
-                  onBlur={field.handleBlur}
-                />
+                <NumberField id="product-reorder-level" field={field} step="1" min="0" max="100000" />
               </div>
             )}
           </form.Field>

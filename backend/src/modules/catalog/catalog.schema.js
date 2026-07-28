@@ -51,3 +51,20 @@ export const listSubCategoriesQuerySchema = z.object({
 });
 
 export const idParamSchema = z.object({ id: uuidField });
+
+/** PATCH /api/divisions/reorder — full ordered list of every division id */
+export const reorderDivisionsSchema = z.object({
+  orderedIds: z.array(uuidField).min(1, 'At least one id is required'),
+});
+
+/** PATCH /api/categories/reorder — full ordered list of every category id within one division */
+export const reorderCategoriesSchema = z.object({
+  divisionId: uuidField,
+  orderedIds: z.array(uuidField).min(1, 'At least one id is required'),
+});
+
+/** PATCH /api/sub-categories/reorder — full ordered list of every sub-category id within one category */
+export const reorderSubCategoriesSchema = z.object({
+  categoryId: uuidField,
+  orderedIds: z.array(uuidField).min(1, 'At least one id is required'),
+});

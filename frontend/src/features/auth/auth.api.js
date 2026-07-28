@@ -31,3 +31,14 @@ export async function logoutApi() {
 export async function changePasswordApi(input) {
   await apiClient.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, input)
 }
+
+/** Lists the authenticated user's own active login sessions (device/IP/last-used). */
+export async function listMySessionsApi() {
+  const { data } = await apiClient.get(API_ENDPOINTS.AUTH.MY_SESSIONS)
+  return data
+}
+
+/** Revokes one of the authenticated user's own sessions. */
+export async function revokeMySessionApi(sessionId) {
+  await apiClient.delete(API_ENDPOINTS.AUTH.MY_SESSION_BY_ID(sessionId))
+}

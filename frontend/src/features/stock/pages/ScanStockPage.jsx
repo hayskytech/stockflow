@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
@@ -11,10 +11,11 @@ import { useCheckBarcodes, useCreateStock } from "@/features/stock/hooks/use-sto
 import { ScanInput, playErrorBuzz } from "@/components/common/ScanInput"
 import { ScanSessionForm } from "@/features/stock/components/ScanSessionForm"
 import { ScannedItemsList } from "@/features/stock/components/ScannedItemsList"
-import { formatMoney } from "@/lib/format"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 
 export function ScanStockPage() {
   const navigate = useNavigate()
+  const formatMoney = useFormatMoney()
   const { data: products = [] } = useProductOptions()
   const activeProducts = useMemo(() => products.filter((p) => p.isActive), [products])
 
@@ -145,12 +146,6 @@ export function ScanStockPage() {
       <PageHeader
         title="Scan Stock"
         description="Add stock with a barcode scanner — one scan per physical item, imported as a single batch"
-        actions={
-          <Link to={ROUTES.STOCK.LIST} id="scan-back-button" className="btn btn-outline-secondary">
-            <i className="fas fa-arrow-left mr-1" />
-            Back to Stock
-          </Link>
-        }
       />
 
       {showHeaderForm ? (

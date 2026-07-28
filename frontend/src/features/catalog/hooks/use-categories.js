@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { createCategoryApi, deleteCategoryApi, listCategoriesApi, updateCategoryApi } from "@/features/catalog/catalog.api"
+import {
+  createCategoryApi,
+  deleteCategoryApi,
+  listCategoriesApi,
+  reorderCategoriesApi,
+  updateCategoryApi,
+} from "@/features/catalog/catalog.api"
 
 export const CATEGORIES_QUERY_KEY = "categories"
 
@@ -30,6 +36,14 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteCategoryApi,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] }),
+  })
+}
+
+export function useReorderCategories() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ divisionId, orderedIds }) => reorderCategoriesApi(divisionId, orderedIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] }),
   })
 }

@@ -3,13 +3,22 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
+import { DragHandle, useSortableList } from "@/components/common/SortableList"
 import { useAuthStore } from "@/store/auth.store"
 import { useCatalogStore } from "@/features/catalog/catalog.store"
 import { useDivisions } from "@/features/catalog/hooks/use-divisions"
-import { useCategories, useCreateCategory, useDeleteCategory, useUpdateCategory } from "@/features/catalog/hooks/use-categories"
+import {
+  useCategories,
+  useCreateCategory,
+  useDeleteCategory,
+  useReorderCategories,
+  useUpdateCategory,
+} from "@/features/catalog/hooks/use-categories"
 import {
   useCreateSubCategory,
   useDeleteSubCategory,
+  useReorderSubCategories,
   useSubCategories,
   useUpdateSubCategory,
 } from "@/features/catalog/hooks/use-sub-categories"
@@ -43,24 +52,55 @@ export function CategoriesPage() {
     data: categoriesData,
     isLoading: isCategoriesLoading,
     isError: isCategoriesError,
-  } = useCategories({ page: categoryPage, per_page: 10, division_id: categoryDivisionFilter || undefined })
+  } = useCategories({ page: categoryPage, per_page: 100, division_id: categoryDivisionFilter || undefined, order: "asc" })
   const categories = categoriesData?.items ?? []
 
   const createCategory = useCreateCategory()
   const updateCategory = useUpdateCategory()
   const deleteCategory = useDeleteCategory()
+  const reorderCategories = useReorderCategories()
+
+  // Reordering is scoped to one division, so it only makes sense once a specific
+  // division is selected (not the "All divisions" view) and the whole set is on one page.
+  const canReorderCategories =
+    isAdmin && Boolean(categoryDivisionFilter) && (categoriesData?.totalPages ?? 1) <= 1 && categories.length > 1
+  const { getDragHandlers: getCategoryDragHandlers } = useSortableList({
+    items: categories,
+    getId: (row) => row.id,
+    onReorder: async (newOrder) => {
+      try {
+        await reorderCategories.mutateAsync({ divisionId: categoryDivisionFilter, orderedIds: newOrder.map((row) => row.id) })
+      } catch (err) {
+        setCategoryServerError(err.response?.data?.message ?? "Could not reorder categories")
+      }
+    },
+  })
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId) ?? null
   const {
     data: subCategoriesData,
     isLoading: isSubCategoriesLoading,
     isError: isSubCategoriesError,
-  } = useSubCategories({ page: subCategoryPage, per_page: 10, category_id: selectedCategoryId })
+  } = useSubCategories({ page: subCategoryPage, per_page: 100, category_id: selectedCategoryId, order: "asc" })
   const subCategories = subCategoriesData?.items ?? []
 
   const createSubCategory = useCreateSubCategory()
   const updateSubCategory = useUpdateSubCategory()
   const deleteSubCategory = useDeleteSubCategory()
+  const reorderSubCategories = useReorderSubCategories()
+
+  const canReorderSubCategories = isAdmin && (subCategoriesData?.totalPages ?? 1) <= 1 && subCategories.length > 1
+  const { getDragHandlers: getSubCategoryDragHandlers } = useSortableList({
+    items: subCategories,
+    getId: (row) => row.id,
+    onReorder: async (newOrder) => {
+      try {
+        await reorderSubCategories.mutateAsync({ categoryId: selectedCategoryId, orderedIds: newOrder.map((row) => row.id) })
+      } catch (err) {
+        setSubCategoryServerError(err.response?.data?.message ?? "Could not reorder sub-categories")
+      }
+    },
+  })
 
   function openAddCategoryModal() {
     setEditingCategory(null)
@@ -136,6 +176,7 @@ export function CategoriesPage() {
   }
 
   const categoryColumns = [
+    ...(canReorderCategories ? [{ key: "drag", label: "", render: () => <DragHandle /> }] : []),
     { key: "name", label: "Name" },
     { key: "divisionName", label: "Division" },
     {
@@ -162,14 +203,18 @@ export function CategoriesPage() {
             Sub-categories
           </button>
           {isAdmin ? (
-            <>
-              <button type="button" className="btn btn-sm btn-outline-primary mr-2" onClick={() => openEditCategoryModal(row)}>
-                Edit
-              </button>
-              <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingCategory(row)}>
-                Delete
-              </button>
-            </>
+            <RowActionsMenu
+              actions={[
+                { key: "edit", label: "Edit", icon: "fa-pen", onClick: () => openEditCategoryModal(row) },
+                {
+                  key: "delete",
+                  label: "Delete",
+                  icon: "fa-trash",
+                  variant: "danger",
+                  onClick: () => setDeletingCategory(row),
+                },
+              ]}
+            />
           ) : null}
         </>
       ),
@@ -177,6 +222,7 @@ export function CategoriesPage() {
   ]
 
   const subCategoryColumns = [
+    ...(canReorderSubCategories ? [{ key: "drag", label: "", render: () => <DragHandle /> }] : []),
     { key: "name", label: "Name" },
     {
       key: "isActive",
@@ -192,14 +238,18 @@ export function CategoriesPage() {
             label: "",
             className: "text-right",
             render: (row) => (
-              <>
-                <button type="button" className="btn btn-sm btn-outline-primary mr-2" onClick={() => openEditSubCategoryModal(row)}>
-                  Edit
-                </button>
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingSubCategory(row)}>
-                  Delete
-                </button>
-              </>
+              <RowActionsMenu
+                actions={[
+                  { key: "edit", label: "Edit", icon: "fa-pen", onClick: () => openEditSubCategoryModal(row) },
+                  {
+                    key: "delete",
+                    label: "Delete",
+                    icon: "fa-trash",
+                    variant: "danger",
+                    onClick: () => setDeletingSubCategory(row),
+                  },
+                ]}
+              />
             ),
           },
         ]
@@ -210,6 +260,7 @@ export function CategoriesPage() {
     <PageWrapper>
       <PageHeader
         title="Categories"
+        count={categoriesData?.total}
         description="Categories sit under a division; sub-categories sit under a category."
         actions={
           isAdmin ? (
@@ -242,6 +293,13 @@ export function CategoriesPage() {
                 </option>
               ))}
             </select>
+            {isAdmin ? (
+              <small className="form-text text-muted">
+                {canReorderCategories
+                  ? "Drag rows to reorder."
+                  : "Select a single division to drag rows and reorder its categories."}
+              </small>
+            ) : null}
           </div>
 
           {categoryServerError && !isCategoryModalOpen ? <div className="alert alert-danger">{categoryServerError}</div> : null}
@@ -257,6 +315,7 @@ export function CategoriesPage() {
             page={categoryPage}
             totalPages={categoriesData?.totalPages ?? 1}
             onPageChange={setCategoryPage}
+            getRowProps={canReorderCategories ? (row) => getCategoryDragHandlers(row.id) : undefined}
           />
         </div>
       </div>
@@ -264,7 +323,10 @@ export function CategoriesPage() {
       {selectedCategory ? (
         <div className="card">
           <div className="card-header d-flex justify-content-between align-items-center">
-            <h3 className="card-title mb-0">Sub-categories of &quot;{selectedCategory?.name}&quot;</h3>
+            <h3 className="card-title mb-0">
+              Sub-categories of &quot;{selectedCategory?.name}&quot;
+              {typeof subCategoriesData?.total === "number" ? ` (${subCategoriesData.total})` : ""}
+            </h3>
             {isAdmin ? (
               <button type="button" className="btn btn-sm btn-primary" onClick={openAddSubCategoryModal}>
                 <i className="fas fa-plus mr-1" />
@@ -275,6 +337,11 @@ export function CategoriesPage() {
           <div className="card-body">
             {subCategoryServerError && !isSubCategoryModalOpen ? (
               <div className="alert alert-danger">{subCategoryServerError}</div>
+            ) : null}
+            {isAdmin && subCategories.length > 1 ? (
+              <p className="text-muted small">
+                {canReorderSubCategories ? "Drag rows to reorder." : "Reordering needs the full list on one page."}
+              </p>
             ) : null}
             <DataTable
               columns={subCategoryColumns}
@@ -287,6 +354,7 @@ export function CategoriesPage() {
               page={subCategoryPage}
               totalPages={subCategoriesData?.totalPages ?? 1}
               onPageChange={setSubCategoryPage}
+              getRowProps={canReorderSubCategories ? (row) => getSubCategoryDragHandlers(row.id) : undefined}
             />
           </div>
         </div>

@@ -23,6 +23,7 @@ export async function listOrders(req, res, next) {
       dateFrom: req.query.date_from,
       dateTo: req.query.date_to,
       scope: req.query.scope,
+      customerId: req.query.customer_id,
     });
     const { rows, total } = await ordersService.listOrders(req.listQuery, filters, req.user);
     setPaginationHeaders(res, total, req.listQuery.perPage);

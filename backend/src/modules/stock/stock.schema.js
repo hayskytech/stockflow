@@ -22,6 +22,11 @@ const barcodeField = z
 
 const moneyField = z.coerce.number().min(0, 'Must be a number ≥ 0');
 
+/** Today's date as YYYY-MM-DD, UTC — matches the plain DATE column and avoids locale-aware methods. */
+function todayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 /** POST /api/stock — bulk-create scanned units against one product/invoice. */
 export const scanImportSchema = z
   .object({
@@ -34,7 +39,11 @@ export const scanImportSchema = z
     note: z.string().trim().max(500, 'Note must be 500 characters or less').optional(),
     barcodes: z.array(barcodeField).min(1, 'Scan at least one barcode').max(500, 'A single import is capped at 500 barcodes'),
   })
-  .refine((data) => data.wsp <= data.mrp, { message: 'WSP cannot be greater than MRP', path: ['wsp'] });
+  .refine((data) => data.wsp <= data.mrp, { message: 'WSP cannot be greater than MRP', path: ['wsp'] })
+  .refine((data) => !data.invoiceDate || data.invoiceDate <= todayDateString(), {
+    message: 'Invoice date cannot be in the future',
+    path: ['invoiceDate'],
+  });
 
 /** POST /api/stock/barcode-status — advisory duplicate check while scanning. */
 export const barcodeStatusSchema = z.object({

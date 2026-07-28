@@ -40,7 +40,6 @@ INSERT INTO users (
   password_hash,
   role,
   is_active,
-  must_change_password,
   created_at,
   updated_at
 ) VALUES (
@@ -51,7 +50,6 @@ INSERT INTO users (
   '$2b$12$Xrpko5jTF9EaqcJU1oEEVO2Yk10N.NQrlKaP61dsKFpsGiVqIw9D6',
   'admin',
   TRUE,
-  TRUE,   -- force password change on first login
   NOW(),
   NOW()
 );
@@ -70,7 +68,6 @@ INSERT INTO users (
   password_hash,
   role,
   is_active,
-  must_change_password,
   created_at,
   updated_at
 ) VALUES (
@@ -79,7 +76,6 @@ INSERT INTO users (
   'staff@stockflow.local',
   '$2b$12$Xrpko5jTF9EaqcJU1oEEVO2Yk10N.NQrlKaP61dsKFpsGiVqIw9D6',
   'staff',
-  TRUE,
   TRUE,
   NOW(),
   NOW()

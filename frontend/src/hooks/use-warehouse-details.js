@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { apiClient } from "@/lib/axios"
 import { API_ENDPOINTS } from "@/constants/api"
 import { APP_NAME } from "@/constants/app"
+import { formatMoney } from "@/lib/format"
 
 /**
  * Read-only warehouse settings (name/address/contact + bank transfer details) used by other
@@ -43,4 +44,29 @@ export function useWarehousePublicInfo() {
 export function useSiteTitle() {
   const { data } = useWarehousePublicInfo()
   return data?.name || APP_NAME
+}
+
+const DEFAULT_APP_SETTINGS = {
+  phoneCountryCode: "+91",
+  phoneNumberLength: 10,
+  currencySymbol: "₹",
+  currencyDecimalDigits: 2,
+}
+
+/** App-wide phone/currency format settings (see Warehouse "App Settings"), with safe defaults
+ *  while the public warehouse query hasn't resolved yet. */
+export function useAppSettings() {
+  const { data } = useWarehousePublicInfo()
+  return {
+    phoneCountryCode: data?.phoneCountryCode ?? DEFAULT_APP_SETTINGS.phoneCountryCode,
+    phoneNumberLength: data?.phoneNumberLength ?? DEFAULT_APP_SETTINGS.phoneNumberLength,
+    currencySymbol: data?.currencySymbol ?? DEFAULT_APP_SETTINGS.currencySymbol,
+    currencyDecimalDigits: data?.currencyDecimalDigits ?? DEFAULT_APP_SETTINGS.currencyDecimalDigits,
+  }
+}
+
+/** Bound money formatter using the admin-configured currency symbol/decimal digits. */
+export function useFormatMoney() {
+  const { currencySymbol, currencyDecimalDigits } = useAppSettings()
+  return (value) => formatMoney(value, { symbol: currencySymbol, decimalDigits: currencyDecimalDigits })
 }

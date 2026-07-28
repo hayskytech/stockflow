@@ -30,6 +30,10 @@ export async function deleteDivisionApi(id) {
   await apiClient.delete(API_ENDPOINTS.DIVISIONS.BY_ID(id))
 }
 
+export async function reorderDivisionsApi(orderedIds) {
+  await apiClient.patch(API_ENDPOINTS.DIVISIONS.REORDER, { orderedIds })
+}
+
 // --- Categories ----------------------------------------------------------
 
 export async function listCategoriesApi(params) {
@@ -51,6 +55,10 @@ export async function deleteCategoryApi(id) {
   await apiClient.delete(API_ENDPOINTS.CATEGORIES.BY_ID(id))
 }
 
+export async function reorderCategoriesApi(divisionId, orderedIds) {
+  await apiClient.patch(API_ENDPOINTS.CATEGORIES.REORDER, { divisionId, orderedIds })
+}
+
 // --- Sub-categories --------------------------------------------------------
 
 export async function listSubCategoriesApi(params) {
@@ -70,4 +78,8 @@ export async function updateSubCategoryApi(id, input) {
 
 export async function deleteSubCategoryApi(id) {
   await apiClient.delete(API_ENDPOINTS.SUB_CATEGORIES.BY_ID(id))
+}
+
+export async function reorderSubCategoriesApi(categoryId, orderedIds) {
+  await apiClient.patch(API_ENDPOINTS.SUB_CATEGORIES.REORDER, { categoryId, orderedIds })
 }

@@ -102,7 +102,11 @@ export function StockLedgerPage() {
 
   return (
     <PageWrapper>
-      <PageHeader title="Stock Ledger" description="Append-only history of every stock movement — imports, orders, and adjustments" />
+      <PageHeader
+        title="Stock Ledger"
+        count={data?.total}
+        description="Append-only history of every stock movement — imports, orders, and adjustments"
+      />
 
       <div className="card">
         <div className="card-body">

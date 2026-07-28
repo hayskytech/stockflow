@@ -3,6 +3,7 @@ import {
   createSubCategoryApi,
   deleteSubCategoryApi,
   listSubCategoriesApi,
+  reorderSubCategoriesApi,
   updateSubCategoryApi,
 } from "@/features/catalog/catalog.api"
 
@@ -36,6 +37,14 @@ export function useDeleteSubCategory() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deleteSubCategoryApi,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [SUB_CATEGORIES_QUERY_KEY] }),
+  })
+}
+
+export function useReorderSubCategories() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ categoryId, orderedIds }) => reorderSubCategoriesApi(categoryId, orderedIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [SUB_CATEGORIES_QUERY_KEY] }),
   })
 }

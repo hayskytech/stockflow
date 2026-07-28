@@ -2,6 +2,8 @@ import { useState } from "react"
 import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
+import { NumberField } from "@/components/ui/NumberField"
+import { PhoneField } from "@/components/ui/PhoneField"
 import { warehouseSchema } from "@/features/warehouse/warehouse.schema"
 import { useUpdateWarehouse, useWarehouse } from "@/features/warehouse/hooks/use-warehouse"
 
@@ -44,13 +46,20 @@ function WarehouseForm({ warehouse, onSubmit, isSubmitting }) {
     defaultValues: {
       name: warehouse?.name ?? "",
       address: warehouse?.address ?? "",
-      phone: warehouse?.phone ?? "",
+      // Strip any pre-existing formatting (e.g. a baked-in "+91-" prefix from before this
+      // field was digit-only) so it doesn't visually double up with the new prefix box —
+      // keep only the last N digits, since a leading country code would otherwise remain.
+      phone: (warehouse?.phone ?? "").replace(/\D/g, "").slice(-(warehouse?.phoneNumberLength ?? 10)),
       email: warehouse?.email ?? "",
       bankName: warehouse?.bankName ?? "",
       accountHolderName: warehouse?.accountHolderName ?? "",
       accountNumber: warehouse?.accountNumber ?? "",
       ifscCode: warehouse?.ifscCode ?? "",
       upiId: warehouse?.upiId ?? "",
+      phoneCountryCode: warehouse?.phoneCountryCode ?? "+91",
+      phoneNumberLength: warehouse?.phoneNumberLength ?? 10,
+      currencySymbol: warehouse?.currencySymbol ?? "₹",
+      currencyDecimalDigits: warehouse?.currencyDecimalDigits ?? 2,
     },
     validators: { onSubmit: warehouseSchema },
     onSubmit: async ({ value }) => {
@@ -115,13 +124,7 @@ function WarehouseForm({ warehouse, onSubmit, isSubmitting }) {
             {(field) => (
               <div className="form-group">
                 <label htmlFor="warehouse-phone">Phone (optional)</label>
-                <input
-                  id="warehouse-phone"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
+                <PhoneField id="warehouse-phone" field={field} />
               </div>
             )}
           </form.Field>
@@ -232,6 +235,73 @@ function WarehouseForm({ warehouse, onSubmit, isSubmitting }) {
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
+              </div>
+            )}
+          </form.Field>
+        </div>
+      </div>
+
+      <hr />
+      <h5 className="mb-3">App Settings</h5>
+      <p className="text-muted small">Applied app-wide to every phone number field and every displayed money amount.</p>
+
+      <div className="row">
+        <div className="col-md-3">
+          <form.Field name="phoneCountryCode">
+            {(field) => (
+              <div className="form-group">
+                <label htmlFor="warehouse-phone-country-code">Phone country code</label>
+                <input
+                  id="warehouse-phone-country-code"
+                  className="form-control"
+                  placeholder="+91"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                {field.state.meta.errors.length > 0 ? (
+                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
+                ) : null}
+              </div>
+            )}
+          </form.Field>
+        </div>
+        <div className="col-md-3">
+          <form.Field name="phoneNumberLength">
+            {(field) => (
+              <div className="form-group">
+                <label htmlFor="warehouse-phone-number-length">Phone number digits</label>
+                <NumberField id="warehouse-phone-number-length" field={field} min="6" max="15" step="1" />
+              </div>
+            )}
+          </form.Field>
+        </div>
+        <div className="col-md-3">
+          <form.Field name="currencySymbol">
+            {(field) => (
+              <div className="form-group">
+                <label htmlFor="warehouse-currency-symbol">Currency symbol</label>
+                <input
+                  id="warehouse-currency-symbol"
+                  className="form-control"
+                  placeholder="₹"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+                {field.state.meta.errors.length > 0 ? (
+                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
+                ) : null}
+              </div>
+            )}
+          </form.Field>
+        </div>
+        <div className="col-md-3">
+          <form.Field name="currencyDecimalDigits">
+            {(field) => (
+              <div className="form-group">
+                <label htmlFor="warehouse-currency-decimal-digits">Currency decimal digits</label>
+                <NumberField id="warehouse-currency-decimal-digits" field={field} min="0" max="4" step="1" />
               </div>
             )}
           </form.Field>

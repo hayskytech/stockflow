@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useProductDetail } from "@/features/product-detail/hooks/use-product-detail"
+import { useRelatedProducts } from "@/features/product-detail/hooks/use-related-products"
 import { QuantitySelector } from "@/components/ui/QuantitySelector"
+import { ProductCard } from "@/components/common/ProductCard"
+import { LoginRequiredModal } from "@/components/common/LoginRequiredModal"
 import { useCartStore } from "@/store/cart.store"
+import { useAuthStore } from "@/store/auth.store"
 import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney, stockBadge } from "@/lib/format"
 import { ROUTES } from "@/constants/routes"
@@ -11,10 +15,13 @@ export function ProductDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: product, isLoading, isError } = useProductDetail(id)
+  const { data: relatedProducts = [] } = useRelatedProducts(product?.categoryId, product?.id)
   const addItem = useCartStore((s) => s.addItem)
+  const accessToken = useAuthStore((s) => s.accessToken)
   const [quantity, setQuantity] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState(null)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   useEffect(() => {
     setSelectedImageUrl(null)
@@ -43,6 +50,10 @@ export function ProductDetailPage() {
   const displayImageUrl = selectedImageUrl ?? allImageUrls[0] ?? null
 
   function handleAddToCart() {
+    if (!accessToken) {
+      setLoginModalOpen(true)
+      return
+    }
     addItem(product, quantity)
     setJustAdded(true)
   }
@@ -149,6 +160,21 @@ export function ProductDetailPage() {
           )}
         </div>
       </div>
+
+      {relatedProducts.length > 0 ? (
+        <div id="related-products" className="mt-4">
+          <h5 className="mb-3">Related Products</h5>
+          <div className="row">
+            {relatedProducts.map((relatedProduct) => (
+              <div key={relatedProduct.id} className="col-6 col-md-3 mb-4">
+                <ProductCard product={relatedProduct} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <LoginRequiredModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
     </div>
   )
 }

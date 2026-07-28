@@ -72,6 +72,19 @@ export function Topbar({ onToggleSidebar }) {
             <span className="d-none d-md-inline">{user?.name ?? "Account"}</span>
           </button>
           <div className={`dropdown-menu dropdown-menu-lg dropdown-menu-right ${menuOpen ? "show" : ""}`}>
+            <button
+              type="button"
+              id="topbar-profile-link"
+              className="dropdown-item"
+              onClick={() => {
+                setMenuOpen(false)
+                navigate(ROUTES.PROFILE)
+              }}
+            >
+              <i className="far fa-user mr-2" />
+              My Profile
+            </button>
+            <div className="dropdown-divider" />
             {user?.role === "admin" ? (
               <>
                 <button

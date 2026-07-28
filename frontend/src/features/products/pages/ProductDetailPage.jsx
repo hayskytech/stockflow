@@ -1,15 +1,17 @@
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useAuthStore } from "@/store/auth.store"
 import { useProduct } from "@/features/products/hooks/use-products"
-import { formatMoney, formatDateTimeIST, stockBadge } from "@/lib/format"
+import { formatDateTimeIST, stockBadge } from "@/lib/format"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const formatMoney = useFormatMoney()
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
   const isStaff = useAuthStore((s) => s.user?.role === "staff")
   const canManage = isAdmin || isStaff
@@ -30,7 +32,6 @@ export function ProductDetailPage() {
     return (
       <PageWrapper>
         <div className="alert alert-danger">Product not found.</div>
-        <Link to={ROUTES.PRODUCTS.LIST}>Back to Products</Link>
       </PageWrapper>
     )
   }
@@ -44,9 +45,6 @@ export function ProductDetailPage() {
         description={product.productCode}
         actions={
           <>
-            <Link to={ROUTES.PRODUCTS.LIST} className="btn btn-outline-secondary mr-2">
-              Back to Products
-            </Link>
             {canManage ? (
               <button
                 type="button"

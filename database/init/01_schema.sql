@@ -47,6 +47,28 @@
 -- To record stock intake (file import / barcode-scan import) in the ledger on an
 -- already-provisioned DB, run once:
 --   ALTER TABLE stock_ledger MODIFY reference_type ENUM('order','adjustment','import') NOT NULL;
+--
+-- To add app-wide phone/currency format settings to an already-provisioned DB, run once:
+--   ALTER TABLE warehouse
+--     ADD COLUMN phone_country_code VARCHAR(4) NOT NULL DEFAULT '+91',
+--     ADD COLUMN phone_number_length TINYINT UNSIGNED NOT NULL DEFAULT 10,
+--     ADD COLUMN currency_symbol VARCHAR(5) NOT NULL DEFAULT '₹',
+--     ADD COLUMN currency_decimal_digits TINYINT UNSIGNED NOT NULL DEFAULT 2;
+--
+-- To remove the forced/temporary-password concept on an already-provisioned DB, run once:
+--   ALTER TABLE users DROP COLUMN must_change_password;
+--
+-- To add manual drag-and-drop ordering to the catalog tree on an already-provisioned DB, run once:
+--   ALTER TABLE divisions ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY idx_divisions_sort_order (sort_order);
+--   ALTER TABLE categories ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY idx_categories_sort_order (sort_order);
+--   ALTER TABLE sub_categories ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY idx_sub_categories_sort_order (sort_order);
+--   -- then backfill a stable initial order (alphabetical) so existing rows aren't all tied at 0:
+--   UPDATE divisions d JOIN (SELECT id, ROW_NUMBER() OVER (ORDER BY name) AS rn FROM divisions) t
+--     ON t.id = d.id SET d.sort_order = t.rn;
+--   UPDATE categories c JOIN (SELECT id, ROW_NUMBER() OVER (PARTITION BY division_id ORDER BY name) AS rn FROM categories) t
+--     ON t.id = c.id SET c.sort_order = t.rn;
+--   UPDATE sub_categories s JOIN (SELECT id, ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY name) AS rn FROM sub_categories) t
+--     ON t.id = s.id SET s.sort_order = t.rn;
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
@@ -70,8 +92,7 @@ CREATE TABLE users (
   state                 VARCHAR(100)    NULL,
   pincode               VARCHAR(10)     NULL,
 
-  is_active             BOOLEAN         NOT NULL DEFAULT TRUE       COMMENT 'FALSE = account disabled',
-  must_change_password  BOOLEAN         NOT NULL DEFAULT FALSE      COMMENT 'Forces password change on next login',
+  is_active             BOOLEAN         NOT NULL DEFAULT TRUE       COMMENT 'FALSE = account disabled (also used as the customer soft-delete flag)',
   failed_login_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0        COMMENT 'Resets to 0 on successful login',
   locked_until          DATETIME        NULL                        COMMENT 'Account locked until this time after too many failures',
 
@@ -136,6 +157,10 @@ CREATE TABLE warehouse (
   account_number        VARCHAR(30)   NULL,
   ifsc_code              VARCHAR(15)   NULL,
   upi_id                VARCHAR(100)  NULL,
+  phone_country_code    VARCHAR(4)    NOT NULL DEFAULT '+91'         COMMENT 'Prefix shown/enforced on all phone number inputs app-wide',
+  phone_number_length   TINYINT UNSIGNED NOT NULL DEFAULT 10        COMMENT 'Required digit count for all phone number inputs app-wide',
+  currency_symbol       VARCHAR(5)    NOT NULL DEFAULT '₹'           COMMENT 'Shown before every money amount app-wide',
+  currency_decimal_digits TINYINT UNSIGNED NOT NULL DEFAULT 2       COMMENT 'Decimal places shown for every money amount app-wide',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -156,12 +181,14 @@ CREATE TABLE divisions (
   id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
   name          VARCHAR(100)  NOT NULL,
   is_active     BOOLEAN       NOT NULL DEFAULT TRUE                 COMMENT 'FALSE hides it from new-product/order pickers',
+  sort_order    INT           NOT NULL DEFAULT 0                    COMMENT 'Manual drag-and-drop display order',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
   UNIQUE KEY uq_divisions_name    (name),
-  KEY idx_divisions_is_active     (is_active)
+  KEY idx_divisions_is_active     (is_active),
+  KEY idx_divisions_sort_order    (sort_order)
 
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
@@ -178,6 +205,7 @@ CREATE TABLE categories (
   division_id   CHAR(36)      NOT NULL,
   name          VARCHAR(100)  NOT NULL,
   is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
+  sort_order    INT           NOT NULL DEFAULT 0                    COMMENT 'Manual drag-and-drop display order within its division',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -185,6 +213,7 @@ CREATE TABLE categories (
   UNIQUE KEY uq_categories_division_name (division_id, name),
   KEY idx_categories_division_id  (division_id),
   KEY idx_categories_is_active    (is_active),
+  KEY idx_categories_sort_order   (sort_order),
 
   CONSTRAINT fk_categories_division_id
     FOREIGN KEY (division_id) REFERENCES divisions (id) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -204,6 +233,7 @@ CREATE TABLE sub_categories (
   category_id   CHAR(36)      NOT NULL,
   name          VARCHAR(100)  NOT NULL,
   is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
+  sort_order    INT           NOT NULL DEFAULT 0                    COMMENT 'Manual drag-and-drop display order within its category',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -211,6 +241,7 @@ CREATE TABLE sub_categories (
   UNIQUE KEY uq_sub_categories_category_name (category_id, name),
   KEY idx_sub_categories_category_id (category_id),
   KEY idx_sub_categories_is_active   (is_active),
+  KEY idx_sub_categories_sort_order  (sort_order),
 
   CONSTRAINT fk_sub_categories_category_id
     FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE RESTRICT ON UPDATE CASCADE

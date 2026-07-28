@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom"
+import { Navigate } from "react-router-dom"
 import { useAuthStore } from "@/store/auth.store"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
 
@@ -13,9 +13,7 @@ import { ROUTES, landingPathForRole } from "@/constants/routes"
 export function ProtectedRoute({ children, allow }) {
   const accessToken = useAuthStore((s) => s.accessToken)
   const role = useAuthStore((s) => s.user?.role)
-  const mustChangePassword = useAuthStore((s) => s.mustChangePassword)
   const isInitialized = useAuthStore((s) => s.isInitialized)
-  const { pathname } = useLocation()
 
   if (!isInitialized) {
     return (
@@ -27,10 +25,6 @@ export function ProtectedRoute({ children, allow }) {
 
   if (!accessToken) {
     return <Navigate to={ROUTES.AUTH.LOGIN} replace />
-  }
-
-  if (mustChangePassword && pathname !== ROUTES.AUTH.CHANGE_PASSWORD) {
-    return <Navigate to={ROUTES.AUTH.CHANGE_PASSWORD} replace />
   }
 
   if (allow && !allow.includes(role)) {

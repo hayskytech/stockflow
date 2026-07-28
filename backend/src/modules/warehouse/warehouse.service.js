@@ -5,6 +5,8 @@ const WAREHOUSE_COLUMNS = `
   id, name, address, phone, email,
   bank_name AS bankName, account_holder_name AS accountHolderName,
   account_number AS accountNumber, ifsc_code AS ifscCode, upi_id AS upiId,
+  phone_country_code AS phoneCountryCode, phone_number_length AS phoneNumberLength,
+  currency_symbol AS currencySymbol, currency_decimal_digits AS currencyDecimalDigits,
   created_at AS createdAt, updated_at AS updatedAt
 `;
 
@@ -18,6 +20,10 @@ const COLUMN_MAP = {
   accountNumber: 'account_number',
   ifscCode: 'ifsc_code',
   upiId: 'upi_id',
+  phoneCountryCode: 'phone_country_code',
+  phoneNumberLength: 'phone_number_length',
+  currencySymbol: 'currency_symbol',
+  currencyDecimalDigits: 'currency_decimal_digits',
 };
 
 export async function getWarehouse() {
@@ -26,10 +32,25 @@ export async function getWarehouse() {
   return row;
 }
 
-/** Public subset for unauthenticated screens (e.g. login/register site title) — name only, never bank details. */
+/**
+ * Public subset for unauthenticated screens — name (site title) plus the app-wide phone/currency
+ * format settings, which must be readable without a session (e.g. the public storefront and the
+ * register form both need to validate phone numbers against these before a session exists).
+ * Never includes bank/address/contact details.
+ */
 export async function getPublicWarehouseInfo() {
-  const [row] = await executeQuery(`SELECT name FROM warehouse WHERE id = 1`);
-  return { name: row?.name ?? null };
+  const [row] = await executeQuery(
+    `SELECT name, phone_country_code AS phoneCountryCode, phone_number_length AS phoneNumberLength,
+            currency_symbol AS currencySymbol, currency_decimal_digits AS currencyDecimalDigits
+     FROM warehouse WHERE id = 1`,
+  );
+  return {
+    name: row?.name ?? null,
+    phoneCountryCode: row?.phoneCountryCode ?? '+91',
+    phoneNumberLength: row?.phoneNumberLength ?? 10,
+    currencySymbol: row?.currencySymbol ?? '₹',
+    currencyDecimalDigits: row?.currencyDecimalDigits ?? 2,
+  };
 }
 
 export async function updateWarehouse(input) {

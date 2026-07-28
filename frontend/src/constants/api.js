@@ -8,6 +8,8 @@ export const API_ENDPOINTS = {
     LOGOUT: "/auth/logout",
     ME: "/auth/me",
     CHANGE_PASSWORD: "/auth/change-password",
+    MY_SESSIONS: "/users/me/sessions",
+    MY_SESSION_BY_ID: (sessionId) => `/users/me/sessions/${sessionId}`,
   },
   USERS: {
     LIST: "/users",
@@ -18,14 +20,17 @@ export const API_ENDPOINTS = {
   DIVISIONS: {
     LIST: "/divisions",
     BY_ID: (id) => `/divisions/${id}`,
+    REORDER: "/divisions/reorder",
   },
   CATEGORIES: {
     LIST: "/categories",
     BY_ID: (id) => `/categories/${id}`,
+    REORDER: "/categories/reorder",
   },
   SUB_CATEGORIES: {
     LIST: "/sub-categories",
     BY_ID: (id) => `/sub-categories/${id}`,
+    REORDER: "/sub-categories/reorder",
   },
   PRODUCTS: {
     LIST: "/products",

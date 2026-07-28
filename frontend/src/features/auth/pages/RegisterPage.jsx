@@ -4,6 +4,8 @@ import { useForm } from "@tanstack/react-form"
 import { registerApi } from "@/features/auth/auth.api"
 import { registerSchema } from "@/features/auth/auth.schema"
 import { PasswordField } from "@/features/auth/components/PasswordField"
+import { PasswordRequirements } from "@/features/auth/components/PasswordRequirements"
+import { PhoneField } from "@/components/ui/PhoneField"
 import { useAuthStore } from "@/store/auth.store"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { APP_TAGLINE } from "@/constants/app"
@@ -123,24 +125,8 @@ export function RegisterPage() {
                 <div className="col-md-6">
                   <form.Field name="phone">
                     {(field) => (
-                      <div className="input-group mb-3">
-                        <input
-                          id="register-phone"
-                          type="tel"
-                          className="form-control"
-                          placeholder="Phone"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          onBlur={field.handleBlur}
-                        />
-                        <div className="input-group-append">
-                          <div className="input-group-text">
-                            <i className="fas fa-phone" />
-                          </div>
-                        </div>
-                        {field.state.meta.errors.length > 0 ? (
-                          <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                        ) : null}
+                      <div className="mb-3">
+                        <PhoneField id="register-phone" field={field} />
                       </div>
                     )}
                   </form.Field>
@@ -306,7 +292,12 @@ export function RegisterPage() {
               </form.Field>
 
               <form.Field name="password">
-                {(field) => <PasswordField id="register-password" placeholder="Password" field={field} />}
+                {(field) => (
+                  <>
+                    <PasswordField id="register-password" placeholder="Password" field={field} />
+                    <PasswordRequirements value={field.state.value} />
+                  </>
+                )}
               </form.Field>
 
               {serverError ? <div className="alert alert-danger py-2">{serverError}</div> : null}

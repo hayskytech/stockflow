@@ -15,7 +15,7 @@ export function useDivisionOptions() {
   return useQuery({
     queryKey: [CATALOG_OPTIONS_QUERY_KEY, "divisions"],
     queryFn: async () => {
-      const { data } = await apiClient.get(API_ENDPOINTS.DIVISIONS.LIST, { params: { per_page: 100 } })
+      const { data } = await apiClient.get(API_ENDPOINTS.DIVISIONS.LIST, { params: { per_page: 100, order: "asc" } })
       return data
     },
   })
@@ -26,7 +26,7 @@ export function useCategoryOptions(divisionId) {
     queryKey: [CATALOG_OPTIONS_QUERY_KEY, "categories", divisionId ?? null],
     queryFn: async () => {
       const { data } = await apiClient.get(API_ENDPOINTS.CATEGORIES.LIST, {
-        params: { per_page: 100, division_id: divisionId || undefined },
+        params: { per_page: 100, division_id: divisionId || undefined, order: "asc" },
       })
       return data
     },
@@ -38,7 +38,7 @@ export function useSubCategoryOptions(categoryId) {
     queryKey: [CATALOG_OPTIONS_QUERY_KEY, "subCategories", categoryId ?? null],
     queryFn: async () => {
       const { data } = await apiClient.get(API_ENDPOINTS.SUB_CATEGORIES.LIST, {
-        params: { per_page: 100, category_id: categoryId || undefined },
+        params: { per_page: 100, category_id: categoryId || undefined, order: "asc" },
       })
       return data
     },

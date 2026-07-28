@@ -48,24 +48,54 @@ export async function registerCustomer(input, ip, userAgent) {
 
   const businessName = input.businessName || null;
 
+  // A previously soft-deleted customer (deactivated by an admin) re-registering with the same
+  // email or phone reactivates their old account instead of colliding on the unique indexes.
+  const [inactiveMatch] = await executeQuery(
+    `SELECT id FROM users WHERE (email = ? OR phone = ?) AND is_active = 0 AND role = 'customer'`,
+    [input.email, input.phone],
+  );
+
   try {
-    await executeQuery(
-      `INSERT INTO users (id, name, email, phone, password_hash, role, business_name, address, town, district, state, pincode, is_active, must_change_password)
-       VALUES (?, ?, ?, ?, ?, 'customer', ?, ?, ?, ?, ?, ?, 1, 0)`,
-      [
-        id,
-        input.name,
-        input.email,
-        input.phone,
-        passwordHash,
-        businessName,
-        input.address,
-        input.town,
-        input.district,
-        input.state,
-        input.pincode,
-      ],
-    );
+    if (inactiveMatch) {
+      await executeQuery(
+        `UPDATE users
+         SET name = ?, email = ?, phone = ?, password_hash = ?, business_name = ?,
+             address = ?, town = ?, district = ?, state = ?, pincode = ?,
+             is_active = 1, failed_login_attempts = 0, locked_until = NULL
+         WHERE id = ?`,
+        [
+          input.name,
+          input.email,
+          input.phone,
+          passwordHash,
+          businessName,
+          input.address,
+          input.town,
+          input.district,
+          input.state,
+          input.pincode,
+          inactiveMatch.id,
+        ],
+      );
+    } else {
+      await executeQuery(
+        `INSERT INTO users (id, name, email, phone, password_hash, role, business_name, address, town, district, state, pincode, is_active)
+         VALUES (?, ?, ?, ?, ?, 'customer', ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          id,
+          input.name,
+          input.email,
+          input.phone,
+          passwordHash,
+          businessName,
+          input.address,
+          input.town,
+          input.district,
+          input.state,
+          input.pincode,
+        ],
+      );
+    }
   } catch (err) {
     // Generic message intentionally — do not reveal registration state beyond "taken".
     if (err.code === 'ER_DUP_ENTRY') {
@@ -77,16 +107,18 @@ export async function registerCustomer(input, ip, userAgent) {
     throw err;
   }
 
-  const accessToken = signAccessToken({ sub: id, role: 'customer' });
+  const finalId = inactiveMatch?.id ?? id;
+
+  const accessToken = signAccessToken({ sub: finalId, role: 'customer' });
   const refreshToken = generateRefreshToken();
 
-  await storeRefreshToken(id, hashRefreshToken(refreshToken), ip, userAgent);
+  await storeRefreshToken(finalId, hashRefreshToken(refreshToken), ip, userAgent);
 
   return {
     accessToken,
     refreshToken,
     user: {
-      id,
+      id: finalId,
       name: input.name,
       email: input.email,
       phone: input.phone,
@@ -97,7 +129,6 @@ export async function registerCustomer(input, ip, userAgent) {
       district: input.district,
       state: input.state,
       pincode: input.pincode,
-      mustChangePassword: false,
     },
   };
 }
@@ -105,7 +136,7 @@ export async function registerCustomer(input, ip, userAgent) {
 /** Validates credentials, enforces account lockout, and issues tokens on success. */
 export async function loginUser(input, ip, userAgent) {
   const [user] = await executeQuery(
-    `SELECT id, name, email, password_hash, role, is_active, must_change_password,
+    `SELECT id, name, email, password_hash, role, is_active,
             failed_login_attempts, locked_until
      FROM users
      WHERE email = ?`,
@@ -149,18 +180,14 @@ export async function loginUser(input, ip, userAgent) {
 
   await storeRefreshToken(user.id, hashRefreshToken(refreshToken), ip, userAgent);
 
-  const mustChangePassword = user.must_change_password === 1;
-
   return {
     accessToken,
     refreshToken,
-    mustChangePassword,
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      mustChangePassword,
     },
   };
 }
@@ -197,7 +224,7 @@ export async function refreshTokens(rawToken, ip, userAgent) {
   ]);
 
   const [user] = await executeQuery(
-    `SELECT id, name, email, role, must_change_password FROM users WHERE id = ? AND is_active = 1`,
+    `SELECT id, name, email, role FROM users WHERE id = ? AND is_active = 1`,
     [existing.user_id],
   );
 
@@ -216,7 +243,6 @@ export async function refreshTokens(rawToken, ip, userAgent) {
       name: user.name,
       email: user.email,
       role: user.role,
-      mustChangePassword: user.must_change_password === 1,
     },
   };
 }
@@ -233,7 +259,7 @@ export async function logoutUser(rawToken) {
 export async function getMe(userId) {
   const [user] = await executeQuery(
     `SELECT id, name, email, phone, role, business_name, address, town, district, state, pincode,
-            is_active, must_change_password, last_login_at, created_at, updated_at
+            is_active, last_login_at, created_at, updated_at
      FROM users
      WHERE id = ? AND is_active = 1`,
     [userId],
@@ -255,8 +281,5 @@ export async function changeUserPassword(userId, input) {
 
   const newHash = await bcrypt.hash(input.newPassword, 12);
 
-  await executeQuery(`UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?`, [
-    newHash,
-    userId,
-  ]);
+  await executeQuery(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 }

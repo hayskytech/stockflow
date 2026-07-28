@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Topbar } from "@/components/layout/Topbar"
+import { ScrollToTop } from "@/components/common/ScrollToTop"
 
 // AdminLTE's `lg` breakpoint. Below it the sidebar must be off-canvas by default —
 // the CSS only auto-hides it under 768px; in the 768–992 range stock AdminLTE relies
@@ -33,6 +34,7 @@ export function AppShell() {
 
   return (
     <div className="wrapper">
+      <ScrollToTop />
       <Topbar onToggleSidebar={() => setSidebarOpen((v) => !v)} />
       <Sidebar />
       <div id="sidebar-overlay" onClick={() => setSidebarOpen(false)} />

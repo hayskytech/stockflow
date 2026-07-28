@@ -23,7 +23,6 @@ export function DispatchDetailPage() {
     return (
       <PageWrapper>
         <div className="alert alert-danger">Dispatch not found.</div>
-        <Link to={ROUTES.DISPATCHES.LIST}>Back to Dispatches</Link>
       </PageWrapper>
     )
   }
@@ -33,11 +32,6 @@ export function DispatchDetailPage() {
       <PageHeader
         title={`Dispatch ${dispatch.dispatchNumber}`}
         description={`Dispatched ${formatDateTimeIST(dispatch.createdAt)} by ${dispatch.dispatchedByName}`}
-        actions={
-          <Link to={ROUTES.DISPATCHES.LIST} className="btn btn-outline-secondary">
-            Back to Dispatches
-          </Link>
-        }
       />
 
       <div className="row">

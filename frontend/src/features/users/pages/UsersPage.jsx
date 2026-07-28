@@ -1,12 +1,15 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { useAuthStore } from "@/store/auth.store"
 import { useUsersStore } from "@/features/users/users.store"
 import { UserFormModal } from "@/features/users/components/UserFormModal"
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from "@/features/users/hooks/use-users"
+import { ROUTES } from "@/constants/routes"
 
 const ROLE_BADGES = {
   admin: "badge-danger",
@@ -85,7 +88,11 @@ export function UsersPage() {
   }
 
   const columns = [
-    { key: "name", label: "Name" },
+    {
+      key: "name",
+      label: "Name",
+      render: (row) => <Link to={ROUTES.USERS.DETAIL(row.id)}>{row.name}</Link>,
+    },
     { key: "email", label: "Email" },
     {
       key: "role",
@@ -106,20 +113,18 @@ export function UsersPage() {
       label: "",
       className: "text-right",
       render: (row) => (
-        <>
-          <button type="button" className="btn btn-sm btn-outline-primary mr-2" onClick={() => openEdit(row)}>
-            Edit
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-danger"
-            onClick={() => setDeletingUser(row)}
-            disabled={row.id === currentUserId}
-            title={row.id === currentUserId ? "You cannot delete your own account" : undefined}
-          >
-            Delete
-          </button>
-        </>
+        <RowActionsMenu
+          actions={[
+            { key: "edit", label: "Edit", icon: "fa-pen", onClick: () => openEdit(row) },
+            row.id !== currentUserId && {
+              key: "delete",
+              label: "Delete",
+              icon: "fa-trash",
+              variant: "danger",
+              onClick: () => setDeletingUser(row),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -128,6 +133,7 @@ export function UsersPage() {
     <PageWrapper>
       <PageHeader
         title="Users / Staff"
+        count={data?.total}
         description="Manage admin, staff, and customer accounts"
         actions={
           <button type="button" className="btn btn-primary" onClick={openCreate}>
@@ -200,7 +206,11 @@ export function UsersPage() {
       <ConfirmDialog
         open={Boolean(deletingUser)}
         title="Delete user?"
-        message={`Are you sure you want to delete "${deletingUser?.name}"? This cannot be undone.`}
+        message={
+          deletingUser?.role === "customer"
+            ? `This will deactivate "${deletingUser?.name}"'s account. Their order history is kept, and the account reactivates automatically if they (or you) re-add the same email or phone number.`
+            : `Are you sure you want to delete "${deletingUser?.name}"? This cannot be undone.`
+        }
         onConfirm={handleDelete}
         onCancel={() => setDeletingUser(null)}
       />

@@ -7,6 +7,9 @@ import {
   idParamSchema,
   listCategoriesQuerySchema,
   listSubCategoriesQuerySchema,
+  reorderCategoriesSchema,
+  reorderDivisionsSchema,
+  reorderSubCategoriesSchema,
   updateCategorySchema,
   updateDivisionSchema,
   updateSubCategorySchema,
@@ -68,6 +71,17 @@ export async function deleteDivision(req, res, next) {
   }
 }
 
+/** PATCH /api/divisions/reorder */
+export async function reorderDivisions(req, res, next) {
+  try {
+    const { orderedIds } = parseOrThrow(reorderDivisionsSchema, req.body);
+    await catalogService.reorderDivisions(orderedIds);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Categories
 // ---------------------------------------------------------------------------
@@ -118,6 +132,17 @@ export async function deleteCategory(req, res, next) {
   }
 }
 
+/** PATCH /api/categories/reorder */
+export async function reorderCategories(req, res, next) {
+  try {
+    const { divisionId, orderedIds } = parseOrThrow(reorderCategoriesSchema, req.body);
+    await catalogService.reorderCategories(divisionId, orderedIds);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Sub-categories
 // ---------------------------------------------------------------------------
@@ -162,6 +187,17 @@ export async function deleteSubCategory(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     await catalogService.deleteSubCategory(id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** PATCH /api/sub-categories/reorder */
+export async function reorderSubCategories(req, res, next) {
+  try {
+    const { categoryId, orderedIds } = parseOrThrow(reorderSubCategoriesSchema, req.body);
+    await catalogService.reorderSubCategories(categoryId, orderedIds);
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -30,6 +30,7 @@ export function MediaLibraryPage() {
     <PageWrapper>
       <PageHeader
         title="Media Library"
+        count={data?.total}
         description={`Images uploaded across ${siteTitle} — reuse them or remove what's no longer needed`}
         actions={
           <button

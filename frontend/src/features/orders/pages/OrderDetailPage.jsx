@@ -5,12 +5,14 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
 import { useOrder, useUpdateOrderStatus, useUpdatePaymentStatus } from "@/features/orders/hooks/use-orders"
-import { formatMoney, formatDateTimeIST } from "@/lib/format"
+import { formatDateTimeIST } from "@/lib/format"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
 
 export function OrderDetailPage() {
   const { id } = useParams()
+  const formatMoney = useFormatMoney()
   const { data: order, isLoading, isError } = useOrder(id)
   const updateOrderStatus = useUpdateOrderStatus()
   const updatePaymentStatus = useUpdatePaymentStatus()
@@ -48,7 +50,6 @@ export function OrderDetailPage() {
     return (
       <PageWrapper>
         <div className="alert alert-danger">Order not found.</div>
-        <Link to={ROUTES.ORDERS.LIST}>Back to Orders</Link>
       </PageWrapper>
     )
   }
@@ -58,11 +59,6 @@ export function OrderDetailPage() {
       <PageHeader
         title={`Order ${order.orderNumber}`}
         description={`Placed ${formatDateTimeIST(order.createdAt)} by ${order.requestedByName}`}
-        actions={
-          <Link to={ROUTES.ORDERS.LIST} className="btn btn-outline-secondary">
-            Back to Orders
-          </Link>
-        }
       />
 
       {serverError ? <div className="alert alert-danger">{serverError}</div> : null}

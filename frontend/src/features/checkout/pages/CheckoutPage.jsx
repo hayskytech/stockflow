@@ -3,6 +3,8 @@ import { Navigate, useNavigate } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { checkoutSchema } from "@/features/checkout/checkout.schema"
 import { placeOrderApi } from "@/features/checkout/checkout.api"
+import { useMyProfile } from "@/features/checkout/hooks/use-my-profile"
+import { PhoneField } from "@/components/ui/PhoneField"
 import { useCartStore } from "@/store/cart.store"
 import { useWarehouseDetails } from "@/hooks/use-warehouse-details"
 import { formatMoney } from "@/lib/format"
@@ -10,9 +12,39 @@ import { ROUTES } from "@/constants/routes"
 
 export function CheckoutPage() {
   const items = useCartStore((s) => s.items)
+  const { data: warehouse, isLoading: isLoadingWarehouse } = useWarehouseDetails()
+  const { data: profile, isLoading: isLoadingProfile } = useMyProfile()
+
+  // Captured once on mount (not read live) — guards against loading this page directly with an
+  // empty cart, without re-triggering when a successful submit calls clearCart() and briefly
+  // re-renders this still-mounted page before the navigate-away to the order page takes effect.
+  const [cameInWithEmptyCart] = useState(() => items.length === 0)
+
+  if (cameInWithEmptyCart) {
+    return <Navigate to={ROUTES.STORE.CART} replace />
+  }
+
+  if (isLoadingProfile) {
+    return (
+      <div className="text-center py-5">
+        <div className="spinner-border text-primary" role="status" />
+      </div>
+    )
+  }
+
+  return (
+    <CheckoutForm items={items} profile={profile} warehouse={warehouse} isLoadingWarehouse={isLoadingWarehouse} />
+  )
+}
+
+/**
+ * Split out from CheckoutPage so the form's `defaultValues` (seeded from the customer's saved
+ * profile — address should come from their personal details, not be re-typed every order) are
+ * only built once the profile has actually loaded.
+ */
+function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
   const clearCart = useCartStore((s) => s.clearCart)
   const navigate = useNavigate()
-  const { data: warehouse, isLoading: isLoadingWarehouse } = useWarehouseDetails()
 
   // Stable for the lifetime of this checkout attempt — a resubmit (double-click, retry,
   // back-button) reuses the same key so the server returns the original order instead of
@@ -24,13 +56,13 @@ export function CheckoutPage() {
 
   const form = useForm({
     defaultValues: {
-      fullName: "",
-      phone: "",
-      addressLine1: "",
-      addressLine2: "",
-      city: "",
-      state: "",
-      pincode: "",
+      fullName: profile?.name ?? "",
+      phone: profile?.phone ?? "",
+      addressLine1: profile?.address ?? "",
+      addressLine2: profile?.district ?? "",
+      city: profile?.town ?? "",
+      state: profile?.state ?? "",
+      pincode: profile?.pincode ?? "",
       transactionId: "",
       notes: "",
     },
@@ -51,17 +83,16 @@ export function CheckoutPage() {
           notes: value.notes,
           idempotencyKey,
         })
-        clearCart()
+        // Navigate before clearing the cart — clearing first drops `items` to empty while
+        // CheckoutPage is still mounted, which trips its own `items.length === 0` guard and
+        // redirects to the cart page instead of the order confirmation.
         navigate(ROUTES.STORE.ORDER_DETAIL(order.id))
+        clearCart()
       } catch (err) {
         setServerError(err.response?.data?.message ?? "Could not place order. Please try again.")
       }
     },
   })
-
-  if (items.length === 0) {
-    return <Navigate to={ROUTES.STORE.CART} replace />
-  }
 
   return (
     <div>
@@ -101,17 +132,7 @@ export function CheckoutPage() {
                   {(field) => (
                     <div className="form-group">
                       <label htmlFor="checkout-phone">Phone number</label>
-                      <input
-                        id="checkout-phone"
-                        type="tel"
-                        className="form-control"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                      />
-                      {field.state.meta.errors.length > 0 ? (
-                        <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                      ) : null}
+                      <PhoneField id="checkout-phone" field={field} />
                     </div>
                   )}
                 </form.Field>

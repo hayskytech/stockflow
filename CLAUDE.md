@@ -139,7 +139,7 @@ Two separate state tools with distinct responsibilities — do not mix them:
 - Validate all external input (request bodies, form data) with schemas (Zod/Joi on backend, matching schema on frontend)
 - ECMA naming: camelCase for variables/functions, PascalCase for components, SCREAMING_SNAKE_CASE for constants
 - Prefer named exports over default exports everywhere — `export const authRouter = Router()` not `export default router`. Exception: React components may use default exports where tooling requires it
-- No audit logging, no soft deletes — hard-delete rows and rely on `created_at`/`updated_at` only
+- No audit logging, no soft deletes — hard-delete rows and rely on `created_at`/`updated_at` only. **One deliberate exception**: deleting a `customer` user deactivates (`is_active=false`) instead of hard-deleting, so their order history stays intact; admin/staff deletes remain hard deletes
 
 ## Error Handling
 
@@ -161,7 +161,7 @@ JWT-based auth with access + refresh tokens.
 - **Refresh rotation** (`POST /auth/refresh`) — every refresh consumes (revokes) the old token and issues a new pair. If a revoked/already-used token is replayed, treat it as token theft: revoke **all** sessions for that user.
 - **Logout** (`POST /auth/logout`) — revokes the refresh token and clears the cookie.
 - **Me** (`GET /auth/me`) — returns the authenticated user's safe profile (excludes password hash, token data).
-- **Forced password change** — `must_change_password` flag on user (e.g. first login / admin reset) forces `POST /auth/change-password` before normal use. Password policy: min 8 chars, upper, lower, number, special char.
+- **Change password** (`POST /auth/change-password`) — voluntary, self-service only. There is no forced/temporary-password concept: a password set by self-registration or by an admin creating/resetting a user is permanent from the start; a user is never forced through this endpoint before continuing to use the app. Password policy: min 8 chars, upper, lower, number, special char.
 - **Middleware**: `authenticate` — verifies the Bearer access token, attaches decoded payload to `req.user`, rejects with 401 on missing/invalid/expired token.
 - **Rate limiting**: login/refresh/change-password endpoints behind a stricter limiter to slow brute-force attempts.
 
@@ -200,8 +200,7 @@ name
 email            UNIQUE
 password_hash
 role             ENUM('admin','staff','customer')
-is_active
-must_change_password
+is_active        -- FALSE also doubles as the customer soft-delete flag (see Coding Rules)
 failed_login_attempts, locked_until
 created_at, updated_at
 ```
@@ -214,20 +213,17 @@ created_at, updated_at
 | Manage users (create/edit/deactivate)            | ✅    | ❌    | ❌       |
 | View/manage products & stock                     | ✅    | ✅    | ❌       |
 | Browse product catalog (storefront)              | ✅    | ✅    | ✅ (also guests, no login required) |
-| Place orders                                     | ✅    | ✅    | ❌\*     |
+| Place orders                                     | ✅    | ✅    | ✅ (via storefront cart/checkout) |
 | Accept/dispatch orders                           | ✅    | ✅    | ❌       |
 | View reports                                     | ✅    | ✅    | ❌       |
 | View/terminate sessions — own                    | ✅    | ✅    | ✅       |
 | View/terminate sessions — others                 | ✅    | ❌    | ❌       |
 
-\* Customers are browse-only in the current storefront; customer order placement (cart/checkout) is a planned follow-up.
-
 ### Onboarding flow
 
 1. Admin sets up the Warehouse record (`PUT /warehouse`) — name, address, contact details.
-2. Admin creates Users, choosing `role` (`admin` or `staff`).
-3. New user logs in with a temporary password and is forced through `must_change_password` before normal use.
-4. Customers self-register at `POST /auth/register` (public) and are auto-logged-in into the storefront — no admin involvement, no forced password change.
+2. Admin creates Users, choosing `role` (`admin` or `staff`) and setting a permanent password directly — there is no temporary-password/forced-change step.
+3. Customers self-register at `POST /auth/register` (public) and are auto-logged-in into the storefront — no admin involvement. Registering (or an admin re-adding a user) with the same email/phone as a previously deactivated (soft-deleted) customer reactivates that same account instead of creating a duplicate.
 
 ## Pagination & Filtering — WordPress REST API style
 
@@ -252,16 +248,19 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 ## Feature Modules & Example Routes
 
 - **Storefront (Home)** — customer-facing ecommerce landing at `/store`, which is also what the home URL (`/`) redirects to by default for every visitor (frontend `features/home/`). Lists active products grouped by category using the existing `GET /products` endpoint; browse-only, no new backend routes. Browsing (home + product detail) requires no login — `GET /products`, `GET /products/:id`, `GET /divisions`, `GET /categories`, `GET /sub-categories` are public reads; only cart/checkout/order-history need an account. Renders inside `StoreShell` (top navbar, no admin sidebar). Logged-in admin/staff reach the back office via a "Dashboard" link in the account dropdown, not the default landing page.
+  - Product detail (`features/product-detail/`) shows up to 4 "Related Products" from the same category (client-side filter over `GET /products?category_id=`), rendered with the shared `components/common/ProductCard.jsx` (also used by `features/home`).
+  - Clicking "Add to Cart" while logged out shows a `LoginRequiredModal` (`components/common/`) instead of adding the item — the cart itself is always guest-persisted client-side, but building it up is gated behind login.
+  - Checkout (`features/checkout/`) prefills the shipping form from the logged-in customer's saved profile (`GET /auth/me`) — still editable per order.
 - **Dashboard** — summary widgets, no dedicated routes beyond `GET /reports/*`.
 - **Warehouse** — `GET /warehouse`, `PUT /warehouse` — single-record settings (name, address, contact); admin only for write.
 - **Catalog** — `divisions`, `categories`, `sub_categories` — `GET /divisions`, `GET /categories` (`division_id`), `GET /sub-categories` (`category_id`), CRUD on each — admin only for write; staff read-only. Deleting a division/category/sub-category that still has children or products is rejected (`ON DELETE RESTRICT`) — deactivate (`is_active=false`) instead.
 - **Products** — `GET /products` (`search`, `division_id`, `category_id`, `sub_category_id`, `brand_id`, `is_active`), CRUD — admin/staff for write. `mrp`/`wsp` validated `wsp <= mrp`; `product_code`/`barcode` unique.
 - **Stock** — `GET /stock` (`search`, `product_id`, `status`, `invoice_no`, `order_id`, `date_from`, `date_to`), `GET /stock/:id`, `POST /stock` (manual barcode scan-add against a product), `POST /stock/import` (bulk `.xlsx`/`.csv`), `POST /stock/barcode-status` (advisory pre-check while scanning), `DELETE /stock/:id` — admin/staff; one row per physical barcoded unit (`in_stock` → `reserved` → `dispatched`); every create/delete writes a `stock_ledger` row and keeps `products.quantity_available` in sync.
 - **Stock Ledger** — `GET /stock-ledger` (`product_id`, `movement_type`, `date_from`, `date_to`) — read-only, append-only log of every stock movement (import, order reserve/release, dispatch, adjustment).
-- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`), `POST /orders` (checks `quantity_available` per line, all-or-nothing, but does **not** reserve stock; admin/staff may pass `requestedFor` + `paymentMethod: 'offline'` for manual walk-in/phone orders), `PATCH /orders/:id/status`. Lifecycle: `pending` → `accepted` → `dispatched` → `completed`, with `rejected`/`cancelled` as terminal exits from `pending`. Stock units are only locked and reserved on the `pending` → `accepted` transition (all-or-nothing; the order stays `pending` with a 409 if stock ran out in the meantime). `rejected`/`cancelled` happen only from `pending`, before anything is reserved, so there's nothing to release. The `accepted` → `dispatched` transition is NOT allowed via PATCH — it only happens through `POST /dispatches` (scan-verified).
+- **Orders** — `GET /orders` (`status`, `date_from`, `date_to`, `customer_id` — admin/staff filtering to one user's orders, used by `UserViewPage`), `POST /orders` (checks `quantity_available` per line, all-or-nothing, but does **not** reserve stock; admin/staff may pass `requestedFor` + `paymentMethod: 'offline'` for manual walk-in/phone orders), `PATCH /orders/:id/status`. Lifecycle: `pending` → `accepted` → `dispatched` → `completed`, with `rejected`/`cancelled` as terminal exits from `pending`. Stock units are only locked and reserved on the `pending` → `accepted` transition (all-or-nothing; the order stays `pending` with a 409 if stock ran out in the meantime). `rejected`/`cancelled` happen only from `pending`, before anything is reserved, so there's nothing to release. The `accepted` → `dispatched` transition is NOT allowed via PATCH — it only happens through `POST /dispatches` (scan-verified).
 - **Dispatches** — `GET /dispatches`, `GET /dispatches/:id`, `POST /dispatches` (orderId + scanned barcodes: every unit is verified before the order leaves; scanning a different in_stock unit of an ordered product swaps it in and releases the auto-reserved one), `POST /dispatches/barcode-status` (advisory per-barcode check: matched/swap/wrong_product/unavailable/unknown), `POST /dispatches/import` (barcode file instead of live scanning) — admin/staff. Creates a `dispatches` row + one `dispatch_items` row per unit (audit of exactly which barcodes left) and flips the order to `dispatched` in the same transaction.
 - **Reports** — `GET /reports/stock-summary` (includes low-stock: `quantity_available <= reorder_level`), `GET /reports/order-history` (`days`), `GET /reports/stock-movement` (`days` — daily physical in/out from `stock_ledger`, counting only `import`/`adjustment`/`dispatch` rows) — aggregate queries.
-- **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Plus session endpoints above.
+- **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Create/edit accept the same profile fields as customer self-registration (phone, business name, address, town, district, state, pincode) in addition to name/email/role/password, though they're only meaningful for `role='customer'`. Deleting a `customer` soft-deletes (see Coding Rules); deleting `admin`/`staff` hard-deletes. `UserViewPage` (frontend `features/users/pages/UserViewPage.jsx`) shows one user's Details/Orders/Payments in tabs, backed by `GET /orders?customer_id=` (admin/staff only). Plus session endpoints above.
 
 All write routes (`POST`/`PUT`/`PATCH`/`DELETE`) go through `authenticate` + `requireRole(...)`; list/read routes go through `authenticate` + `pagination`.
 

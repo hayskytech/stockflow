@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const uuidField = z.string().uuid('Invalid id');
-const moneyField = z.number().nonnegative('Must be zero or greater');
+const moneyField = z.number().nonnegative('Must be zero or greater').max(10000000, 'Must be 1,00,00,000 or less');
+const reorderLevelField = z.number().int().nonnegative('Must be zero or greater').max(100000, 'Must be 1,00,000 or less');
 
 /** POST /api/products */
 export const createProductSchema = z
@@ -15,7 +16,7 @@ export const createProductSchema = z
     size: z.string().trim().max(10, 'Size is too long').optional().nullable(),
     mrp: moneyField,
     wsp: moneyField,
-    reorderLevel: z.number().int().nonnegative('Must be zero or greater').default(0),
+    reorderLevel: reorderLevelField.default(0),
     unit: z.string().trim().min(1).max(20).default('pc'),
     productPhotoMediaId: uuidField.optional().nullable(),
     galleryMediaIds: z.array(uuidField).max(5, 'Maximum 5 gallery images allowed').optional(),
@@ -38,7 +39,7 @@ export const updateProductSchema = z
     size: z.string().trim().max(10).optional().nullable(),
     mrp: moneyField.optional(),
     wsp: moneyField.optional(),
-    reorderLevel: z.number().int().nonnegative().optional(),
+    reorderLevel: reorderLevelField.optional(),
     unit: z.string().trim().min(1).max(20).optional(),
     productPhotoMediaId: uuidField.optional().nullable(),
     galleryMediaIds: z.array(uuidField).max(5, 'Maximum 5 gallery images allowed').optional(),

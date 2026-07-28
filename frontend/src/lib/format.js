@@ -1,5 +1,7 @@
-export function formatMoney(value) {
-  return `₹${Number(value).toFixed(2)}`
+/** Defaults match the warehouse "App Settings" defaults — pass `symbol`/`decimalDigits` (see
+ *  `useFormatMoney` in hooks/use-warehouse-details.js) to reflect the admin-configured values. */
+export function formatMoney(value, { symbol = "₹", decimalDigits = 2 } = {}) {
+  return `${symbol}${Number(value).toFixed(decimalDigits)}`
 }
 
 /** Derives the stock badge label + Bootstrap contextual class from stock levels. */

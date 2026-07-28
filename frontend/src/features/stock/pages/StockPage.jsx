@@ -9,7 +9,9 @@ import { useProductOptions } from "@/hooks/use-product-options"
 import { useStockStore } from "@/features/stock/stock.store"
 import { useDeleteStock, useStockList } from "@/features/stock/hooks/use-stock"
 import { StockImportModal } from "@/features/stock/components/StockImportModal"
-import { formatMoney } from "@/lib/format"
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
+import { SearchSelect } from "@/components/ui/SearchSelect"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
 const STATUS_LABELS = {
@@ -19,6 +21,7 @@ const STATUS_LABELS = {
 }
 
 export function StockPage() {
+  const formatMoney = useFormatMoney()
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
   const isStaff = useAuthStore((s) => s.user?.role === "staff")
   const canManage = isAdmin || isStaff
@@ -69,13 +72,14 @@ export function StockPage() {
         </>
       ),
     },
-    { key: "categoryName", label: "Category" },
-    { key: "size", label: "Size", render: (row) => row.size ?? "—" },
-    { key: "mrp", label: "MRP", render: (row) => formatMoney(row.mrp) },
-    { key: "wsp", label: "WSP", render: (row) => formatMoney(row.wsp) },
+    { key: "categoryName", label: "Category", hideable: true },
+    { key: "size", label: "Size", render: (row) => row.size ?? "—", hideable: true },
+    { key: "mrp", label: "MRP", render: (row) => formatMoney(row.mrp), hideable: true },
+    { key: "wsp", label: "WSP", render: (row) => formatMoney(row.wsp), hideable: true },
     {
       key: "invoiceNo",
       label: "Invoice",
+      hideable: true,
       render: (row) => (
         <>
           {row.invoiceNo}
@@ -95,12 +99,20 @@ export function StockPage() {
       key: "actions",
       label: "",
       className: "text-right",
-      render: (row) =>
-        canManage && row.status === "in_stock" ? (
-          <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingStock(row)}>
-            Delete
-          </button>
-        ) : null,
+      render: (row) => (
+        <RowActionsMenu
+          actions={[
+            canManage &&
+              row.status === "in_stock" && {
+                key: "delete",
+                label: "Delete",
+                icon: "fa-trash",
+                variant: "danger",
+                onClick: () => setDeletingStock(row),
+              },
+          ]}
+        />
+      ),
     },
   ]
 
@@ -108,6 +120,7 @@ export function StockPage() {
     <PageWrapper>
       <PageHeader
         title="Stock"
+        count={data?.total}
         description="Barcoded physical inventory received against products"
         actions={
           canManage ? (
@@ -142,22 +155,16 @@ export function StockPage() {
               />
             </div>
             <div className="col-md-4">
-              <select
+              <SearchSelect
                 id="stock-product-filter"
-                className="form-control"
+                placeholder="All products"
                 value={productFilter}
-                onChange={(e) => {
-                  setProductFilter(e.target.value)
+                onChange={(value) => {
+                  setProductFilter(value)
                   setPage(1)
                 }}
-              >
-                <option value="">All products</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))}
-              </select>
+                options={products.map((product) => ({ value: product.id, label: product.name }))}
+              />
             </div>
             <div className="col-md-4">
               <select
@@ -180,6 +187,7 @@ export function StockPage() {
           {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
 
           <DataTable
+            tableKey="stock"
             columns={columns}
             rows={data?.items ?? []}
             isLoading={isLoading}

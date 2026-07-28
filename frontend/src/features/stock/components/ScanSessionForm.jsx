@@ -1,5 +1,6 @@
 import { useForm } from "@tanstack/react-form"
 import { scanSessionSchema } from "@/features/stock/stock.schema"
+import { SearchSelect } from "@/components/ui/SearchSelect"
 
 /**
  * Scan-batch header form — product + supplier invoice + per-unit defaults. Submitting
@@ -44,26 +45,23 @@ export function ScanSessionForm({ products, initial, onSubmit, onCancel }) {
             {(field) => (
               <div className="form-group">
                 <label htmlFor="scan-product-select">Product</label>
-                <select
+                <SearchSelect
                   id="scan-product-select"
-                  className="form-control"
+                  placeholder="Select a product…"
                   value={field.state.value}
-                  onChange={(e) => {
-                    field.handleChange(e.target.value)
-                    const product = products.find((p) => p.id === e.target.value)
+                  onChange={(value) => {
+                    field.handleChange(value)
+                    const product = products.find((p) => p.id === value)
                     if (product) {
                       form.setFieldValue("mrp", product.mrp ?? "")
                       form.setFieldValue("wsp", product.wsp ?? "")
                     }
                   }}
-                >
-                  <option value="">Select a product…</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} ({product.productCode})
-                    </option>
-                  ))}
-                </select>
+                  options={products.map((product) => ({
+                    value: product.id,
+                    label: `${product.name} (${product.productCode})`,
+                  }))}
+                />
                 {renderError(field)}
               </div>
             )}
@@ -95,6 +93,7 @@ export function ScanSessionForm({ products, initial, onSubmit, onCancel }) {
                   id="scan-invoice-date"
                   type="date"
                   className="form-control"
+                  max={new Date().toISOString().slice(0, 10)}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
@@ -115,10 +114,12 @@ export function ScanSessionForm({ products, initial, onSubmit, onCancel }) {
                   id="scan-mrp"
                   type="number"
                   min="0"
+                  max="10000000"
                   step="0.01"
                   className="form-control"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  onWheel={(e) => e.currentTarget.blur()}
                 />
                 {renderError(field)}
               </div>
@@ -134,10 +135,12 @@ export function ScanSessionForm({ products, initial, onSubmit, onCancel }) {
                   id="scan-wsp"
                   type="number"
                   min="0"
+                  max="10000000"
                   step="0.01"
                   className="form-control"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                  onWheel={(e) => e.currentTarget.blur()}
                 />
                 {renderError(field)}
               </div>

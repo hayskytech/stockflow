@@ -49,7 +49,6 @@ export async function login(req, res, next) {
     res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, cookieOptions);
     res.status(200).json({
       accessToken: result.accessToken,
-      mustChangePassword: result.mustChangePassword,
       user: result.user,
     });
   } catch (err) {

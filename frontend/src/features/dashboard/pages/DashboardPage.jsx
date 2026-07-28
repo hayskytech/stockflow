@@ -11,12 +11,13 @@ import { OrdersByStatusChart } from "@/features/dashboard/components/OrdersBySta
 import { OrdersTrendChart } from "@/features/dashboard/components/OrdersTrendChart"
 import { StockByDivisionChart } from "@/features/dashboard/components/StockByDivisionChart"
 import { LowStockTable } from "@/features/dashboard/components/LowStockTable"
-import { formatMoney } from "@/lib/format"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { useAuthStore } from "@/store/auth.store"
 import { ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"
 
 export function DashboardPage() {
+  const formatMoney = useFormatMoney()
   const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
   const { data: stockSummary, isLoading: isLoadingStock, isError: isStockError } = useStockSummary()
   const { data: orderHistory, isLoading: isLoadingOrders, isError: isOrdersError } = useOrderHistory(14)

@@ -1,7 +1,7 @@
 import { EmptyState } from "@/components/common/EmptyState"
 import { useHomeStore } from "@/features/home/home.store"
 import { useStorefrontProducts } from "@/features/home/hooks/use-storefront-products"
-import { ProductCard } from "@/features/home/components/ProductCard"
+import { ProductCard } from "@/components/common/ProductCard"
 import { StoreSidebar } from "@/features/home/components/StoreSidebar"
 
 export function HomePage() {

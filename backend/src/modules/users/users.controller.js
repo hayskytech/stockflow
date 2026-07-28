@@ -1,6 +1,12 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
-import { createUserSchema, idParamSchema, listUsersQuerySchema, updateUserSchema } from './users.schema.js';
+import {
+  createUserSchema,
+  idParamSchema,
+  listUsersQuerySchema,
+  sessionIdParamSchema,
+  updateUserSchema,
+} from './users.schema.js';
 import * as usersService from './users.service.js';
 
 function parseOrThrow(schema, data) {
@@ -72,6 +78,27 @@ export async function deleteUser(req, res, next) {
     }
 
     await usersService.deleteUser(id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/users/me/sessions */
+export async function listMySessions(req, res, next) {
+  try {
+    const sessions = await usersService.listSessionsForUser(req.user.sub);
+    res.status(200).json(sessions);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** DELETE /api/users/me/sessions/:sessionId */
+export async function revokeMySession(req, res, next) {
+  try {
+    const { sessionId } = parseOrThrow(sessionIdParamSchema, req.params);
+    await usersService.revokeSessionForUser(req.user.sub, sessionId);
     res.status(204).send();
   } catch (err) {
     next(err);

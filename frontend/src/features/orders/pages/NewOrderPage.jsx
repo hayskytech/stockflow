@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -7,7 +7,9 @@ import { useProductOptions } from "@/hooks/use-product-options"
 import { useUserOptions } from "@/hooks/use-user-options"
 import { useCreateOrder } from "@/features/orders/hooks/use-orders"
 import { manualOrderSchema } from "@/features/orders/orders.schema"
-import { formatMoney } from "@/lib/format"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { PhoneField } from "@/components/ui/PhoneField"
+import { SearchSelect } from "@/components/ui/SearchSelect"
 import { ROUTES } from "@/constants/routes"
 
 function TextField({ form, name, label, id, ...inputProps }) {
@@ -41,6 +43,7 @@ function TextField({ form, name, label, id, ...inputProps }) {
  */
 export function NewOrderPage() {
   const navigate = useNavigate()
+  const formatMoney = useFormatMoney()
   const { data: users = [] } = useUserOptions()
   const { data: products = [] } = useProductOptions()
   const [serverError, setServerError] = useState("")
@@ -98,12 +101,6 @@ export function NewOrderPage() {
       <PageHeader
         title="New Order"
         description="Manual order for a walk-in or phone customer — stock is reserved once accepted"
-        actions={
-          <Link to={ROUTES.ORDERS.LIST} className="btn btn-outline-secondary">
-            <i className="fas fa-arrow-left mr-1" />
-            Back to Orders
-          </Link>
-        }
       />
 
       <form
@@ -122,19 +119,16 @@ export function NewOrderPage() {
                   {(field) => (
                     <div className="form-group">
                       <label htmlFor="new-order-customer">Order for</label>
-                      <select
+                      <SearchSelect
                         id="new-order-customer"
-                        className="form-control"
+                        placeholder="Choose a customer…"
                         value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      >
-                        <option value="">Choose a customer…</option>
-                        {activeUsers.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name} ({user.email}){user.role !== "customer" ? ` — ${user.role}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(value) => field.handleChange(value)}
+                        options={activeUsers.map((user) => ({
+                          value: user.id,
+                          label: `${user.name} (${user.email})${user.role !== "customer" ? ` — ${user.role}` : ""}`,
+                        }))}
+                      />
                       {field.state.meta.errors.length > 0 ? (
                         <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
                       ) : null}
@@ -152,19 +146,16 @@ export function NewOrderPage() {
                             <form.Field name={`items[${index}].productId`}>
                               {(field) => (
                                 <>
-                                  <select
+                                  <SearchSelect
                                     id={`new-order-product-${index}`}
-                                    className="form-control"
+                                    placeholder="Choose a product…"
                                     value={field.state.value}
-                                    onChange={(e) => field.handleChange(e.target.value)}
-                                  >
-                                    <option value="">Choose a product…</option>
-                                    {activeProducts.map((product) => (
-                                      <option key={product.id} value={product.id}>
-                                        {product.name} — {formatMoney(product.wsp)} ({product.quantityAvailable} in stock)
-                                      </option>
-                                    ))}
-                                  </select>
+                                    onChange={(value) => field.handleChange(value)}
+                                    options={activeProducts.map((product) => ({
+                                      value: product.id,
+                                      label: `${product.name} — ${formatMoney(product.wsp)} (${product.quantityAvailable} in stock)`,
+                                    }))}
+                                  />
                                   {field.state.meta.errors.length > 0 ? (
                                     <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
                                   ) : null}
@@ -183,6 +174,7 @@ export function NewOrderPage() {
                                     className="form-control"
                                     value={field.state.value}
                                     onChange={(e) => field.handleChange(e.target.value)}
+                                    onWheel={(e) => e.currentTarget.blur()}
                                   />
                                   {field.state.meta.errors.length > 0 ? (
                                     <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
@@ -226,7 +218,14 @@ export function NewOrderPage() {
                     <TextField form={form} name="shippingName" label="Full name" id="new-order-shipping-name" />
                   </div>
                   <div className="col-md-6">
-                    <TextField form={form} name="shippingPhone" label="Phone" id="new-order-shipping-phone" />
+                    <form.Field name="shippingPhone">
+                      {(field) => (
+                        <div className="form-group">
+                          <label htmlFor="new-order-shipping-phone">Phone</label>
+                          <PhoneField id="new-order-shipping-phone" field={field} />
+                        </div>
+                      )}
+                    </form.Field>
                   </div>
                 </div>
                 <TextField form={form} name="shippingAddressLine1" label="Address line 1" id="new-order-address1" />

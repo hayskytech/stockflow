@@ -23,3 +23,7 @@ export const scanSessionSchema = z
     note: z.string().trim().max(500, "Note must be 500 characters or less"),
   })
   .refine((value) => value.wsp <= value.mrp, { message: "WSP cannot be greater than MRP", path: ["wsp"] })
+  .refine((value) => !value.invoiceDate || value.invoiceDate <= new Date().toISOString().slice(0, 10), {
+    message: "Invoice date cannot be in the future",
+    path: ["invoiceDate"],
+  })

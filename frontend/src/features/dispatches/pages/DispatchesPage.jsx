@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -8,7 +8,6 @@ import { formatDateTimeIST } from "@/lib/format"
 import { ROUTES } from "@/constants/routes"
 
 export function DispatchesPage() {
-  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
 
@@ -19,13 +18,18 @@ export function DispatchesPage() {
   })
 
   const columns = [
-    { key: "dispatchNumber", label: "Dispatch #" },
+    {
+      key: "dispatchNumber",
+      label: "Dispatch #",
+      render: (row) => <Link to={ROUTES.DISPATCHES.DETAIL(row.id)}>{row.dispatchNumber}</Link>,
+    },
     { key: "orderNumber", label: "Order #" },
-    { key: "shippingName", label: "Ship to" },
-    { key: "unitCount", label: "Units" },
+    { key: "shippingName", label: "Ship to", hideable: true },
+    { key: "unitCount", label: "Units", hideable: true },
     {
       key: "courierName",
       label: "Courier",
+      hideable: true,
       render: (row) =>
         row.courierName ? (
           <>
@@ -36,27 +40,17 @@ export function DispatchesPage() {
           <span className="text-muted">—</span>
         ),
     },
-    { key: "dispatchedByName", label: "Dispatched by" },
+    { key: "dispatchedByName", label: "Dispatched by", hideable: true },
     { key: "createdAt", label: "Dispatched at", render: (row) => formatDateTimeIST(row.createdAt) },
-    {
-      key: "actions",
-      label: "",
-      className: "text-right",
-      render: (row) => (
-        <button
-          type="button"
-          className="btn btn-sm btn-outline-secondary"
-          onClick={() => navigate(ROUTES.DISPATCHES.DETAIL(row.id))}
-        >
-          View
-        </button>
-      ),
-    },
   ]
 
   return (
     <PageWrapper>
-      <PageHeader title="Dispatches" description="Scan-verified record of every order that left the warehouse" />
+      <PageHeader
+        title="Dispatches"
+        count={data?.total}
+        description="Scan-verified record of every order that left the warehouse"
+      />
 
       <div className="card">
         <div className="card-body">
@@ -77,6 +71,7 @@ export function DispatchesPage() {
           </div>
 
           <DataTable
+            tableKey="dispatches"
             columns={columns}
             rows={data?.items ?? []}
             isLoading={isLoading}

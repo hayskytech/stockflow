@@ -5,9 +5,11 @@ import { RouteErrorPage } from "@/components/common/RouteErrorPage"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
 import { ROUTES } from "@/constants/routes"
 import { ROLES } from "@/constants/app"
+import { CRUMBS } from "@/constants/breadcrumbs"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
+import { ProfilePage } from "@/features/auth/pages/ProfilePage"
 import { HomePage } from "@/features/home/pages/HomePage"
 import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
 import { ProductDetailPage as AdminProductDetailPage } from "@/features/products/pages/ProductDetailPage"
@@ -34,6 +36,7 @@ import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
 import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
+import { UserViewPage } from "@/features/users/pages/UserViewPage"
 import { SettingsPage } from "@/features/settings/pages/SettingsPage"
 import { UppyUploader } from "@/components/common/UppyUploader"
 
@@ -124,86 +127,112 @@ export const router = createHashRouter([
       {
         path: ROUTES.DASHBOARD,
         element: <DashboardPage />,
+        handle: { crumb: CRUMBS.DASHBOARD },
       },
       {
         path: ROUTES.WAREHOUSE,
         element: <WarehousePage />,
+        handle: { crumb: CRUMBS.WAREHOUSE },
       },
       {
         path: ROUTES.CATALOG.DIVISIONS,
         element: <DivisionsPage />,
+        handle: { crumb: CRUMBS.DIVISIONS },
       },
       {
         path: ROUTES.CATALOG.CATEGORIES,
         element: <CategoriesPage />,
+        handle: { crumb: CRUMBS.CATEGORIES },
       },
       {
         path: ROUTES.PRODUCTS.LIST,
         element: <ProductsPage />,
+        handle: { crumb: CRUMBS.PRODUCTS_LIST },
       },
       {
         path: ROUTES.PRODUCTS.NEW,
         element: <ProductFormPage />,
+        handle: { crumb: CRUMBS.PRODUCTS_NEW },
       },
       {
         path: "/products/:id",
         element: <AdminProductDetailPage />,
+        handle: { crumb: CRUMBS.PRODUCTS_DETAIL },
       },
       {
         path: "/products/:id/edit",
         element: <ProductFormPage />,
+        handle: { crumb: CRUMBS.PRODUCTS_EDIT },
       },
       {
         path: ROUTES.STOCK.LIST,
         element: <StockPage />,
+        handle: { crumb: CRUMBS.STOCK_LIST },
       },
       {
         path: ROUTES.STOCK.SCAN,
         element: <ScanStockPage />,
+        handle: { crumb: CRUMBS.STOCK_SCAN },
       },
       {
         path: ROUTES.STOCK_LEDGER,
         element: <StockLedgerPage />,
+        handle: { crumb: CRUMBS.STOCK_LEDGER },
       },
       {
         path: ROUTES.MEDIA_LIBRARY.LIST,
         element: <MediaLibraryPage />,
+        handle: { crumb: CRUMBS.MEDIA_LIST },
       },
       {
         path: "/media-library/:id",
         element: <MediaDetailPage />,
+        handle: { crumb: CRUMBS.MEDIA_DETAIL },
       },
       {
         path: ROUTES.ORDERS.LIST,
         element: <OrdersPage />,
+        handle: { crumb: CRUMBS.ORDERS_LIST },
       },
       {
         path: ROUTES.ORDERS.NEW,
         element: <NewOrderPage />,
+        handle: { crumb: CRUMBS.ORDERS_NEW },
       },
       {
         path: "/orders/:id",
         element: <OrderDetailPage />,
+        handle: { crumb: CRUMBS.ORDERS_DETAIL },
       },
       {
         path: "/orders/:id/dispatch",
         element: <DispatchOrderPage />,
+        handle: { crumb: CRUMBS.ORDERS_DISPATCH },
       },
       {
         path: ROUTES.DISPATCHES.LIST,
         element: <DispatchesPage />,
+        handle: { crumb: CRUMBS.DISPATCHES_LIST },
       },
       {
         path: "/dispatches/:id",
         element: <DispatchDetailPage />,
+        handle: { crumb: CRUMBS.DISPATCHES_DETAIL },
       },
       {
         path: ROUTES.REPORTS,
         element: <ReportsPage />,
+        handle: { crumb: CRUMBS.REPORTS },
       },
       {
         path: ROUTES.USERS.LIST,
         element: <UsersPage />,
+        handle: { crumb: CRUMBS.USERS },
+      },
+      {
+        path: "/users/:id",
+        element: <UserViewPage />,
+        handle: { crumb: CRUMBS.USERS_DETAIL },
       },
       {
         path: ROUTES.SETTINGS,
@@ -212,6 +241,12 @@ export const router = createHashRouter([
             <SettingsPage />
           </ProtectedRoute>
         ),
+        handle: { crumb: CRUMBS.SETTINGS },
+      },
+      {
+        path: ROUTES.PROFILE,
+        element: <ProfilePage />,
+        handle: { crumb: CRUMBS.PROFILE },
       },
     ],
   },

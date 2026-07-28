@@ -1,20 +1,25 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
 import { useOrdersStore } from "@/features/orders/orders.store"
 import { useOrders, useUpdateOrderStatus } from "@/features/orders/hooks/use-orders"
-import { formatMoney, formatDateTimeIST } from "@/lib/format"
+import { formatDateTimeIST } from "@/lib/format"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
 const STATUS_OPTIONS = ["pending", "accepted", "rejected", "dispatched", "completed", "cancelled"]
 
 export function OrdersPage() {
   const navigate = useNavigate()
+  const formatMoney = useFormatMoney()
 
+  const search = useOrdersStore((s) => s.search)
+  const setSearch = useOrdersStore((s) => s.setSearch)
   const statusFilter = useOrdersStore((s) => s.statusFilter)
   const setStatusFilter = useOrdersStore((s) => s.setStatusFilter)
   const dateFrom = useOrdersStore((s) => s.dateFrom)
@@ -28,6 +33,7 @@ export function OrdersPage() {
   const { data, isLoading, isError } = useOrders({
     page,
     per_page: 10,
+    search: search || undefined,
     status: statusFilter || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
@@ -45,10 +51,15 @@ export function OrdersPage() {
   }
 
   const columns = [
-    { key: "orderNumber", label: "Order #" },
+    {
+      key: "orderNumber",
+      label: "Order #",
+      render: (row) => <Link to={ROUTES.ORDERS.DETAIL(row.id)}>{row.orderNumber}</Link>,
+    },
     {
       key: "requestedByName",
       label: "Customer",
+      hideable: true,
       render: (row) => (
         <>
           <div>{row.requestedByName}</div>
@@ -58,40 +69,35 @@ export function OrdersPage() {
     },
     { key: "totalAmount", label: "Amount", render: (row) => formatMoney(row.totalAmount) },
     { key: "status", label: "Status", render: (row) => <OrderStatusBadge status={row.status} /> },
-    { key: "paymentStatus", label: "Payment", render: (row) => <PaymentStatusBadge status={row.paymentStatus} /> },
-    { key: "createdAt", label: "Placed", render: (row) => formatDateTimeIST(row.createdAt) },
+    {
+      key: "paymentStatus",
+      label: "Payment",
+      hideable: true,
+      render: (row) => <PaymentStatusBadge status={row.paymentStatus} />,
+    },
+    { key: "createdAt", label: "Placed", hideable: true, render: (row) => formatDateTimeIST(row.createdAt) },
     {
       key: "actions",
       label: "",
       className: "text-right",
       render: (row) => (
-        <>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary mr-2"
-            onClick={() => navigate(ROUTES.ORDERS.DETAIL(row.id))}
-          >
-            View
-          </button>
-          {row.status === "pending" ? (
-            <>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-success mr-2"
-                onClick={() => handleStatusChange(row.id, "accepted")}
-              >
-                Accept
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-danger"
-                onClick={() => handleStatusChange(row.id, "rejected")}
-              >
-                Reject
-              </button>
-            </>
-          ) : null}
-        </>
+        <RowActionsMenu
+          actions={[
+            row.status === "pending" && {
+              key: "accept",
+              label: "Accept",
+              icon: "fa-check",
+              onClick: () => handleStatusChange(row.id, "accepted"),
+            },
+            row.status === "pending" && {
+              key: "reject",
+              label: "Reject",
+              icon: "fa-xmark",
+              variant: "danger",
+              onClick: () => handleStatusChange(row.id, "rejected"),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -100,6 +106,7 @@ export function OrdersPage() {
     <PageWrapper>
       <PageHeader
         title="Orders"
+        count={data?.total}
         description="Orders placed against the warehouse"
         actions={
           <button
@@ -117,7 +124,20 @@ export function OrdersPage() {
       <div className="card">
         <div className="card-body">
           <div className="row mb-3">
-            <div className="col-md-4">
+            <div className="col-md-3">
+              <input
+                id="orders-search"
+                type="search"
+                className="form-control"
+                placeholder="Search by order #, customer name, or email…"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+              />
+            </div>
+            <div className="col-md-3">
               <select
                 id="orders-status-filter"
                 className="form-control"
@@ -135,7 +155,7 @@ export function OrdersPage() {
                 ))}
               </select>
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
               <input
                 id="orders-date-from"
                 type="date"
@@ -147,7 +167,7 @@ export function OrdersPage() {
                 }}
               />
             </div>
-            <div className="col-md-4">
+            <div className="col-md-3">
               <input
                 id="orders-date-to"
                 type="date"
@@ -164,6 +184,7 @@ export function OrdersPage() {
           {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
 
           <DataTable
+            tableKey="orders"
             columns={columns}
             rows={data?.items ?? []}
             isLoading={isLoading}

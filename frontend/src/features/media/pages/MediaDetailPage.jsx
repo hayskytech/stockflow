@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
@@ -164,7 +164,6 @@ export function MediaDetailPage() {
     return (
       <PageWrapper>
         <div className="alert alert-danger">Media item not found.</div>
-        <Link to={ROUTES.MEDIA_LIBRARY.LIST}>Back to Media Library</Link>
       </PageWrapper>
     )
   }
@@ -178,9 +177,6 @@ export function MediaDetailPage() {
         description="Media item details"
         actions={
           <>
-            <Link to={ROUTES.MEDIA_LIBRARY.LIST} className="btn btn-outline-secondary mr-2">
-              Back to Media Library
-            </Link>
             <button id="media-detail-download" type="button" className="btn btn-outline-secondary mr-2" onClick={() => downloadMediaFile(media)}>
               <i className="fas fa-download mr-1" /> Download
             </button>

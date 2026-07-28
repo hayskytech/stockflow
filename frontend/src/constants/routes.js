@@ -46,8 +46,10 @@ export const ROUTES = {
   REPORTS: "/reports",
   USERS: {
     LIST: "/users",
+    DETAIL: (id) => `/users/${id}`,
   },
   SETTINGS: "/settings",
+  PROFILE: "/profile",
 }
 
 /** The landing route for a user after login/registration, based on their role. */

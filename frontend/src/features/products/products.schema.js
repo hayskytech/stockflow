@@ -1,10 +1,14 @@
 import { z } from "zod"
 
-const money = z.number({ invalid_type_error: "Must be a number" }).nonnegative("Must be zero or greater")
+const money = z
+  .number({ invalid_type_error: "Must be a number" })
+  .nonnegative("Must be zero or greater")
+  .max(10000000, "Must be 1,00,00,000 or less")
 const nonNegativeInt = z
   .number({ invalid_type_error: "Must be a number" })
   .int("Must be a whole number")
   .nonnegative("Must be zero or greater")
+  .max(100000, "Must be 1,00,000 or less")
 
 export const productSchema = z
   .object({

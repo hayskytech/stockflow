@@ -2,6 +2,9 @@ import { create } from "zustand"
 
 /** UI/client state for the admin orders list page — filters only, no server data. */
 export const useOrdersStore = create((set) => ({
+  search: "",
+  setSearch: (search) => set({ search }),
+
   statusFilter: "",
   setStatusFilter: (statusFilter) => set({ statusFilter }),
 

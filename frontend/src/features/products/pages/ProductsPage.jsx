@@ -1,18 +1,21 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { useAuthStore } from "@/store/auth.store"
 import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useProductsStore } from "@/features/products/products.store"
 import { useProducts } from "@/features/products/hooks/use-products"
 import { ProductImportModal } from "@/features/products/components/ProductImportModal"
 import { resolveMediaUrl } from "@/lib/media"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductsPage() {
   const navigate = useNavigate()
+  const formatMoney = useFormatMoney()
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
   const isStaff = useAuthStore((s) => s.user?.role === "staff")
   const canManage = isAdmin || isStaff
@@ -60,19 +63,21 @@ export function ProductsPage() {
           </div>
         ),
     },
-    { key: "productCode", label: "Code" },
+    { key: "productCode", label: "Code", hideable: true },
     {
       key: "name",
       label: "Name",
       render: (row) => (
         <div>
-          <div>{row.name}</div>
-          <small className="text-muted">{row.categoryName}</small>
+          <Link to={ROUTES.PRODUCTS.DETAIL(row.id)}>{row.name}</Link>
+          <div>
+            <small className="text-muted">{row.categoryName}</small>
+          </div>
         </div>
       ),
     },
-    { key: "mrp", label: "MRP", render: (row) => `₹${Number(row.mrp).toFixed(2)}` },
-    { key: "wsp", label: "WSP", render: (row) => `₹${Number(row.wsp).toFixed(2)}` },
+    { key: "mrp", label: "MRP", render: (row) => formatMoney(row.mrp), hideable: true },
+    { key: "wsp", label: "WSP", render: (row) => formatMoney(row.wsp), hideable: true },
     {
       key: "quantityAvailable",
       label: "Stock",
@@ -85,6 +90,7 @@ export function ProductsPage() {
     {
       key: "isActive",
       label: "Status",
+      hideable: true,
       render: (row) => (
         <span className={`badge ${row.isActive ? "badge-success" : "badge-secondary"}`}>{row.isActive ? "Active" : "Inactive"}</span>
       ),
@@ -94,24 +100,16 @@ export function ProductsPage() {
       label: "",
       className: "text-right",
       render: (row) => (
-        <>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-secondary mr-2"
-            onClick={() => navigate(ROUTES.PRODUCTS.DETAIL(row.id))}
-          >
-            View
-          </button>
-          {canManage ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary"
-              onClick={() => navigate(ROUTES.PRODUCTS.EDIT(row.id))}
-            >
-              Edit
-            </button>
-          ) : null}
-        </>
+        <RowActionsMenu
+          actions={[
+            canManage && {
+              key: "edit",
+              label: "Edit",
+              icon: "fa-pen",
+              onClick: () => navigate(ROUTES.PRODUCTS.EDIT(row.id)),
+            },
+          ]}
+        />
       ),
     },
   ]
@@ -120,6 +118,7 @@ export function ProductsPage() {
     <PageWrapper>
       <PageHeader
         title="Products"
+        count={data?.total}
         description="Manage your product catalog and stock levels"
         actions={
           canManage ? (
@@ -195,6 +194,7 @@ export function ProductsPage() {
           </div>
 
           <DataTable
+            tableKey="products"
             columns={columns}
             rows={data?.items ?? []}
             isLoading={isLoading}

@@ -3,9 +3,17 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
+import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
+import { DragHandle, useSortableList } from "@/components/common/SortableList"
 import { useAuthStore } from "@/store/auth.store"
 import { DivisionFormModal } from "@/features/catalog/components/DivisionFormModal"
-import { useCreateDivision, useDeleteDivision, useDivisions, useUpdateDivision } from "@/features/catalog/hooks/use-divisions"
+import {
+  useCreateDivision,
+  useDeleteDivision,
+  useDivisions,
+  useReorderDivisions,
+  useUpdateDivision,
+} from "@/features/catalog/hooks/use-divisions"
 
 export function DivisionsPage() {
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
@@ -17,10 +25,27 @@ export function DivisionsPage() {
   const [deletingDivision, setDeletingDivision] = useState(null)
   const [serverError, setServerError] = useState("")
 
-  const { data, isLoading, isError } = useDivisions({ page, per_page: 10, search })
+  // Divisions are a short, curated list — fetch them all in one page so drag-and-drop
+  // reordering (which needs the complete set) is available by default.
+  const { data, isLoading, isError } = useDivisions({ page, per_page: 100, search, order: "asc" })
   const createDivision = useCreateDivision()
   const updateDivision = useUpdateDivision()
   const deleteDivision = useDeleteDivision()
+  const reorderDivisions = useReorderDivisions()
+
+  const rows = data?.items ?? []
+  const canReorder = isAdmin && !search && (data?.totalPages ?? 1) <= 1 && rows.length > 1
+  const { getDragHandlers } = useSortableList({
+    items: rows,
+    getId: (row) => row.id,
+    onReorder: async (newOrder) => {
+      try {
+        await reorderDivisions.mutateAsync(newOrder.map((row) => row.id))
+      } catch (err) {
+        setServerError(err.response?.data?.message ?? "Could not reorder divisions")
+      }
+    },
+  })
 
   function openAddModal() {
     setEditingDivision(null)
@@ -59,6 +84,7 @@ export function DivisionsPage() {
   }
 
   const columns = [
+    ...(canReorder ? [{ key: "drag", label: "", render: () => <DragHandle /> }] : []),
     { key: "name", label: "Name" },
     {
       key: "isActive",
@@ -72,14 +98,18 @@ export function DivisionsPage() {
             label: "",
             className: "text-right",
             render: (row) => (
-              <>
-                <button type="button" className="btn btn-sm btn-outline-primary mr-2" onClick={() => openEditModal(row)}>
-                  Edit
-                </button>
-                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setDeletingDivision(row)}>
-                  Delete
-                </button>
-              </>
+              <RowActionsMenu
+                actions={[
+                  { key: "edit", label: "Edit", icon: "fa-pen", onClick: () => openEditModal(row) },
+                  {
+                    key: "delete",
+                    label: "Delete",
+                    icon: "fa-trash",
+                    variant: "danger",
+                    onClick: () => setDeletingDivision(row),
+                  },
+                ]}
+              />
             ),
           },
         ]
@@ -90,6 +120,7 @@ export function DivisionsPage() {
     <PageWrapper>
       <PageHeader
         title="Divisions"
+        count={data?.total}
         description="Top-level product lines — Kids Wear, Mens Wear, Ladies Wear…"
         actions={
           isAdmin ? (
@@ -114,13 +145,18 @@ export function DivisionsPage() {
                 setPage(1)
               }}
             />
+            {isAdmin ? (
+              <small className="form-text text-muted">
+                {canReorder ? "Drag rows to reorder." : "Clear the search to drag rows and reorder."}
+              </small>
+            ) : null}
           </div>
 
           {serverError && !isModalOpen ? <div className="alert alert-danger">{serverError}</div> : null}
 
           <DataTable
             columns={columns}
-            rows={data?.items ?? []}
+            rows={rows}
             isLoading={isLoading}
             isError={isError}
             emptyIcon="fa-sitemap"
@@ -129,6 +165,7 @@ export function DivisionsPage() {
             page={page}
             totalPages={data?.totalPages ?? 1}
             onPageChange={setPage}
+            getRowProps={canReorder ? (row) => getDragHandlers(row.id) : undefined}
           />
         </div>
       </div>

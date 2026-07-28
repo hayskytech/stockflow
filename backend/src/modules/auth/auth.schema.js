@@ -29,14 +29,8 @@ export const registerSchema = z.object({
   password: passwordPolicy,
 });
 
-/** Validates the request body for POST /api/auth/change-password (forced on first login). */
-export const changePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: passwordPolicy,
-    confirmPassword: z.string().min(1, 'Confirm password is required'),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+/** Validates the request body for POST /api/auth/change-password (voluntary, self-service). */
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: passwordPolicy,
+});
