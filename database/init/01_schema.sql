@@ -7,12 +7,6 @@
 -- No soft deletes, no audit log tables — rows are hard-deleted, created_at/updated_at only.
 -- =============================================================================
 
-CREATE DATABASE IF NOT EXISTS stockflow
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE stockflow;
-
 -- -----------------------------------------------------------------------------
 -- MIGRATION NOTE (existing databases only):
 -- This init script only runs on a fresh database. To add the `customer` role to
