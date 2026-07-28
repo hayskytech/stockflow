@@ -12,7 +12,7 @@ export function useSubCategories(params) {
   return useQuery({
     queryKey: [SUB_CATEGORIES_QUERY_KEY, params],
     queryFn: () => listSubCategoriesApi(params),
-    enabled: params.categoryId !== undefined && params.categoryId !== "",
+    enabled: params.category_id !== undefined && params.category_id !== "",
   })
 }
 

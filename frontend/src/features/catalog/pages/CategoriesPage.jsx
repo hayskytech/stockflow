@@ -55,7 +55,7 @@ export function CategoriesPage() {
     data: subCategoriesData,
     isLoading: isSubCategoriesLoading,
     isError: isSubCategoriesError,
-  } = useSubCategories({ page: subCategoryPage, per_page: 10, categoryId: selectedCategoryId })
+  } = useSubCategories({ page: subCategoryPage, per_page: 10, category_id: selectedCategoryId })
   const subCategories = subCategoriesData?.items ?? []
 
   const createSubCategory = useCreateSubCategory()
@@ -232,6 +232,7 @@ export function CategoriesPage() {
               onChange={(e) => {
                 setCategoryDivisionFilter(e.target.value)
                 setCategoryPage(1)
+                setSelectedCategoryId("")
               }}
             >
               <option value="">All divisions</option>
@@ -260,7 +261,7 @@ export function CategoriesPage() {
         </div>
       </div>
 
-      {selectedCategoryId ? (
+      {selectedCategory ? (
         <div className="card">
           <div className="card-header d-flex justify-content-between align-items-center">
             <h3 className="card-title mb-0">Sub-categories of &quot;{selectedCategory?.name}&quot;</h3>
