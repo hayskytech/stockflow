@@ -1,8 +1,9 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Modal } from "@/components/ui/Modal"
 import { UppyUploader } from "@/components/common/UppyUploader"
 import { EmptyState } from "@/components/common/EmptyState"
-import { useMediaList } from "@/features/media/hooks/use-media"
+import { MEDIA_QUERY_KEY, useMediaList } from "@/features/media/hooks/use-media"
 import { resolveMediaUrl } from "@/lib/media"
 
 /**
@@ -12,13 +13,23 @@ import { resolveMediaUrl } from "@/lib/media"
 export function MediaLibraryModal({ open, onClose, onSelect }) {
   const [tab, setTab] = useState("library")
   const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
+  const queryClient = useQueryClient()
 
-  const { data, isLoading, isError } = useMediaList({ search, per_page: 24 })
+  const { data, isLoading, isError } = useMediaList({ search, page, per_page: 24 })
   const items = data?.items ?? []
 
   function handleSelect(media) {
     onSelect(media)
     onClose()
+  }
+
+  // UppyUploader posts directly via XHR, bypassing the useMediaList/useMutation hooks —
+  // so nothing else marks the cached media list stale. Without this, other already-mounted
+  // (or later-mounted) pickers keep serving the pre-upload cached list.
+  function handleUploaded(media) {
+    queryClient.invalidateQueries({ queryKey: [MEDIA_QUERY_KEY] })
+    handleSelect(media)
   }
 
   return (
@@ -37,7 +48,7 @@ export function MediaLibraryModal({ open, onClose, onSelect }) {
       </ul>
 
       {tab === "upload" ? (
-        <UppyUploader allowMultiple={false} onUploaded={handleSelect} />
+        <UppyUploader allowMultiple={false} onUploaded={handleUploaded} />
       ) : (
         <div>
           <input
@@ -46,7 +57,10 @@ export function MediaLibraryModal({ open, onClose, onSelect }) {
             className="form-control mb-3"
             placeholder="Search by filename…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
           />
 
           {isLoading ? (
@@ -73,6 +87,33 @@ export function MediaLibraryModal({ open, onClose, onSelect }) {
               ))}
             </div>
           )}
+
+          {data && data.totalPages > 1 ? (
+            <nav className="d-flex justify-content-end mt-3">
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
+                  <button type="button" className="page-link" onClick={() => setPage(page - 1)} disabled={page <= 1}>
+                    Previous
+                  </button>
+                </li>
+                <li className="page-item disabled">
+                  <span className="page-link">
+                    Page {page} of {data.totalPages}
+                  </span>
+                </li>
+                <li className={`page-item ${page >= data.totalPages ? "disabled" : ""}`}>
+                  <button
+                    type="button"
+                    className="page-link"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= data.totalPages}
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          ) : null}
         </div>
       )}
     </Modal>

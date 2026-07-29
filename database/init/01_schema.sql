@@ -8,67 +8,11 @@
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- MIGRATION NOTE (existing databases only):
--- This init script only runs on a fresh database. To add the `customer` role to
--- an already-provisioned DB, run once:
---   ALTER TABLE users MODIFY role ENUM('admin','staff','customer') NOT NULL DEFAULT 'staff';
---
--- To add bank-transfer order placement to an already-provisioned DB, run once:
---   ALTER TABLE warehouse
---     ADD COLUMN bank_name VARCHAR(150) NULL,
---     ADD COLUMN account_holder_name VARCHAR(150) NULL,
---     ADD COLUMN account_number VARCHAR(30) NULL,
---     ADD COLUMN ifsc_code VARCHAR(15) NULL,
---     ADD COLUMN upi_id VARCHAR(100) NULL;
---   ALTER TABLE orders
---     ADD COLUMN payment_method ENUM('bank_transfer') NOT NULL DEFAULT 'bank_transfer',
---     ADD COLUMN transaction_id VARCHAR(100) NOT NULL,
---     ADD COLUMN payment_status ENUM('pending','verified','rejected') NOT NULL DEFAULT 'pending',
---     ADD COLUMN total_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
---     ADD COLUMN shipping_name VARCHAR(100) NOT NULL,
---     ADD COLUMN shipping_phone VARCHAR(20) NOT NULL,
---     ADD COLUMN shipping_address_line1 VARCHAR(200) NOT NULL,
---     ADD COLUMN shipping_address_line2 VARCHAR(200) NULL,
---     ADD COLUMN shipping_city VARCHAR(100) NOT NULL,
---     ADD COLUMN shipping_state VARCHAR(100) NOT NULL,
---     ADD COLUMN shipping_pincode VARCHAR(10) NOT NULL,
---     ADD COLUMN idempotency_key CHAR(36) NULL,
---     ADD UNIQUE KEY uq_orders_idempotency_key (idempotency_key),
---     ADD KEY idx_orders_payment_status (payment_status),
---     ADD KEY idx_orders_transaction_id (transaction_id);
---   ALTER TABLE order_items
---     ADD COLUMN mrp_at_order DECIMAL(10,2) NOT NULL,
---     ADD COLUMN wsp_at_order DECIMAL(10,2) NOT NULL;
---
--- To move to per-unit barcoded stock on an already-provisioned DB, run once:
---   ALTER TABLE products DROP KEY uq_products_barcode, DROP COLUMN barcode;
---   -- then create the `stock` table exactly as defined further down in this file.
---
--- To record stock intake (file import / barcode-scan import) in the ledger on an
--- already-provisioned DB, run once:
---   ALTER TABLE stock_ledger MODIFY reference_type ENUM('order','adjustment','import') NOT NULL;
---
--- To add app-wide phone/currency format settings to an already-provisioned DB, run once:
---   ALTER TABLE warehouse
---     ADD COLUMN phone_country_code VARCHAR(4) NOT NULL DEFAULT '+91',
---     ADD COLUMN phone_number_length TINYINT UNSIGNED NOT NULL DEFAULT 10,
---     ADD COLUMN currency_symbol VARCHAR(5) NOT NULL DEFAULT '₹',
---     ADD COLUMN currency_decimal_digits TINYINT UNSIGNED NOT NULL DEFAULT 2;
---
--- To remove the forced/temporary-password concept on an already-provisioned DB, run once:
---   ALTER TABLE users DROP COLUMN must_change_password;
---
--- To add manual drag-and-drop ordering to the catalog tree on an already-provisioned DB, run once:
---   ALTER TABLE divisions ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY idx_divisions_sort_order (sort_order);
---   ALTER TABLE categories ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY idx_categories_sort_order (sort_order);
---   ALTER TABLE sub_categories ADD COLUMN sort_order INT NOT NULL DEFAULT 0, ADD KEY idx_sub_categories_sort_order (sort_order);
---   -- then backfill a stable initial order (alphabetical) so existing rows aren't all tied at 0:
---   UPDATE divisions d JOIN (SELECT id, ROW_NUMBER() OVER (ORDER BY name) AS rn FROM divisions) t
---     ON t.id = d.id SET d.sort_order = t.rn;
---   UPDATE categories c JOIN (SELECT id, ROW_NUMBER() OVER (PARTITION BY division_id ORDER BY name) AS rn FROM categories) t
---     ON t.id = c.id SET c.sort_order = t.rn;
---   UPDATE sub_categories s JOIN (SELECT id, ROW_NUMBER() OVER (PARTITION BY category_id ORDER BY name) AS rn FROM sub_categories) t
---     ON t.id = s.id SET s.sort_order = t.rn;
+-- This init script only runs on a fresh database and always reflects current
+-- head — every table below already includes every column/constraint added
+-- since the project started. An already-provisioned (older) DB catches up by
+-- running the numbered migration files in this directory in order (e.g.
+-- 03_add_catalog_sort_order.sql), not by re-reading this file's history.
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
