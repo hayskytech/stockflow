@@ -2,7 +2,7 @@ import { ENV } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 
 export class AppError extends Error {
-  /** `details` is an optional machine-readable payload (e.g. the list of conflicting barcodes). */
+  /** `details` is an optional machine-readable payload (e.g. the list of order-acceptance failures). */
   constructor(statusCode, message, details) {
     super(message);
     this.name = 'AppError';

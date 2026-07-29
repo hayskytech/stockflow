@@ -145,7 +145,7 @@ export async function createOrder(input, userId) {
     const validItems = [];
 
     // Placing an order does not reserve stock — it's only a soft availability check.
-    // Specific barcoded units get locked and reserved when the order is accepted.
+    // The quantity is actually locked and reserved when the order is accepted.
     for (const item of sortedItems) {
       const [product] = await execute(
         `SELECT id, name, mrp, wsp, quantity_available AS quantityAvailable, is_active AS isActive
@@ -224,8 +224,8 @@ export async function createOrder(input, userId) {
 
 // Order lifecycle: pending -> accepted -> dispatched -> completed, with rejected/cancelled
 // as terminal exits from pending. The accepted -> dispatched transition is NOT allowed here:
-// it only happens inside the dispatches module (POST /dispatches), which scan-verifies the
-// physical units before flipping the status in the same transaction.
+// it only happens inside the dispatches module (POST /dispatches), which flips the status
+// in the same transaction that releases the reserved quantity.
 const ALLOWED_TRANSITIONS = {
   pending: ['accepted', 'rejected', 'cancelled'],
   dispatched: ['completed'],
@@ -254,8 +254,10 @@ export async function updateOrderStatus(id, status, requester) {
     // Lock rows in a consistent order so two concurrent acceptances sharing products can't deadlock.
     const sortedItems = [...items].sort((a, b) => a.productId.localeCompare(b.productId));
 
-    // Stock is only committed at acceptance — this is the moment the reserved quantity/units
-    // are actually claimed against this order.
+    // Stock is only committed at acceptance — this is the moment the reserved quantity
+    // is actually claimed against this order. Product rows are still locked in a
+    // consistent order (sortedItems) so two concurrent acceptances sharing products
+    // can't deadlock each other.
     await withTransaction(async (execute) => {
       const failures = [];
       const lockedItems = [];
@@ -269,32 +271,17 @@ export async function updateOrderStatus(id, status, requester) {
           failures.push(`${product?.name ?? 'A product'} — only ${product?.quantityAvailable ?? 0} left in stock`);
           continue;
         }
-        // Picks the actual barcoded units being reserved — oldest invoice first — and locks
-        // them so two concurrent acceptances can't claim the same unit.
-        const stockRows = await execute(
-          `SELECT id FROM stock WHERE product_id = ? AND status = 'in_stock'
-           ORDER BY invoice_date ASC, created_at ASC LIMIT ? FOR UPDATE`,
-          [item.productId, item.quantity],
-        );
-        if (stockRows.length < item.quantity) {
-          failures.push(`${product.name} — only ${stockRows.length} left in stock`);
-        } else {
-          lockedItems.push({ ...item, stockIds: stockRows.map((row) => row.id) });
-        }
+        lockedItems.push(item);
       }
 
       // All-or-nothing: report every failing line in one response instead of one at a time.
       if (failures.length > 0) throw new AppError(409, failures.join('; '));
 
-      for (const { productId, quantity, stockIds } of lockedItems) {
+      for (const { productId, quantity } of lockedItems) {
         await execute(
           `UPDATE products SET quantity_available = quantity_available - ?, quantity_reserved = quantity_reserved + ?
            WHERE id = ?`,
           [quantity, quantity, productId],
-        );
-        await execute(
-          `UPDATE stock SET status = 'reserved', order_id = ? WHERE id IN (${stockIds.map(() => '?').join(',')})`,
-          [id, ...stockIds],
         );
         await execute(
           `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)

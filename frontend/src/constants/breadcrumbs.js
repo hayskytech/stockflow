@@ -18,7 +18,6 @@ export const CRUMBS = {
   PRODUCTS_DETAIL: () => trail({ label: "Products", to: ROUTES.PRODUCTS.LIST }, { label: "Product Details" }),
   PRODUCTS_EDIT: () => trail({ label: "Products", to: ROUTES.PRODUCTS.LIST }, { label: "Edit Product" }),
   STOCK_LIST: () => trail({ label: "Stock" }),
-  STOCK_SCAN: () => trail({ label: "Stock", to: ROUTES.STOCK.LIST }, { label: "Scan Stock" }),
   STOCK_LEDGER: () => trail({ label: "Stock Ledger" }),
   MEDIA_LIST: () => trail({ label: "Media Library" }),
   MEDIA_DETAIL: () => trail({ label: "Media Library", to: ROUTES.MEDIA_LIBRARY.LIST }, { label: "Media Details" }),

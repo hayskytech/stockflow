@@ -12,10 +12,10 @@ I want to make a webapp for stock management. There is a single warehouse in whi
 - Warehouse (single-record settings: name, address, contact, and bank transfer details shown to customers at checkout)
 - Catalog (divisions → categories → sub_categories — admin-managed product taxonomy)
 - Products (mrp, wsp, product_code, category… see `cloth_inventory_db_schema.md`)
-- Stock (per-unit barcoded physical inventory received against a product — see Stock Concept below)
+- Stock (quantity-based intake batches received against a product — see Stock Concept below)
 - Stock Ledger
 - Orders
-- Dispatches (scan-verified outward flow — see Stock Concept below)
+- Dispatches (outward flow that releases reserved quantity — see Stock Concept below)
 - Reports
 - Users / Staff
 - Media Library (shared image uploads, reused across features)
@@ -34,14 +34,14 @@ See `CLAUDE.md` for the full folder structure, auth implementation, roles/permis
 
 ## Stock Concept
 
-Stock is tracked per physical unit, not just as a quantity counter. Every unit received into the warehouse gets its own row in a `stock` table, keyed by a **unique barcode**, so an individual item can be looked up, moved through a lifecycle (`in_stock` → `reserved` → `dispatched`), and audited on its own.
+Stock is tracked as quantities, not per physical unit. `products.quantity_available`/`quantity_reserved` are the source of truth for stock on hand; the `stock` table is a receipt/batch ledger — one row per intake event (e.g. one line of a supplier invoice), with a quantity — not a table of individually-trackable items.
 
-- **Manual scan-add** — pick a product, then scan barcodes one at a time (or in a batch) to create stock units against it; all-or-nothing if a barcode collides with one already on record.
-- **Bulk import** — upload an `.xlsx`/`.csv` file to create many stock units at once (columns include product, category, mrp/wsp, invoice no/date, barcode, size, note); rows are matched to existing products by name + category, and the whole file is rejected if any row is invalid, unmatched, or collides with an existing barcode/invoice.
+- **Add Stock** — pick a product and enter a quantity, invoice no/date, mrp/wsp, size, and note to create one intake batch; no barcodes are entered anywhere.
+- **Bulk import** — upload an `.xlsx`/`.csv` file to create many batches at once (columns include product, category, mrp/wsp, invoice no/date, quantity, size, note); rows are matched to existing products by name + category, and the whole file is rejected if any row is invalid, unmatched, or the invoice number was already imported.
 - Every stock create/delete writes a `stock_ledger` row and keeps `products.quantity_available` in sync.
-- The `stock` module (list/detail/create/import/delete) is back-office only (admin/staff) — customers never see individual units, only the aggregate stock count on a product.
+- The `stock` module (list/detail/create/import/delete) is back-office only (admin/staff) — customers never see intake batches, only the aggregate stock count on a product.
 
-**Outward (dispatch)** is the mirror of intake: all stock leaves through orders. Placing an order auto-reserves specific units (oldest invoice first); dispatching an accepted order is **scan-verified** — staff scan each physical unit as it leaves, and scanning a different in_stock unit of the same product swaps it in (the auto-reserved one is released back to stock). A `dispatches` row plus one `dispatch_items` row per unit records exactly which barcodes left, who dispatched, and courier/AWB details. Barcodes can also come from an uploaded `.xlsx`/`.csv` instead of live scanning. For walk-in/phone sales with no storefront order, admin/staff create a manual order for the customer (`requestedFor` + `offline` payment) and dispatch it the same way. Dispatched units are never deleted from `stock` — history stays queryable by barcode.
+**Outward (dispatch)** is the mirror of intake: all stock leaves through orders. Placing an order does not reserve stock; accepting it locks and reserves the ordered quantity against each product. Dispatching an accepted order is a one-step confirmation (courier/AWB/note, no scanning) that releases the reserved quantity, writes a `stock_ledger` row per product, and flips the order to `dispatched` in the same transaction. A `dispatches` row records who dispatched and courier/AWB details; its line items mirror the order's `order_items`. For walk-in/phone sales with no storefront order, admin/staff create a manual order for the customer (`requestedFor` + `offline` payment) and dispatch it the same way.
 
 ## Media Concept
 
@@ -166,7 +166,7 @@ backend/src/
     warehouse/   ...
     catalog/     ...   # divisions, categories, sub_categories
     products/    ...
-    stock/       ...   # per-unit barcoded stock: manual scan-add + xlsx/csv import
+    stock/       ...   # quantity-based stock intake: add batch + xlsx/csv import
     stockLedger/ ...
     orders/      ...
     dispatches/  ...
@@ -176,7 +176,7 @@ backend/src/
 
 Each module follows the same 4-file split as `auth`: **router** (wires path → middleware → controller), **controller** (req/res, calls service, no SQL), **service** (SQL via `executeQuery`, business logic), **schema** (input validation, e.g. with `zod` or `joi`).
 
-DB design for these modules — divisions/categories/sub_categories hierarchy, `products` fields (`mrp`, `wsp`, `product_code`, `quantity_available`/`quantity_reserved`, `reorder_level`), the per-unit barcoded `stock` table, the `stock_ledger` append-only movement log, and the single unified `orders`/`order_items`/`dispatches`/`dispatch_items` tables (no branch or wholesaler tables — every orderer is just a `users` row) — is defined in `cloth_inventory_db_schema.md`.
+DB design for these modules — divisions/categories/sub_categories hierarchy, `products` fields (`mrp`, `wsp`, `product_code`, `quantity_available`/`quantity_reserved`, `reorder_level`), the batch-based `stock` table, the `stock_ledger` append-only movement log, and the single unified `orders`/`order_items`/`dispatches` tables (no branch or wholesaler tables — every orderer is just a `users` row) — is defined in `cloth_inventory_db_schema.md` (may not yet reflect the quantity-based stock model — see `database/init/01_schema.sql` for the current schema).
 
 ### Pagination & filtering — WordPress REST API style
 
@@ -202,11 +202,11 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 
 - **Warehouse** — `GET /warehouse`, `PUT /warehouse` — single-record settings (name, address, contact); admin only for write.
 - **Catalog** — `GET/POST/PUT/DELETE /divisions`, `GET/POST/PUT/DELETE /categories` (`division_id`), `GET/POST/PUT/DELETE /sub-categories` (`category_id`) — admin only for write, staff read-only; deletes are blocked (`ON DELETE RESTRICT`) while children/products still reference the row — use `is_active=false` instead.
-- **Products** — `GET /products` (`search`, `division_id`, `category_id`, `sub_category_id`, `brand_id`, `is_active`), CRUD — admin/staff for write. Enforces `wsp <= mrp` and unique `product_code`/`barcode`.
-- **Stock** — `GET /stock` (`search`, `product_id`, `status`, `invoice_no`, `order_id`, `date_from`, `date_to`), `GET /stock/:id`, `POST /stock` (manual barcode scan-add against a product), `POST /stock/import` (bulk `.xlsx`/`.csv` upload), `POST /stock/barcode-status` (advisory pre-check while scanning), `DELETE /stock/:id` — admin/staff only; every create/delete runs inside a transaction that also writes a `stock_ledger` row and keeps `products.quantity_available` in sync.
+- **Products** — `GET /products` (`search`, `division_id`, `category_id`, `sub_category_id`, `brand_id`, `is_active`), CRUD — admin/staff for write. Enforces `wsp <= mrp` and unique `product_code`. `products` has no `barcode` column.
+- **Stock** — `GET /stock` (`search`, `product_id`, `invoice_no`, `date_from`, `date_to`), `GET /stock/:id`, `POST /stock` (create one intake batch against a product), `POST /stock/import` (bulk `.xlsx`/`.csv` upload), `DELETE /stock/:id` — admin/staff only; every create/delete runs inside a transaction that also writes a `stock_ledger` row and keeps `products.quantity_available` in sync.
 - **Stock Ledger** — `GET /stock-ledger` (`product_id`, `movement_type`, `date_from`, `date_to`) — read-only, append-only log of every stock movement.
 - **Orders** — `GET /orders` (`status`, `date_from`, `date_to` — scoped to the requester's own orders for customers, all orders for admin/staff), `POST /orders` (locks + reserves stock per line item, all-or-nothing on insufficient stock; captures shipping details, the bank transfer `transaction_id`, and an idempotency key so a retried submit can't double-reserve stock), `PATCH /orders/:id/status` (accept/reject/cancel — reject/cancel releases reserved stock back to `quantity_available`; a customer may cancel their own still-pending order; `accepted → dispatched` is NOT allowed here — that transition only happens through the scan-verified `POST /dispatches`), `PATCH /orders/:id/payment-status` (admin/staff mark a bank transfer verified/rejected, independent of the accept/reject decision). Payment: `bank_transfer` (storefront checkout, account details from Warehouse settings) or `offline` (manual orders only — admin/staff pass `requestedFor` to place a walk-in/phone order on a customer's behalf; no transaction id required).
-- **Dispatches** — `GET /dispatches` (`order_id`, `date_from`, `date_to`), `GET /dispatches/:id`, `POST /dispatches` (scan-verified, full-order dispatch: orderId + scanned barcodes, unit swap supported, all-or-nothing), `POST /dispatches/barcode-status` (advisory scan check), `POST /dispatches/import` (barcode file) — admin/staff only. No partial fulfillment — an order dispatches in one go.
+- **Dispatches** — `GET /dispatches` (`order_id`, `date_from`, `date_to`), `GET /dispatches/:id`, `POST /dispatches` (full-order dispatch: orderId + courier/AWB/note, releases the order's reserved quantity) — admin/staff only. No partial fulfillment — an order dispatches in one go.
 - **Reports** — `GET /reports/stock-summary` (includes low-stock via `quantity_available <= reorder_level`), `GET /reports/order-history` (`days`), `GET /reports/stock-movement` (`days` — daily physical in/out from `stock_ledger`, plus on-hand and reserved unit counts) — aggregate queries, no pagination.
 - **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Plus the session endpoints from **Session Management (Admin)** above.
 

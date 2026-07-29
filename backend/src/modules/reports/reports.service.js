@@ -61,10 +61,9 @@ export async function getStockSummary() {
  */
 export async function getStockMovement(days) {
   const [onHand] = await executeQuery(
-    `SELECT
-       COALESCE(SUM(CASE WHEN status = 'in_stock' THEN 1 ELSE 0 END), 0) AS availableUnits,
-       COALESCE(SUM(CASE WHEN status = 'reserved' THEN 1 ELSE 0 END), 0) AS reservedUnits
-     FROM stock`,
+    `SELECT COALESCE(SUM(quantity_available), 0) AS availableUnits,
+            COALESCE(SUM(quantity_reserved), 0)  AS reservedUnits
+     FROM products`,
   );
 
   const dailyRows = await executeQuery(

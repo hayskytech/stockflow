@@ -441,40 +441,34 @@ CREATE TABLE order_items (
 
 -- =============================================================================
 -- TABLE: stock
--- One row per physical barcoded unit received against a product (imported in bulk from
--- the client's Excel/CSV exports, or occasionally added by hand). mrp/wsp/size are captured
--- per unit since they can vary within the same product (e.g. by size) — products.mrp/wsp
--- remain only as defaults used when a product is first created manually.
--- order_id is the order currently holding (reserved) or that consumed (dispatched) this
--- unit; it's cleared back to NULL when a reservation is released.
+-- One row per stock intake batch (e.g. one line of a supplier invoice), not per
+-- physical unit - quantity-based tracking, no barcodes. mrp/wsp/size are captured
+-- per batch since they can vary within the same product (e.g. by size) —
+-- products.mrp/wsp remain only as defaults used when a product is first created
+-- manually. products.quantity_available/quantity_reserved are the source of
+-- truth for stock on hand; this table is the receipt/batch ledger of intake events.
 -- =============================================================================
 CREATE TABLE stock (
   id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
   product_id    CHAR(36)      NOT NULL,
-  barcode       VARCHAR(50)   NOT NULL                              COMMENT 'Unique physical unit barcode',
+  quantity      INT           NOT NULL                              COMMENT 'Units received in this batch',
   mrp           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   wsp           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   size          VARCHAR(20)   NULL,
-  invoice_no    VARCHAR(100)  NOT NULL                              COMMENT 'Supplier invoice this unit arrived on - shared by many units',
+  invoice_no    VARCHAR(100)  NOT NULL                              COMMENT 'Supplier invoice this batch arrived on',
   invoice_date  DATE          NULL,
   note          VARCHAR(500)  NULL,
-  status        ENUM('in_stock','reserved','dispatched') NOT NULL DEFAULT 'in_stock',
-  order_id      CHAR(36)      NULL                                  COMMENT 'Order holding (reserved) or that consumed (dispatched) this unit',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE KEY uq_stock_barcode    (barcode),
   KEY idx_stock_product_id       (product_id),
   KEY idx_stock_invoice_no       (invoice_no),
-  KEY idx_stock_status           (status),
-  KEY idx_stock_order_id         (order_id),
   KEY idx_stock_created_at       (created_at),
 
   CONSTRAINT fk_stock_product_id
     FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT fk_stock_order_id
-    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT chk_stock_quantity_pos CHECK (quantity > 0),
   CONSTRAINT chk_stock_mrp_nonneg   CHECK (mrp >= 0),
   CONSTRAINT chk_stock_wsp_nonneg   CHECK (wsp >= 0),
   CONSTRAINT chk_stock_wsp_le_mrp   CHECK (wsp <= mrp)
@@ -482,7 +476,7 @@ CREATE TABLE stock (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='One row per physical barcoded stock unit';
+  COMMENT='One row per stock intake batch';
 
 
 -- =============================================================================
@@ -516,9 +510,9 @@ CREATE TABLE stock_ledger (
 
 -- =============================================================================
 -- TABLE: dispatches
--- One row per dispatch event — the scan-verified moment an order's reserved units
--- physically left the warehouse. The order's status flip to 'dispatched' happens in
--- the same transaction that creates this row.
+-- One row per dispatch event — the moment an order's reserved quantity physically
+-- left the warehouse. The order's status flip to 'dispatched' happens in the same
+-- transaction that creates this row.
 -- =============================================================================
 CREATE TABLE dispatches (
   id               CHAR(36)     NOT NULL                             COMMENT 'UUID v4 primary key',
@@ -543,36 +537,4 @@ CREATE TABLE dispatches (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='One row per scan-verified dispatch event against an order';
-
-
--- =============================================================================
--- TABLE: dispatch_items
--- One row per physical stock unit that left in a dispatch — the audit trail of
--- exactly which barcodes went out. barcode is snapshotted so the record stands
--- alone even though stock rows are never deleted.
--- =============================================================================
-CREATE TABLE dispatch_items (
-  id           CHAR(36)    NOT NULL                                  COMMENT 'UUID v4 primary key',
-  dispatch_id  CHAR(36)    NOT NULL,
-  stock_id     CHAR(36)    NOT NULL                                  COMMENT 'The stock unit that was dispatched',
-  product_id   CHAR(36)    NOT NULL,
-  barcode      VARCHAR(50) NOT NULL                                  COMMENT 'Snapshot of the unit barcode at dispatch time',
-
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_dispatch_items_stock_id (stock_id),
-  KEY idx_dispatch_items_dispatch_id    (dispatch_id),
-  KEY idx_dispatch_items_product_id     (product_id),
-  KEY idx_dispatch_items_barcode        (barcode),
-
-  CONSTRAINT fk_dispatch_items_dispatch_id
-    FOREIGN KEY (dispatch_id) REFERENCES dispatches (id) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_dispatch_items_stock_id
-    FOREIGN KEY (stock_id) REFERENCES stock (id) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT fk_dispatch_items_product_id
-    FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE
-
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci
-  COMMENT='Per-unit audit trail of which barcodes left in a dispatch';
+  COMMENT='One row per dispatch event against an order';

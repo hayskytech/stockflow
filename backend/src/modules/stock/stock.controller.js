@@ -1,6 +1,6 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
-import { barcodeStatusSchema, idParamSchema, listStockQuerySchema, scanImportSchema } from './stock.schema.js';
+import { createStockSchema, idParamSchema, listStockQuerySchema } from './stock.schema.js';
 import * as stockService from './stock.service.js';
 
 function parseOrThrow(schema, data) {
@@ -14,9 +14,7 @@ export async function listStock(req, res, next) {
   try {
     const filters = parseOrThrow(listStockQuerySchema, {
       productId: req.query.product_id,
-      status: req.query.status,
       invoiceNo: req.query.invoice_no,
-      orderId: req.query.order_id,
       dateFrom: req.query.date_from,
       dateTo: req.query.date_to,
     });
@@ -50,23 +48,12 @@ export async function importStock(req, res, next) {
   }
 }
 
-/** POST /api/stock — bulk-create scanned stock units against one product/invoice */
+/** POST /api/stock — create one stock intake batch against a product/invoice */
 export async function createStock(req, res, next) {
   try {
-    const input = parseOrThrow(scanImportSchema, req.body);
-    const result = await stockService.createStockUnits(input);
+    const input = parseOrThrow(createStockSchema, req.body);
+    const result = await stockService.createStockBatch(input);
     res.status(201).json(result);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** POST /api/stock/barcode-status — reports which of the given barcodes already exist */
-export async function barcodeStatus(req, res, next) {
-  try {
-    const { barcodes } = parseOrThrow(barcodeStatusSchema, req.body);
-    const existing = await stockService.checkBarcodes(barcodes);
-    res.status(200).json({ existing });
   } catch (err) {
     next(err);
   }

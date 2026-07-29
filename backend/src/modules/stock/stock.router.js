@@ -6,7 +6,7 @@ import { authenticate } from '../../middleware/auth.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { pagination } from '../../middleware/pagination.js';
 import { requireRole } from '../../middleware/requireRole.js';
-import { barcodeStatus, createStock, deleteStock, getStock, importStock, listStock } from './stock.controller.js';
+import { createStock, deleteStock, getStock, importStock, listStock } from './stock.controller.js';
 
 export const stockRouter = Router();
 
@@ -38,7 +38,7 @@ function handleUpload(req, res, next) {
 }
 
 const stockPagination = pagination({
-  sortable: ['barcode', 'invoice_no', 'invoice_date', 'mrp', 'wsp', 'status', 'created_at'],
+  sortable: ['quantity', 'invoice_no', 'invoice_date', 'mrp', 'wsp', 'created_at'],
   defaultSort: 'created_at',
 });
 
@@ -46,6 +46,5 @@ const stockPagination = pagination({
 stockRouter.get('/', authenticate, requireRole('admin', 'staff'), stockPagination, listStock);
 stockRouter.get('/:id', authenticate, requireRole('admin', 'staff'), getStock);
 stockRouter.post('/', authenticate, requireRole('admin', 'staff'), createStock);
-stockRouter.post('/barcode-status', authenticate, requireRole('admin', 'staff'), barcodeStatus);
 stockRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importStock);
 stockRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteStock);

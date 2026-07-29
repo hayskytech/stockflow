@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { to: ROUTES.CATALOG.DIVISIONS, icon: "fa-sitemap", label: "Divisions" },
   { to: ROUTES.CATALOG.CATEGORIES, icon: "fa-tags", label: "Categories" },
   { to: ROUTES.PRODUCTS.LIST, icon: "fa-shirt", label: "Products" },
-  { to: ROUTES.STOCK.LIST, icon: "fa-barcode", label: "Stock" },
+  { to: ROUTES.STOCK.LIST, icon: "fa-boxes", label: "Stock" },
   { to: ROUTES.STOCK_LEDGER, icon: "fa-book", label: "Stock Ledger" },
   { to: ROUTES.MEDIA_LIBRARY.LIST, icon: "fa-images", label: "Media Library" },
   { to: ROUTES.HERO_SLIDES, icon: "fa-photo-film", label: "Homepage Sliders", adminOnly: true },

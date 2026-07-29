@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  checkBarcodesApi,
-  createStockApi,
+  createStockBatchApi,
   deleteStockApi,
   getStockApi,
   importStockApi,
@@ -25,7 +24,7 @@ export function useStock(id) {
   })
 }
 
-// Import/delete change products.quantity_available and write stock_ledger rows too —
+// Import/create/delete change products.quantity_available and write stock_ledger rows too —
 // invalidated by those features' query key strings directly (see PRODUCTS_QUERY_KEY in
 // products/hooks/use-products.js and STOCK_LEDGER_QUERY_KEY in stock-ledger/hooks/
 // use-stock-ledger.js) since features never import each other's modules.
@@ -44,22 +43,17 @@ export function useImportStock() {
   })
 }
 
-/** Commits a scan session — bulk-creates one stock row per scanned barcode. */
-export function useCreateStock() {
+/** Creates one stock intake batch against a product/invoice. */
+export function useCreateStockBatch() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: createStockApi,
+    mutationFn: createStockBatchApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [STOCK_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
     },
   })
-}
-
-/** Advisory duplicate check for a batch of freshly scanned barcodes. */
-export function useCheckBarcodes() {
-  return useMutation({ mutationFn: checkBarcodesApi })
 }
 
 export function useDeleteStock() {

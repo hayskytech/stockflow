@@ -26,7 +26,6 @@ export const ROUTES = {
   },
   STOCK: {
     LIST: "/stock",
-    SCAN: "/stock/scan",
   },
   STOCK_LEDGER: "/stock-ledger",
   MEDIA_LIBRARY: {

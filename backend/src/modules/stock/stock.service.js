@@ -6,20 +6,19 @@ import { parseRowsFromFile } from '../../utils/importFile.js';
 import { pairKey, parseStockRow } from './stock.parsing.js';
 
 const STOCK_COLUMNS = `
-  s.id, s.barcode, s.mrp, s.wsp, s.size, s.invoice_no AS invoiceNo, s.invoice_date AS invoiceDate,
-  s.note, s.status, s.order_id AS orderId, s.created_at AS createdAt, s.updated_at AS updatedAt,
+  s.id, s.quantity, s.mrp, s.wsp, s.size, s.invoice_no AS invoiceNo, s.invoice_date AS invoiceDate,
+  s.note, s.created_at AS createdAt, s.updated_at AS updatedAt,
   s.product_id AS productId, p.name AS productName, p.product_code AS productCode, c.name AS categoryName
 `;
 const STOCK_JOINS = `FROM stock s JOIN products p ON p.id = s.product_id JOIN categories c ON c.id = p.category_id`;
 
 // stock.router.js whitelists these same keys for `orderby`.
 const SORT_COLUMNS = {
-  barcode: 's.barcode',
+  quantity: 's.quantity',
   invoice_no: 's.invoice_no',
   invoice_date: 's.invoice_date',
   mrp: 's.mrp',
   wsp: 's.wsp',
-  status: 's.status',
   created_at: 's.created_at',
 };
 
@@ -29,24 +28,16 @@ export async function listStock(listQuery, filters) {
   const conditions = [];
   const params = [];
   if (search) {
-    conditions.push('(s.barcode LIKE ? OR s.invoice_no LIKE ? OR p.name LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    conditions.push('(s.invoice_no LIKE ? OR p.name LIKE ?)');
+    params.push(`%${search}%`, `%${search}%`);
   }
   if (filters.productId) {
     conditions.push('s.product_id = ?');
     params.push(filters.productId);
   }
-  if (filters.status) {
-    conditions.push('s.status = ?');
-    params.push(filters.status);
-  }
   if (filters.invoiceNo) {
     conditions.push('s.invoice_no = ?');
     params.push(filters.invoiceNo);
-  }
-  if (filters.orderId) {
-    conditions.push('s.order_id = ?');
-    params.push(filters.orderId);
   }
   if (filters.dateFrom) {
     conditions.push('s.invoice_date >= ?');
@@ -92,53 +83,38 @@ export async function getStockById(id) {
 
 export async function deleteStock(id) {
   const existing = await getStockById(id);
-  if (existing.status !== 'in_stock') {
-    throw new AppError(409, 'Only in-stock items can be deleted — this item is reserved or dispatched');
-  }
+
   await withTransaction(async (execute) => {
+    const [product] = await execute(
+      `SELECT id, name, quantity_available AS quantityAvailable FROM products WHERE id = ? FOR UPDATE`,
+      [existing.productId],
+    );
+    if (product.quantityAvailable < existing.quantity) {
+      throw new AppError(
+        409,
+        `Cannot delete this batch — only ${product.quantityAvailable} of ${existing.quantity} units are still available (the rest are reserved or dispatched)`,
+      );
+    }
+
     await execute(`DELETE FROM stock WHERE id = ?`, [id]);
-    await execute(`UPDATE products SET quantity_available = quantity_available - 1 WHERE id = ?`, [existing.productId]);
+    await execute(`UPDATE products SET quantity_available = quantity_available - ? WHERE id = ?`, [
+      existing.quantity,
+      existing.productId,
+    ]);
     await execute(
       `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-       VALUES (?, 'out', 1, 'adjustment', NULL, ?)`,
-      [existing.productId, `Stock unit deleted — barcode ${existing.barcode}`],
+       VALUES (?, 'out', ?, 'adjustment', NULL, ?)`,
+      [existing.productId, existing.quantity, `Stock batch deleted — invoice ${existing.invoiceNo}`],
     );
   });
 }
 
-/** Returns which of the given barcodes already exist in stock (advisory check while scanning). */
-export async function checkBarcodes(barcodes) {
-  return executeQuery(
-    `SELECT s.barcode, s.status, p.name AS productName
-     FROM stock s JOIN products p ON p.id = s.product_id
-     WHERE s.barcode IN (${barcodes.map(() => '?').join(',')})`,
-    barcodes,
-  );
-}
-
-// Chunk size for multi-row INSERTs — keeps each statement's placeholder count well under
-// MySQL limits while avoiding one round trip per unit inside the transaction.
-const SCAN_INSERT_CHUNK = 250;
-
 /**
- * Bulk-creates scanned stock units against a single product/invoice (one row per physical
- * barcode). All-or-nothing: any barcode collision rejects the whole batch with a 409 whose
- * `details` array lists the conflicting barcodes so the client can drop just those rows.
- * Unlike importStock there is no duplicate-invoice guard — scan sessions legitimately add
- * units against the same invoice across multiple batches.
+ * Creates one stock intake batch against a product/invoice, bumps
+ * products.quantity_available, and writes one stock_ledger 'in'/'import' row — all in
+ * one transaction.
  */
-export async function createStockUnits({ productId, invoiceNo, invoiceDate, mrp, wsp, size, note, barcodes }) {
-  const seen = new Set();
-  const batchDuplicates = new Set();
-  for (const barcode of barcodes) {
-    if (seen.has(barcode)) batchDuplicates.add(barcode);
-    seen.add(barcode);
-  }
-  if (batchDuplicates.size > 0) {
-    const duplicates = [...batchDuplicates];
-    throw new AppError(400, `These barcodes appear more than once in the batch: ${duplicates.join(', ')}`, duplicates);
-  }
-
+export async function createStockBatch({ productId, invoiceNo, invoiceDate, mrp, wsp, size, note, quantity }) {
   const [product] = await executeQuery(
     `SELECT id, name, is_active AS isActive FROM products WHERE id = ?`,
     [productId],
@@ -146,45 +122,27 @@ export async function createStockUnits({ productId, invoiceNo, invoiceDate, mrp,
   if (!product) throw new AppError(404, 'Product not found');
   if (!product.isActive) throw new AppError(409, 'Product is inactive — activate it before adding stock');
 
-  const conflictError = async () => {
-    const conflicts = (await checkBarcodes(barcodes)).map((row) => row.barcode);
-    return new AppError(409, `These barcodes already exist in stock: ${conflicts.join(', ')}`, conflicts);
-  };
+  await withTransaction(async (execute) => {
+    await execute(
+      `INSERT INTO stock (id, product_id, quantity, mrp, wsp, size, invoice_no, invoice_date, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [crypto.randomUUID(), productId, quantity, mrp, wsp, size ?? null, invoiceNo, invoiceDate ?? null, note ?? null],
+    );
+    await execute(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ?`, [quantity, productId]);
+    await execute(
+      `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
+       VALUES (?, 'in', ?, 'import', NULL, ?)`,
+      [productId, quantity, `Stock intake — invoice ${invoiceNo}`.slice(0, 500)],
+    );
+  });
 
-  if ((await checkBarcodes(barcodes)).length > 0) throw await conflictError();
-
-  try {
-    await withTransaction(async (execute) => {
-      for (let i = 0; i < barcodes.length; i += SCAN_INSERT_CHUNK) {
-        const chunk = barcodes.slice(i, i + SCAN_INSERT_CHUNK);
-        await execute(
-          `INSERT INTO stock (id, product_id, barcode, mrp, wsp, size, invoice_no, invoice_date, note, status)
-           VALUES ${chunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_stock')`).join(', ')}`,
-          chunk.flatMap((barcode) => [
-            crypto.randomUUID(), productId, barcode, mrp, wsp, size ?? null, invoiceNo, invoiceDate ?? null, note ?? null,
-          ]),
-        );
-      }
-      await execute(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ?`, [barcodes.length, productId]);
-      await execute(
-        `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-         VALUES (?, 'in', ?, 'import', NULL, ?)`,
-        [productId, barcodes.length, `Scan import — invoice ${invoiceNo}`.slice(0, 500)],
-      );
-    });
-  } catch (err) {
-    // Race: another session inserted one of these barcodes between the pre-check and our insert.
-    if (err?.code === 'ER_DUP_ENTRY') throw await conflictError();
-    throw err;
-  }
-
-  return { imported: barcodes.length, productId, productName: product.name, invoiceNo };
+  return { imported: quantity, productId, productName: product.name, invoiceNo };
 }
 
 /**
  * Bulk-imports stock rows from an uploaded .xlsx/.csv (columns: Product, ProductSubGroup, Mrp,
- * InvoiceNo, WSalePrice, Barcode, InvoiceDate, Size, Note — Itemcode is ignored). All-or-nothing:
- * if any row is invalid, unmatched, or collides with existing data, nothing is inserted.
+ * InvoiceNo, WSalePrice, Quantity, InvoiceDate, Size, Note — Itemcode is ignored). All-or-nothing:
+ * if any row is invalid, unmatched, or the invoice was already imported, nothing is inserted.
  */
 export async function importStock(buffer, originalName) {
   const rawRows = await parseRowsFromFile(buffer, originalName);
@@ -192,16 +150,8 @@ export async function importStock(buffer, originalName) {
   const errors = [];
   const warnings = [];
   const parsedRows = [];
-  const seenBarcodes = new Set();
 
   for (const { rowNumber, data } of rawRows) {
-    const barcode = String(data.Barcode ?? '').trim();
-    if (barcode && seenBarcodes.has(barcode)) {
-      errors.push(`Row ${rowNumber}: barcode "${barcode}" is duplicated in this file`);
-      continue;
-    }
-    if (barcode) seenBarcodes.add(barcode);
-
     const parsed = parseStockRow(rowNumber, data);
     if (parsed.error) {
       errors.push(parsed.error);
@@ -218,18 +168,9 @@ export async function importStock(buffer, originalName) {
     throw new AppError(400, 'File has no valid data rows');
   }
 
-  // Duplicate guards against existing data — checked before anything is matched/inserted so a
-  // re-uploaded file (or a barcode collision) fails cleanly instead of a raw SQL duplicate-key error.
-  const barcodes = parsedRows.map((r) => r.barcode);
+  // Duplicate-invoice guard against existing data — checked before anything is matched/inserted
+  // so a re-uploaded file fails cleanly instead of the operator double-counting stock.
   const invoiceNumbers = [...new Set(parsedRows.map((r) => r.invoiceNo))];
-
-  const existingBarcodes = await executeQuery(
-    `SELECT barcode FROM stock WHERE barcode IN (${barcodes.map(() => '?').join(',')})`,
-    barcodes,
-  );
-  if (existingBarcodes.length > 0) {
-    throw new AppError(409, `These barcodes already exist in stock: ${existingBarcodes.map((r) => r.barcode).join(', ')}`);
-  }
 
   const existingInvoices = await executeQuery(
     `SELECT DISTINCT invoice_no AS invoiceNo FROM stock WHERE invoice_no IN (${invoiceNumbers.map(() => '?').join(',')})`,
@@ -275,17 +216,17 @@ export async function importStock(buffer, originalName) {
     throw new AppError(400, `Import rejected — these rows could not be matched to a product: ${unmatched.join('; ')}`);
   }
 
-  // Everything validated — insert all rows and bump product counters in one transaction.
+  // Everything validated — insert one batch row per file row and bump product counters in one transaction.
   const productCounts = new Map();
   await withTransaction(async (execute) => {
     for (const row of parsedRows) {
       const productId = productLookup.get(pairKey(row.product, row.subGroup));
       await execute(
-        `INSERT INTO stock (id, product_id, barcode, mrp, wsp, size, invoice_no, invoice_date, note, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_stock')`,
-        [crypto.randomUUID(), productId, row.barcode, row.mrp, row.wsp, row.size, row.invoiceNo, row.invoiceDate, row.note],
+        `INSERT INTO stock (id, product_id, quantity, mrp, wsp, size, invoice_no, invoice_date, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), productId, row.quantity, row.mrp, row.wsp, row.size, row.invoiceNo, row.invoiceDate, row.note],
       );
-      productCounts.set(productId, (productCounts.get(productId) ?? 0) + 1);
+      productCounts.set(productId, (productCounts.get(productId) ?? 0) + row.quantity);
     }
     const ledgerNote = `File import — invoice ${invoiceNumbers.join(', ')}`.slice(0, 500);
     for (const [productId, count] of productCounts) {

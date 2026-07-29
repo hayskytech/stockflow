@@ -42,7 +42,6 @@ export const API_ENDPOINTS = {
     BY_ID: (id) => `/stock/${id}`,
     IMPORT: "/stock/import",
     CREATE: "/stock",
-    BARCODE_STATUS: "/stock/barcode-status",
   },
   MEDIA: {
     LIST: "/media",
@@ -70,8 +69,6 @@ export const API_ENDPOINTS = {
     LIST: "/dispatches",
     CREATE: "/dispatches",
     BY_ID: (id) => `/dispatches/${id}`,
-    BARCODE_STATUS: "/dispatches/barcode-status",
-    IMPORT: "/dispatches/import",
   },
   REPORTS: {
     STOCK_SUMMARY: "/reports/stock-summary",

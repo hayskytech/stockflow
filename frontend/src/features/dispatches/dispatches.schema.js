@@ -6,10 +6,3 @@ export const dispatchDetailsSchema = z.object({
   awbNumber: z.string().trim().max(100, "AWB number must be 100 characters or less"),
   note: z.string().trim().max(500, "Note must be 500 characters or less"),
 })
-
-/** POST /dispatches/import upload form. */
-export const dispatchImportSchema = z.object({
-  file: z
-    .instanceof(File, { message: "Choose a .xlsx or .csv file" })
-    .refine((file) => /\.(xlsx|csv)$/i.test(file.name), "Only .xlsx or .csv files are allowed"),
-})

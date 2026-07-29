@@ -15,6 +15,12 @@ export function parseMoney(value) {
   return Number.isFinite(num) && num >= 0 ? num : null;
 }
 
+/** Parses "10"/10 into a positive integer, or null if invalid. */
+export function parseQuantity(value) {
+  const num = typeof value === 'number' ? value : parseFloat(String(value ?? '').replace(/,/g, ''));
+  return Number.isInteger(num) && num > 0 ? num : null;
+}
+
 /** Accepts a real Date (from an .xlsx date cell) or the client software's "DD-MMM-YY" text format. */
 export function parseInvoiceDate(value) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
@@ -45,7 +51,7 @@ export function pairKey(product, subGroup) {
 
 /**
  * Validates and normalizes one raw stock-import row (shared shape used by both import
- * paths: columns Product, ProductSubGroup, Mrp, InvoiceNo, WSalePrice, Barcode,
+ * paths: columns Product, ProductSubGroup, Mrp, InvoiceNo, WSalePrice, Quantity,
  * InvoiceDate, Size, Note — Itemcode is ignored). Returns `{ row, warning }` on success
  * or `{ error }` on failure; never throws, so callers can accumulate results across
  * thousands of rows without try/catch per row.
@@ -53,12 +59,14 @@ export function pairKey(product, subGroup) {
 export function parseStockRow(rowNumber, data) {
   const product = String(data.Product ?? '').trim();
   const subGroup = String(data.ProductSubGroup ?? '').trim();
-  const barcode = String(data.Barcode ?? '').trim();
   const invoiceNo = String(data.InvoiceNo ?? '').trim();
 
-  if (!product || !subGroup || !barcode || !invoiceNo) {
-    return { error: `Row ${rowNumber}: Product, ProductSubGroup, Barcode and InvoiceNo are required` };
+  if (!product || !subGroup || !invoiceNo) {
+    return { error: `Row ${rowNumber}: Product, ProductSubGroup, Quantity and InvoiceNo are required` };
   }
+
+  const quantity = parseQuantity(data.Quantity);
+  if (quantity === null) return { error: `Row ${rowNumber}: Quantity must be a whole number greater than 0` };
 
   const mrp = parseMoney(data.Mrp);
   if (mrp === null) return { error: `Row ${rowNumber}: Mrp must be a number ≥ 0` };
@@ -79,7 +87,7 @@ export function parseStockRow(rowNumber, data) {
       rowNumber,
       product,
       subGroup,
-      barcode,
+      quantity,
       invoiceNo,
       mrp,
       wsp,

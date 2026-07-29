@@ -4,7 +4,7 @@ import { resolveMediaUrl } from "@/lib/media"
 
 const AUTOPLAY_INTERVAL_MS = 5000
 
-/** Full-width 16:9 hero slider shown above the product grid on the storefront homepage. */
+/** Full-width 8:3 hero slider shown above the product grid on the storefront homepage. */
 export function HeroSlider() {
   const { data: slides = [] } = useHeroSlidesPublic()
   const [activeIndex, setActiveIndex] = useState(0)
@@ -33,7 +33,7 @@ export function HeroSlider() {
     <div
       id="home-hero-slider"
       className="position-relative mb-4 rounded overflow-hidden"
-      style={{ aspectRatio: "16 / 9" }}
+      style={{ aspectRatio: "8 / 3" }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >

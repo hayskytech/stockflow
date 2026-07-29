@@ -49,7 +49,7 @@ export function DispatchesPage() {
       <PageHeader
         title="Dispatches"
         count={data?.total}
-        description="Scan-verified record of every order that left the warehouse"
+        description="Record of every order that left the warehouse"
       />
 
       <div className="card">

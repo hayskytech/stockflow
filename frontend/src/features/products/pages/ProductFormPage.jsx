@@ -352,7 +352,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
           <div className="form-group">
             <label htmlFor="product-stock">
               Stock
-              <InfoTooltip text="Units currently available to sell — this comes from scanned/imported barcoded stock, not entered here." />
+              <InfoTooltip text="Units currently available to sell — this comes from stock intake and dispatches, not entered here." />
             </label>
             <input
               id="product-stock"

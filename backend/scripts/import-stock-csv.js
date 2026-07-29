@@ -11,14 +11,14 @@
  *      one INSERT statement per row. For 50,000+ rows that's tens of thousands of
  *      sequential round trips on one connection. This script batches inserts into
  *      multi-row statements (500 rows per statement, chunked into short transactions).
- *   3. It's "all or nothing": a single bad row (or a duplicate barcode, or a typo'd
- *      category) rejects the entire file. Real legacy exports have both — this script
- *      defaults to skipping and reporting bad rows instead of blocking the other 99%
- *      of a 50,000-row file. Pass --strict to restore the interactive endpoint's
- *      abort-on-any-error behavior.
- *   4. It's idempotent by barcode: re-running the script (after a crash, or just to
- *      pick up files you haven't run yet) skips barcodes already in `stock` instead
- *      of erroring, so it's safe to re-run over files that partially or fully succeeded.
+ *   3. It's "all or nothing": a single bad row (or a typo'd category) rejects the
+ *      entire file. Real legacy exports have both — this script defaults to skipping
+ *      and reporting bad rows instead of blocking the other 99% of a 50,000-row file.
+ *      Pass --strict to restore the interactive endpoint's abort-on-any-error behavior.
+ *   4. It's idempotent by batch key (product + invoice + size + mrp + wsp): re-running
+ *      the script (after a crash, or just to pick up files you haven't run yet) skips
+ *      rows whose exact batch already exists in `stock` instead of erroring, so it's
+ *      safe to re-run over files that partially or fully succeeded.
  *
  * Usage (from backend/):
  *   node --env-file=.env scripts/import-stock-csv.js <file.csv> [file2.csv ...]
@@ -32,7 +32,7 @@
  *   --chunk-size=N  Rows per INSERT/transaction (default 500).
  *
  * Column format (same as the interactive import): Product, ProductSubGroup, Mrp,
- * InvoiceNo, WSalePrice, Barcode, InvoiceDate, Size, Note (Itemcode is ignored).
+ * InvoiceNo, WSalePrice, Quantity, InvoiceDate, Size, Note (Itemcode is ignored).
  * Products/categories must already exist — this does not auto-create them.
  */
 import crypto from 'crypto';
@@ -44,8 +44,17 @@ import { pairKey, parseStockRow } from '../src/modules/stock/stock.parsing.js';
 import { parseCsvFile } from './lib/fast-csv.js';
 
 const DEFAULT_CHUNK_SIZE = 500;
-const BARCODE_CHECK_CHUNK = 1000;
+const BATCH_CHECK_CHUNK = 1000;
 const PAIR_MATCH_CHUNK = 300;
+
+/** Natural batch identity — matches the grouping used to collapse per-unit stock into
+ * batches (see database/init/05_remove_stock_barcodes.sql). Two rows with the same key
+ * represent the same intake batch. mrp/wsp are normalized to a fixed 2-decimal string
+ * since mysql2 returns DECIMAL columns as strings (e.g. "899.00") while freshly parsed
+ * file rows carry plain numbers (899). */
+function batchKey(row) {
+  return [row.productId, row.invoiceNo, row.size ?? '', Number(row.mrp).toFixed(2), Number(row.wsp).toFixed(2)].join(' ');
+}
 
 function parseArgs(argv) {
   const files = [];
@@ -82,20 +91,11 @@ function validateRows(rawRows, strict) {
   const validRows = [];
   const rejects = [];
   const warnings = [];
-  const seenBarcodes = new Set();
 
   for (const { rowNumber, data } of rawRows) {
-    const barcode = String(data.Barcode ?? '').trim();
-    if (barcode && seenBarcodes.has(barcode)) {
-      rejects.push({ rowNumber, barcode, reason: `barcode "${barcode}" is duplicated in this file` });
-      if (strict) break;
-      continue;
-    }
-    if (barcode) seenBarcodes.add(barcode);
-
     const parsed = parseStockRow(rowNumber, data);
     if (parsed.error) {
-      rejects.push({ rowNumber, barcode, reason: parsed.error });
+      rejects.push({ rowNumber, reason: parsed.error });
       if (strict) break;
       continue;
     }
@@ -138,12 +138,12 @@ async function resolveProductIds(validRows, strict) {
   for (const row of validRows) {
     const key = pairKey(row.product, row.subGroup);
     if (ambiguousKeys.has(key)) {
-      rejects.push({ rowNumber: row.rowNumber, barcode: row.barcode, reason: `"${row.product}" / "${row.subGroup}" matches more than one product` });
+      rejects.push({ rowNumber: row.rowNumber, reason: `"${row.product}" / "${row.subGroup}" matches more than one product` });
       continue;
     }
     const productId = productLookup.get(key);
     if (!productId) {
-      rejects.push({ rowNumber: row.rowNumber, barcode: row.barcode, reason: `no product named "${row.product}" found in category "${row.subGroup}"` });
+      rejects.push({ rowNumber: row.rowNumber, reason: `no product named "${row.product}" found in category "${row.subGroup}"` });
       continue;
     }
     resolvedRows.push({ ...row, productId });
@@ -155,21 +155,24 @@ async function resolveProductIds(validRows, strict) {
   return { resolvedRows, rejects };
 }
 
-/** Splits rows into { importable, alreadyInStock } based on barcodes already present in `stock` — this is what makes re-running the script safe. */
+/** Splits rows into { importable, alreadyInStock } based on batch keys already present in
+ * `stock` (product + invoice + size + mrp + wsp) — this is what makes re-running the script safe. */
 async function filterAlreadyInStock(resolvedRows) {
+  const invoiceNumbers = [...new Set(resolvedRows.map((r) => r.invoiceNo))];
   const existing = new Set();
-  for (const barcodesChunk of chunk(resolvedRows.map((r) => r.barcode), BARCODE_CHECK_CHUNK)) {
+  for (const invoicesChunk of chunk(invoiceNumbers, BATCH_CHECK_CHUNK)) {
     const rows = await executeQuery(
-      `SELECT barcode FROM stock WHERE barcode IN (${barcodesChunk.map(() => '?').join(',')})`,
-      barcodesChunk,
+      `SELECT product_id AS productId, invoice_no AS invoiceNo, size, mrp, wsp
+       FROM stock WHERE invoice_no IN (${invoicesChunk.map(() => '?').join(',')})`,
+      invoicesChunk,
     );
-    for (const row of rows) existing.add(row.barcode);
+    for (const row of rows) existing.add(batchKey(row));
   }
 
   const importable = [];
   const alreadyInStock = [];
   for (const row of resolvedRows) {
-    (existing.has(row.barcode) ? alreadyInStock : importable).push(row);
+    (existing.has(batchKey(row)) ? alreadyInStock : importable).push(row);
   }
   return { importable, alreadyInStock };
 }
@@ -179,7 +182,7 @@ async function filterAlreadyInStock(resolvedRows) {
  * products.quantity_available and writes one stock_ledger row per product touched in
  * that chunk. Chunk-level (not whole-file) transactions mean a crash partway through
  * leaves already-committed chunks intact — nothing to roll back or redo by hand;
- * re-running the script picks up exactly where it left off via the barcode check above.
+ * re-running the script picks up exactly where it left off via the batch check above.
  */
 async function insertRows(rows, chunkSize, fileLabel, onProgress) {
   const chunks = chunk(rows, chunkSize);
@@ -187,15 +190,15 @@ async function insertRows(rows, chunkSize, fileLabel, onProgress) {
     const rowsChunk = chunks[c];
     await withTransaction(async (execute) => {
       await execute(
-        `INSERT INTO stock (id, product_id, barcode, mrp, wsp, size, invoice_no, invoice_date, note, status)
-         VALUES ${rowsChunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_stock')`).join(', ')}`,
+        `INSERT INTO stock (id, product_id, quantity, mrp, wsp, size, invoice_no, invoice_date, note)
+         VALUES ${rowsChunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?, ?)`).join(', ')}`,
         rowsChunk.flatMap((row) => [
-          crypto.randomUUID(), row.productId, row.barcode, row.mrp, row.wsp, row.size, row.invoiceNo, row.invoiceDate, row.note,
+          crypto.randomUUID(), row.productId, row.quantity, row.mrp, row.wsp, row.size, row.invoiceNo, row.invoiceDate, row.note,
         ]),
       );
 
       const countsByProduct = new Map();
-      for (const row of rowsChunk) countsByProduct.set(row.productId, (countsByProduct.get(row.productId) ?? 0) + 1);
+      for (const row of rowsChunk) countsByProduct.set(row.productId, (countsByProduct.get(row.productId) ?? 0) + row.quantity);
 
       const firstRow = rowsChunk[0].rowNumber;
       const lastRow = rowsChunk[rowsChunk.length - 1].rowNumber;
@@ -217,7 +220,7 @@ function printRejectsSample(label, rejects, limit = 10) {
   if (rejects.length === 0) return;
   console.log(`  ${label} (${rejects.length}), first ${Math.min(limit, rejects.length)}:`);
   for (const r of rejects.slice(0, limit)) {
-    console.log(`    row ${r.rowNumber}${r.barcode ? ` (barcode ${r.barcode})` : ''}: ${r.reason}`);
+    console.log(`    row ${r.rowNumber}: ${r.reason}`);
   }
 }
 

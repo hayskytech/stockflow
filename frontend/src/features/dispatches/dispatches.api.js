@@ -28,28 +28,8 @@ export async function getDispatchOrderApi(orderId) {
   return data
 }
 
-/** Scan-verified dispatch — { orderId, barcodes: [], courierName?, awbNumber?, note? }. */
+/** Dispatch of an accepted order — { orderId, courierName?, awbNumber?, note? }. */
 export async function createDispatchApi(payload) {
   const { data } = await apiClient.post(API_ENDPOINTS.DISPATCHES.CREATE, payload)
-  return data
-}
-
-/** Per-barcode advisory check against an order: matched / swap / wrong_product / unavailable / unknown. */
-export async function checkDispatchBarcodesApi(orderId, barcodes) {
-  const { data } = await apiClient.post(API_ENDPOINTS.DISPATCHES.BARCODE_STATUS, { orderId, barcodes })
-  return data.results
-}
-
-/** Dispatch from an uploaded barcode file (.xlsx/.csv with a Barcode column). */
-export async function importDispatchApi({ orderId, file, courierName, awbNumber, note }) {
-  const formData = new FormData()
-  formData.append("file", file)
-  formData.append("orderId", orderId)
-  if (courierName) formData.append("courierName", courierName)
-  if (awbNumber) formData.append("awbNumber", awbNumber)
-  if (note) formData.append("note", note)
-  const { data } = await apiClient.post(API_ENDPOINTS.DISPATCHES.IMPORT, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  })
   return data
 }

@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -7,18 +6,12 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { useAuthStore } from "@/store/auth.store"
 import { useProductOptions } from "@/hooks/use-product-options"
 import { useStockStore } from "@/features/stock/stock.store"
-import { useDeleteStock, useStockList } from "@/features/stock/hooks/use-stock"
+import { useCreateStockBatch, useDeleteStock, useStockList } from "@/features/stock/hooks/use-stock"
 import { StockImportModal } from "@/features/stock/components/StockImportModal"
+import { StockFormModal } from "@/features/stock/components/StockFormModal"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { SearchSelect } from "@/components/ui/SearchSelect"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
-import { ROUTES } from "@/constants/routes"
-
-const STATUS_LABELS = {
-  in_stock: { label: "In Stock", className: "badge-success" },
-  reserved: { label: "Reserved", className: "badge-warning" },
-  dispatched: { label: "Dispatched", className: "badge-secondary" },
-}
 
 export function StockPage() {
   const formatMoney = useFormatMoney()
@@ -28,15 +21,15 @@ export function StockPage() {
 
   const search = useStockStore((s) => s.search)
   const setSearch = useStockStore((s) => s.setSearch)
-  const statusFilter = useStockStore((s) => s.statusFilter)
-  const setStatusFilter = useStockStore((s) => s.setStatusFilter)
   const productFilter = useStockStore((s) => s.productFilter)
   const setProductFilter = useStockStore((s) => s.setProductFilter)
 
   const [page, setPage] = useState(1)
   const [importOpen, setImportOpen] = useState(false)
+  const [addStockOpen, setAddStockOpen] = useState(false)
   const [deletingStock, setDeletingStock] = useState(null)
   const [serverError, setServerError] = useState("")
+  const [addStockError, setAddStockError] = useState("")
 
   const { data: products = [] } = useProductOptions()
 
@@ -44,10 +37,10 @@ export function StockPage() {
     page,
     per_page: 10,
     search,
-    status: statusFilter || undefined,
     product_id: productFilter || undefined,
   })
 
+  const createStockBatch = useCreateStockBatch()
   const deleteStock = useDeleteStock()
 
   async function handleDelete() {
@@ -60,8 +53,17 @@ export function StockPage() {
     }
   }
 
+  async function handleAddStock(value) {
+    setAddStockError("")
+    try {
+      await createStockBatch.mutateAsync(value)
+      setAddStockOpen(false)
+    } catch (err) {
+      setAddStockError(err.response?.data?.message ?? "Could not add stock")
+    }
+  }
+
   const columns = [
-    { key: "barcode", label: "Barcode" },
     {
       key: "productName",
       label: "Product",
@@ -73,6 +75,7 @@ export function StockPage() {
       ),
     },
     { key: "categoryName", label: "Category", hideable: true },
+    { key: "quantity", label: "Quantity" },
     { key: "size", label: "Size", render: (row) => row.size ?? "—", hideable: true },
     { key: "mrp", label: "MRP", render: (row) => formatMoney(row.mrp), hideable: true },
     { key: "wsp", label: "WSP", render: (row) => formatMoney(row.wsp), hideable: true },
@@ -88,28 +91,19 @@ export function StockPage() {
       ),
     },
     {
-      key: "status",
-      label: "Status",
-      render: (row) => {
-        const status = STATUS_LABELS[row.status] ?? { label: row.status, className: "badge-secondary" }
-        return <span className={`badge ${status.className}`}>{status.label}</span>
-      },
-    },
-    {
       key: "actions",
       label: "",
       className: "text-right",
       render: (row) => (
         <RowActionsMenu
           actions={[
-            canManage &&
-              row.status === "in_stock" && {
-                key: "delete",
-                label: "Delete",
-                icon: "fa-trash",
-                variant: "danger",
-                onClick: () => setDeletingStock(row),
-              },
+            canManage && {
+              key: "delete",
+              label: "Delete",
+              icon: "fa-trash",
+              variant: "danger",
+              onClick: () => setDeletingStock(row),
+            },
           ]}
         />
       ),
@@ -121,14 +115,22 @@ export function StockPage() {
       <PageHeader
         title="Stock"
         count={data?.total}
-        description="Barcoded physical inventory received against products"
+        description="Intake batches received against products"
         actions={
           canManage ? (
             <>
-              <Link to={ROUTES.STOCK.SCAN} id="stock-scan-button" className="btn btn-outline-primary mr-2">
-                <i className="fas fa-barcode mr-1" />
-                Scan Items
-              </Link>
+              <button
+                type="button"
+                id="stock-add-button"
+                className="btn btn-outline-primary mr-2"
+                onClick={() => {
+                  setAddStockError("")
+                  setAddStockOpen(true)
+                }}
+              >
+                <i className="fas fa-plus mr-1" />
+                Add Stock
+              </button>
               <button type="button" id="stock-import-button" className="btn btn-primary" onClick={() => setImportOpen(true)}>
                 <i className="fas fa-file-import mr-1" />
                 Import
@@ -141,12 +143,12 @@ export function StockPage() {
       <div className="card">
         <div className="card-body">
           <div className="row mb-3">
-            <div className="col-md-4">
+            <div className="col-md-6">
               <input
                 id="stock-search-input"
                 type="search"
                 className="form-control"
-                placeholder="Search by barcode, invoice, or product…"
+                placeholder="Search by invoice or product…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value)
@@ -154,7 +156,7 @@ export function StockPage() {
                 }}
               />
             </div>
-            <div className="col-md-4">
+            <div className="col-md-6">
               <SearchSelect
                 id="stock-product-filter"
                 placeholder="All products"
@@ -166,22 +168,6 @@ export function StockPage() {
                 options={products.map((product) => ({ value: product.id, label: product.name }))}
               />
             </div>
-            <div className="col-md-4">
-              <select
-                id="stock-status-filter"
-                className="form-control"
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value)
-                  setPage(1)
-                }}
-              >
-                <option value="">All statuses</option>
-                <option value="in_stock">In Stock</option>
-                <option value="reserved">Reserved</option>
-                <option value="dispatched">Dispatched</option>
-              </select>
-            </div>
           </div>
 
           {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
@@ -192,9 +178,9 @@ export function StockPage() {
             rows={data?.items ?? []}
             isLoading={isLoading}
             isError={isError}
-            emptyIcon="fa-barcode"
+            emptyIcon="fa-boxes"
             emptyTitle="No stock yet"
-            emptyDescription="Import a stock excel/CSV to get started."
+            emptyDescription="Add stock or import a stock excel/CSV to get started."
             page={page}
             totalPages={data?.totalPages ?? 1}
             onPageChange={setPage}
@@ -204,10 +190,21 @@ export function StockPage() {
 
       <StockImportModal open={importOpen} onClose={() => setImportOpen(false)} />
 
+      {addStockOpen ? (
+        <StockFormModal
+          open={addStockOpen}
+          products={products}
+          onClose={() => setAddStockOpen(false)}
+          onSubmit={handleAddStock}
+          isSubmitting={createStockBatch.isPending}
+          serverError={addStockError}
+        />
+      ) : null}
+
       <ConfirmDialog
         open={Boolean(deletingStock)}
-        title="Delete stock item?"
-        message={`Are you sure you want to delete barcode "${deletingStock?.barcode}"? This cannot be undone.`}
+        title="Delete stock batch?"
+        message={`Are you sure you want to delete this batch of "${deletingStock?.productName}" (invoice ${deletingStock?.invoiceNo})? This cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => setDeletingStock(null)}
       />

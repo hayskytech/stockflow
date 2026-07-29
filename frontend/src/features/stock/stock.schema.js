@@ -11,10 +11,15 @@ export const stockImportSchema = z.object({
     ),
 })
 
-/** Scan-session header form — mirrors the backend scanImportSchema (minus the barcodes array). */
-export const scanSessionSchema = z
+/** Add-stock form — mirrors the backend createStockSchema. */
+export const createStockSchema = z
   .object({
     productId: z.string().min(1, "Select a product"),
+    quantity: z.coerce
+      .number({ invalid_type_error: "Quantity must be a number" })
+      .int("Quantity must be a whole number")
+      .min(1, "Quantity must be at least 1")
+      .max(10000, "Quantity cannot exceed 10000"),
     invoiceNo: z.string().trim().min(1, "Invoice number is required").max(100, "Invoice number must be 100 characters or less"),
     invoiceDate: z.string(),
     mrp: z.coerce.number({ invalid_type_error: "MRP must be a number" }).min(0, "MRP must be ≥ 0"),

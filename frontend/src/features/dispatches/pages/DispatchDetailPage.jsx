@@ -67,23 +67,23 @@ export function DispatchDetailPage() {
           <div className="card">
             <div className="card-body">
               <h5 className="card-title">
-                Units dispatched <span className="badge badge-primary">{dispatch.items.length}</span>
+                Products dispatched <span className="badge badge-primary">{dispatch.items.length}</span>
               </h5>
               <div className="table-responsive">
                 <table className="table table-sm" id="dispatch-items-table">
                   <thead>
                     <tr>
-                      <th>Barcode</th>
                       <th>Product</th>
                       <th>Code</th>
+                      <th className="text-right">Quantity</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dispatch.items.map((item) => (
                       <tr key={item.id}>
-                        <td>{item.barcode}</td>
                         <td>{item.productName}</td>
                         <td className="text-muted">{item.productCode}</td>
+                        <td className="text-right">{item.quantity}</td>
                       </tr>
                     ))}
                   </tbody>
