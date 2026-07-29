@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: ROUTES.STOCK.LIST, icon: "fa-barcode", label: "Stock" },
   { to: ROUTES.STOCK_LEDGER, icon: "fa-book", label: "Stock Ledger" },
   { to: ROUTES.MEDIA_LIBRARY.LIST, icon: "fa-images", label: "Media Library" },
+  { to: ROUTES.HERO_SLIDES, icon: "fa-photo-film", label: "Homepage Sliders", adminOnly: true },
   { to: ROUTES.ORDERS.LIST, icon: "fa-cart-shopping", label: "Orders" },
   { to: ROUTES.DISPATCHES.LIST, icon: "fa-truck", label: "Dispatches" },
   { to: ROUTES.REPORTS, icon: "fa-chart-line", label: "Reports" },

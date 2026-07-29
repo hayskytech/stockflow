@@ -56,6 +56,7 @@ backend/src/
     products/    ...
     stock/       ...   # per-unit barcoded stock: manual scan-add + xlsx/csv import
     stockLedger/ ...
+    heroSlides/  ...   # homepage hero slider (16:9 images), admin-managed via the media library
     orders/      ...
     dispatches/  ...   # scan-verified outward dispatch of accepted orders
     reports/     ...
@@ -211,6 +212,7 @@ created_at, updated_at
 | Action                                           | Admin | Staff | Customer |
 | ------------------------------------------------ | ----- | ----- | -------- |
 | Manage warehouse settings (name/address/contact) | ✅    | ❌    | ❌       |
+| Manage homepage hero sliders                     | ✅    | ❌    | ❌       |
 | Manage users (create/edit/deactivate)            | ✅    | ❌    | ❌       |
 | View/manage products & stock                     | ✅    | ✅    | ❌       |
 | Browse product catalog (storefront)              | ✅    | ✅    | ✅ (also guests, no login required) |
@@ -248,7 +250,8 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 
 ## Feature Modules & Example Routes
 
-- **Storefront (Home)** — customer-facing ecommerce landing at `/store`, which is also what the home URL (`/`) redirects to by default for every visitor (frontend `features/home/`). Lists active products grouped by category using the existing `GET /products` endpoint; browse-only, no new backend routes. Browsing (home + product detail) requires no login — `GET /products`, `GET /products/:id`, `GET /divisions`, `GET /categories`, `GET /sub-categories` are public reads; only cart/checkout/order-history need an account. Renders inside `StoreShell` (top navbar, no admin sidebar). Logged-in admin/staff reach the back office via a "Dashboard" link in the account dropdown, not the default landing page.
+- **Storefront (Home)** — customer-facing ecommerce landing at `/store`, which is also what the home URL (`/`) redirects to by default for every visitor (frontend `features/home/`). Lists active products grouped by category using the existing `GET /products` endpoint; browse-only, no new backend routes. Browsing (home + product detail) requires no login — `GET /products`, `GET /products/:id`, `GET /divisions`, `GET /categories`, `GET /sub-categories` are public reads; only cart/checkout/order-history need an account. Renders inside `StoreShell` (top navbar, no admin sidebar). Logged-in admin/staff reach the back office via a "Dashboard" link in the account dropdown, not the default landing page. A full-width 16:9 hero slider (`features/home/components/HeroSlider.jsx`) renders above the product grid, fed by the public, unauthenticated `GET /hero-slides/public` endpoint (active slides only, in `sort_order`).
+- **Homepage Sliders** — admin-only management of the storefront hero slider (`backend/modules/heroSlides/` ↔ `frontend/features/heroSlides/`). Each slide references one image from the shared media library (`media_id`, denormalized `media_url`) plus an optional click-through `link_url`, an `is_active` toggle, and a manual `sort_order`. `GET /hero-slides/public` (unauthenticated, active only) feeds the storefront; `GET /hero-slides`, `POST /hero-slides`, `PUT /hero-slides/:id`, `PATCH /hero-slides/reorder`, `DELETE /hero-slides/:id` are admin-only, mirroring the catalog's drag-and-drop reorder pattern. Deleting a slide detaches its `media_usage` row but does not delete the underlying media item.
   - Product detail (`features/product-detail/`) shows up to 4 "Related Products" from the same category (client-side filter over `GET /products?category_id=`), rendered with the shared `components/common/ProductCard.jsx` (also used by `features/home`).
   - Clicking "Add to Cart" while logged out shows a `LoginRequiredModal` (`components/common/`) instead of adding the item — the cart itself is always guest-persisted client-side, but building it up is gated behind login.
   - Checkout (`features/checkout/`) prefills the shipping form from the logged-in customer's saved profile (`GET /auth/me`) — still editable per order.

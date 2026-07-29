@@ -33,6 +33,7 @@ export const ROUTES = {
     LIST: "/media-library",
     DETAIL: (id) => `/media-library/${id}`,
   },
+  HERO_SLIDES: "/hero-slides",
   ORDERS: {
     LIST: "/orders",
     NEW: "/orders/new",

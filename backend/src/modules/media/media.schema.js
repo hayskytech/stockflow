@@ -4,7 +4,7 @@ const uuidField = z.string().uuid('Invalid id');
 
 // Whitelisted entity types allowed to reference a media item — extend as new
 // features adopt the shared media library.
-export const MEDIA_ENTITY_TYPES = ['product'];
+export const MEDIA_ENTITY_TYPES = ['product', 'hero_slide'];
 
 export const idParamSchema = z.object({ id: uuidField });
 

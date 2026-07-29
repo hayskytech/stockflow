@@ -38,6 +38,7 @@ import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
 import { UserViewPage } from "@/features/users/pages/UserViewPage"
 import { SettingsPage } from "@/features/settings/pages/SettingsPage"
+import { HeroSlidesPage } from "@/features/heroSlides/pages/HeroSlidesPage"
 import { UppyUploader } from "@/components/common/UppyUploader"
 
 export const router = createHashRouter([
@@ -188,6 +189,15 @@ export const router = createHashRouter([
         path: "/media-library/:id",
         element: <MediaDetailPage />,
         handle: { crumb: CRUMBS.MEDIA_DETAIL },
+      },
+      {
+        path: ROUTES.HERO_SLIDES,
+        element: (
+          <ProtectedRoute allow={[ROLES.ADMIN]}>
+            <HeroSlidesPage />
+          </ProtectedRoute>
+        ),
+        handle: { crumb: CRUMBS.HERO_SLIDES },
       },
       {
         path: ROUTES.ORDERS.LIST,

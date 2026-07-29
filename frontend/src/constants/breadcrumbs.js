@@ -22,6 +22,7 @@ export const CRUMBS = {
   STOCK_LEDGER: () => trail({ label: "Stock Ledger" }),
   MEDIA_LIST: () => trail({ label: "Media Library" }),
   MEDIA_DETAIL: () => trail({ label: "Media Library", to: ROUTES.MEDIA_LIBRARY.LIST }, { label: "Media Details" }),
+  HERO_SLIDES: () => trail({ label: "Homepage Sliders" }),
   ORDERS_LIST: () => trail({ label: "Orders" }),
   ORDERS_NEW: () => trail({ label: "Orders", to: ROUTES.ORDERS.LIST }, { label: "New Order" }),
   ORDERS_DETAIL: () => trail({ label: "Orders", to: ROUTES.ORDERS.LIST }, { label: "Order Details" }),

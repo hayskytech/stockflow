@@ -3,6 +3,7 @@ import { useHomeStore } from "@/features/home/home.store"
 import { useStorefrontProducts } from "@/features/home/hooks/use-storefront-products"
 import { ProductCard } from "@/components/common/ProductCard"
 import { StoreSidebar } from "@/features/home/components/StoreSidebar"
+import { HeroSlider } from "@/features/home/components/HeroSlider"
 
 export function HomePage() {
   const search = useHomeStore((s) => s.search)
@@ -27,6 +28,8 @@ export function HomePage() {
 
   return (
     <div>
+      <HeroSlider />
+
       <div className="row">
         <div className="col-md-3 mb-4">
           <StoreSidebar />

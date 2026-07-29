@@ -52,6 +52,12 @@ export const API_ENDPOINTS = {
     RELATED: (id) => `/media/${id}/related`,
     FILE: (id) => `/media/${id}/file`,
   },
+  HERO_SLIDES: {
+    LIST: "/hero-slides",
+    PUBLIC: "/hero-slides/public",
+    BY_ID: (id) => `/hero-slides/${id}`,
+    REORDER: "/hero-slides/reorder",
+  },
   STOCK_LEDGER: "/stock-ledger",
   ORDERS: {
     LIST: "/orders",
