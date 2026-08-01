@@ -58,3 +58,12 @@ export async function parseRowsFromFile(buffer, originalName) {
   }
   return rows;
 }
+
+/** Builds a blank .xlsx template (bold header row only) for the given column names. */
+export async function buildImportTemplate(headers) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template');
+  worksheet.columns = headers.map((header) => ({ header, key: header, width: Math.max(header.length + 4, 14) }));
+  worksheet.getRow(1).font = { bold: true };
+  return workbook.xlsx.writeBuffer();
+}

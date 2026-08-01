@@ -19,4 +19,14 @@ export const useStockLedgerStore = create((set) => ({
 
   dateTo: "",
   setDateTo: (dateTo) => set({ dateTo }),
+
+  resetFilters: () =>
+    set({
+      search: "",
+      productFilter: "",
+      changeTypeFilter: "",
+      referenceTypeFilter: "",
+      dateFrom: "",
+      dateTo: "",
+    }),
 }))

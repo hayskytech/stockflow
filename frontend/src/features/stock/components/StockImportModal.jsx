@@ -1,13 +1,14 @@
 import { useState } from "react"
 import { useForm } from "@tanstack/react-form"
 import { stockImportSchema } from "@/features/stock/stock.schema"
-import { useImportStock } from "@/features/stock/hooks/use-stock"
+import { useDownloadStockImportTemplate, useImportStock } from "@/features/stock/hooks/use-stock"
 
 /** Upload modal for bulk stock import (.xlsx/.csv) — see stock.schema.js for accepted files. */
 export function StockImportModal({ open, onClose }) {
   const [result, setResult] = useState(null)
   const [serverError, setServerError] = useState("")
   const importStock = useImportStock()
+  const downloadTemplate = useDownloadStockImportTemplate()
 
   const form = useForm({
     defaultValues: { file: null },
@@ -82,6 +83,15 @@ export function StockImportModal({ open, onClose }) {
                   Upload the stock excel/CSV exported from your inventory software (columns: Product,
                   ProductSubGroup, Mrp, InvoiceNo, WSalePrice, Quantity, InvoiceDate, Size, Note).
                 </p>
+                <button
+                  type="button"
+                  id="stock-import-download-template"
+                  className="btn btn-link p-0 mb-3"
+                  disabled={downloadTemplate.isPending}
+                  onClick={() => downloadTemplate.mutate()}
+                >
+                  {downloadTemplate.isPending ? "Preparing…" : "Download blank template"}
+                </button>
                 <form.Field name="file">
                   {(field) => (
                     <div className="form-group">

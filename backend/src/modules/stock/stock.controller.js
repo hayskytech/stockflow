@@ -48,6 +48,19 @@ export async function importStock(req, res, next) {
   }
 }
 
+/** GET /api/stock/import-template */
+export async function downloadStockImportTemplate(req, res, next) {
+  try {
+    const buffer = await stockService.getStockImportTemplate();
+    res.status(200);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="stock-import-template.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** POST /api/stock — create one stock intake batch against a product/invoice */
 export async function createStock(req, res, next) {
   try {

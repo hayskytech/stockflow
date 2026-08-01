@@ -88,6 +88,7 @@ export function DataTable({
   emptyIcon,
   emptyTitle,
   emptyDescription,
+  emptyAction,
   page = 1,
   totalPages = 1,
   onPageChange,
@@ -111,7 +112,7 @@ export function DataTable({
   }
 
   if (rows.length === 0) {
-    return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} />
+    return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />
   }
 
   return (

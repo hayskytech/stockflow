@@ -28,8 +28,18 @@ export function StockLedgerPage() {
   const setDateFrom = useStockLedgerStore((s) => s.setDateFrom)
   const dateTo = useStockLedgerStore((s) => s.dateTo)
   const setDateTo = useStockLedgerStore((s) => s.setDateTo)
+  const resetFilters = useStockLedgerStore((s) => s.resetFilters)
 
   const [page, setPage] = useState(1)
+
+  const hasActiveFilters = Boolean(
+    search || productFilter || changeTypeFilter || referenceTypeFilter || dateFrom || dateTo
+  )
+
+  function handleResetFilters() {
+    resetFilters()
+    setPage(1)
+  }
 
   const { data: products = [] } = useProductOptions()
 
@@ -136,7 +146,7 @@ export function StockLedgerPage() {
                 ))}
               </select>
             </div>
-            <div className="col-md-2">
+            <div className="col-md-3">
               <select
                 id="stock-ledger-change-type-filter"
                 className="form-control"
@@ -148,7 +158,7 @@ export function StockLedgerPage() {
                 <option value="out">Out</option>
               </select>
             </div>
-            <div className="col-md-2">
+            <div className="col-md-3">
               <select
                 id="stock-ledger-reference-type-filter"
                 className="form-control"
@@ -161,27 +171,45 @@ export function StockLedgerPage() {
                 <option value="adjustment">Adjustment</option>
               </select>
             </div>
+          </div>
+
+          <div className="row mb-3">
             <div className="col-md-2">
-              <div className="d-flex">
-                <input
-                  id="stock-ledger-date-from"
-                  type="date"
-                  className="form-control"
-                  title="From date"
-                  value={dateFrom}
-                  onChange={(e) => updateFilter(setDateFrom)(e.target.value)}
-                />
-                <input
-                  id="stock-ledger-date-to"
-                  type="date"
-                  className="form-control ml-1"
-                  title="To date"
-                  value={dateTo}
-                  onChange={(e) => updateFilter(setDateTo)(e.target.value)}
-                />
-              </div>
+              <input
+                id="stock-ledger-date-from"
+                type="date"
+                className="form-control"
+                title="From date"
+                value={dateFrom}
+                onChange={(e) => updateFilter(setDateFrom)(e.target.value)}
+              />
+            </div>
+            <div className="col-md-2">
+              <input
+                id="stock-ledger-date-to"
+                type="date"
+                className="form-control"
+                title="To date"
+                value={dateTo}
+                onChange={(e) => updateFilter(setDateTo)(e.target.value)}
+              />
+            </div>
+            <div className="col-md-8 d-flex align-items-start justify-content-end">
+              <button
+                id="stock-ledger-clear-filters-btn"
+                type="button"
+                className="btn btn-outline-secondary"
+                disabled={!hasActiveFilters}
+                onClick={handleResetFilters}
+              >
+                Clear Filters
+              </button>
             </div>
           </div>
+
+          <p className="text-muted small mb-2">
+            {data?.total ?? 0} record{(data?.total ?? 0) === 1 ? "" : "s"} found
+          </p>
 
           <DataTable
             columns={columns}
@@ -189,8 +217,28 @@ export function StockLedgerPage() {
             isLoading={isLoading}
             isError={isError}
             emptyIcon="fa-book"
-            emptyTitle="No stock movements yet"
-            emptyDescription="Movements appear here when stock is imported, reserved, dispatched, or adjusted."
+            emptyTitle={hasActiveFilters ? "No stock movements match the selected filters" : "No stock movements yet"}
+            emptyDescription={
+              hasActiveFilters
+                ? "Try adjusting or clearing the filters above."
+                : "Movements appear here when stock is imported, reserved, dispatched, or adjusted."
+            }
+            emptyAction={
+              hasActiveFilters ? (
+                <button type="button" className="btn btn-sm btn-link" onClick={handleResetFilters}>
+                  Reset Filters
+                </button>
+              ) : (
+                <div>
+                  <Link to={ROUTES.STOCK.LIST} className="btn btn-sm btn-primary mr-2">
+                    Import Stock
+                  </Link>
+                  <Link to={ROUTES.PRODUCTS.LIST} className="btn btn-sm btn-outline-secondary">
+                    View Products
+                  </Link>
+                </div>
+              )
+            }
             page={page}
             totalPages={data?.totalPages ?? 1}
             onPageChange={setPage}

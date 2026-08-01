@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { executeQuery } from '../../db/query.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AppError } from '../../middleware/errorHandler.js';
-import { parseRowsFromFile } from '../../utils/importFile.js';
+import { buildImportTemplate, parseRowsFromFile } from '../../utils/importFile.js';
 import { pairKey, parseStockRow } from './stock.parsing.js';
 
 const STOCK_COLUMNS = `
@@ -137,6 +137,15 @@ export async function createStockBatch({ productId, invoiceNo, invoiceDate, mrp,
   });
 
   return { imported: quantity, productId, productName: product.name, invoiceNo };
+}
+
+const IMPORT_COLUMNS = [
+  'Product', 'ProductSubGroup', 'Mrp', 'InvoiceNo', 'WSalePrice', 'Quantity', 'InvoiceDate', 'Size', 'Note',
+];
+
+/** Blank .xlsx with the header row importStock() expects — downloaded from the import dialog. */
+export async function getStockImportTemplate() {
+  return buildImportTemplate(IMPORT_COLUMNS);
 }
 
 /**

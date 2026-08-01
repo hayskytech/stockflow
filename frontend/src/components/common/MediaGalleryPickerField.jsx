@@ -1,6 +1,9 @@
 import { useState } from "react"
 import { MediaLibraryModal } from "@/components/common/MediaLibraryModal"
 import { resolveMediaUrl } from "@/lib/media"
+import { MEDIA } from "@/constants/app"
+
+const SUPPORTED_FORMATS_LABEL = MEDIA.ALLOWED_MIME_TYPES.map((type) => type.split("/")[1].toUpperCase()).join(", ")
 
 /** Multi-image picker (up to `max`) built on the shared media library modal — mirrors MediaPickerField for a set of images. */
 export function MediaGalleryPickerField({ label, images, onChange, max = 5 }) {
@@ -55,7 +58,7 @@ export function MediaGalleryPickerField({ label, images, onChange, max = 5 }) {
         ) : null}
       </div>
       <small className="form-text text-muted">
-        {images.length} / {max} images
+        {images.length} / {max} images · Supported formats: {SUPPORTED_FORMATS_LABEL} · Max {MEDIA.MAX_UPLOAD_MB}MB
       </small>
 
       <MediaLibraryModal open={modalOpen} onClose={() => setModalOpen(false)} onSelect={handleSelect} />

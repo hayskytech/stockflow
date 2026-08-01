@@ -83,3 +83,16 @@ export async function importProducts(req, res, next) {
     next(err);
   }
 }
+
+/** GET /api/products/import-template */
+export async function downloadProductImportTemplate(req, res, next) {
+  try {
+    const buffer = await productsService.getProductImportTemplate();
+    res.status(200);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="product-import-template.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+}

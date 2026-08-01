@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/axios"
 import { API_ENDPOINTS } from "@/constants/api"
+import { downloadBlob } from "@/lib/download"
 
 function toListResult({ data, headers }) {
   return {
@@ -26,6 +27,11 @@ export async function importStockApi(file) {
     headers: { "Content-Type": "multipart/form-data" },
   })
   return data
+}
+
+export async function downloadStockImportTemplateApi() {
+  const { data } = await apiClient.get(API_ENDPOINTS.STOCK.IMPORT_TEMPLATE, { responseType: "blob" })
+  downloadBlob(data, "stock-import-template.xlsx")
 }
 
 export async function deleteStockApi(id) {

@@ -4,7 +4,7 @@ import { attachUsage, detachUsage, getMediaById } from '../media/media.service.j
 import { executeQuery } from '../../db/query.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AppError } from '../../middleware/errorHandler.js';
-import { parseRowsFromFile } from '../../utils/importFile.js';
+import { buildImportTemplate, parseRowsFromFile } from '../../utils/importFile.js';
 
 const MEDIA_ENTITY_TYPE = 'product';
 export const MAX_GALLERY_IMAGES = 5;
@@ -335,6 +335,13 @@ export async function deleteProduct(id) {
 // Division that receives categories auto-created during a product import — created on
 // demand if it doesn't exist. Admin can move the categories to real divisions afterwards.
 const DEFAULT_IMPORT_DIVISION = 'GENERAL';
+
+const IMPORT_COLUMNS = ['SubGroupName', 'Product Code', 'Product Name'];
+
+/** Blank .xlsx with the header row importProducts() expects — downloaded from the import dialog. */
+export async function getProductImportTemplate() {
+  return buildImportTemplate(IMPORT_COLUMNS);
+}
 
 /**
  * Bulk-creates products from an uploaded .xlsx/.csv (columns: SubGroupName, Product Code,

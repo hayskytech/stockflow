@@ -102,6 +102,7 @@ export function ProductFormPage() {
 
 function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
   const [serverError, setServerError] = useState("")
+  const [divisionError, setDivisionError] = useState("")
   const [selectedDivisionId, setSelectedDivisionId] = useState(product?.divisionId ?? "")
   const [selectedCategoryId, setSelectedCategoryId] = useState(product?.categoryId ?? "")
   const [photoUrl, setPhotoUrl] = useState(product?.productPhotoUrl ?? null)
@@ -141,14 +142,30 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
     },
   })
 
+  function handleReset() {
+    form.reset()
+    setServerError("")
+    setDivisionError("")
+    setSelectedDivisionId(product?.divisionId ?? "")
+    setSelectedCategoryId(product?.categoryId ?? "")
+    setPhotoUrl(product?.productPhotoUrl ?? null)
+    setGalleryImages((product?.galleryImages ?? []).map((img) => ({ mediaId: img.mediaId, url: img.url })))
+  }
+
   return (
     <form
       id="product-form"
       onSubmit={(e) => {
         e.preventDefault()
+        if (!selectedDivisionId) {
+          setDivisionError("Division is required")
+          return
+        }
         form.handleSubmit()
       }}
     >
+      <h6 className="text-uppercase text-muted small font-weight-bold mb-3">Product Details</h6>
+
       <form.Field name="productCode">
         {(field) => (
           <div className="form-group">
@@ -202,6 +219,8 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
         )}
       </form.Field>
 
+      <h6 className="text-uppercase text-muted small font-weight-bold mb-3 mt-4 pt-3 border-top">Classification</h6>
+
       <div className="row">
         <div className="col-md-4">
           <div className="form-group">
@@ -212,6 +231,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
               value={selectedDivisionId}
               onChange={(e) => {
                 setSelectedDivisionId(e.target.value)
+                setDivisionError("")
                 setSelectedCategoryId("")
                 form.setFieldValue("categoryId", "")
                 form.setFieldValue("subCategoryId", "")
@@ -224,6 +244,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
                 </option>
               ))}
             </select>
+            {divisionError ? <div className="invalid-feedback d-block">{divisionError}</div> : null}
           </div>
         </div>
 
@@ -321,6 +342,8 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
         </div>
       </div>
 
+      <h6 className="text-uppercase text-muted small font-weight-bold mb-3 mt-4 pt-3 border-top">Pricing &amp; Stock</h6>
+
       <div className="row">
         <div className="col-md-3">
           <form.Field name="mrp">
@@ -330,7 +353,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
                   MRP
                   <InfoTooltip text="Maximum Retail Price — the listed selling price shown to customers." />
                 </label>
-                <NumberField id="product-mrp" field={field} step="0.01" min="0" max="10000000" />
+                <NumberField id="product-mrp" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
               </div>
             )}
           </form.Field>
@@ -343,7 +366,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
                   WSP
                   <InfoTooltip text="Wholesale Price — must be less than or equal to the MRP." />
                 </label>
-                <NumberField id="product-wsp" field={field} step="0.01" min="0" max="10000000" />
+                <NumberField id="product-wsp" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
               </div>
             )}
           </form.Field>
@@ -416,6 +439,8 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
         </div>
       </div>
 
+      <h6 className="text-uppercase text-muted small font-weight-bold mb-3 mt-4 pt-3 border-top">Images</h6>
+
       <form.Field name="productPhotoMediaId">
         {(field) => (
           <MediaPickerField
@@ -444,13 +469,21 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
 
       {serverError ? <div className="alert alert-danger py-2">{serverError}</div> : null}
 
-      <div className="d-flex justify-content-end">
-        <button type="button" className="btn btn-secondary mr-2" onClick={onCancel}>
-          Cancel
+      <div
+        className="d-flex justify-content-between align-items-center bg-white py-3 mt-3 border-top"
+        style={{ position: "sticky", bottom: 0, zIndex: 10 }}
+      >
+        <button type="button" className="btn btn-outline-secondary" onClick={handleReset} disabled={isSubmitting}>
+          Reset
         </button>
-        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-          {isSubmitting ? "Saving…" : "Save"}
-        </button>
+        <div>
+          <button type="button" className="btn btn-secondary mr-2" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+            {isSubmitting ? "Saving…" : "Save"}
+          </button>
+        </div>
       </div>
     </form>
   )

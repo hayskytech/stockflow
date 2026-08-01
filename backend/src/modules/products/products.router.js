@@ -9,6 +9,7 @@ import { requireRole } from '../../middleware/requireRole.js';
 import {
   createProduct,
   deleteProduct,
+  downloadProductImportTemplate,
   getProduct,
   importProducts,
   listProducts,
@@ -50,7 +51,9 @@ function handleUpload(req, res, next) {
 }
 
 // Reads are public (storefront browsing needs no login); writes stay admin/staff-only.
+// import-template must come before /:id so "import-template" isn't parsed as a product id.
 productsRouter.get('/', productsPagination, listProducts);
+productsRouter.get('/import-template', authenticate, requireRole('admin', 'staff'), downloadProductImportTemplate);
 productsRouter.get('/:id', getProduct);
 productsRouter.post('/', authenticate, requireRole('admin', 'staff'), createProduct);
 productsRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importProducts);

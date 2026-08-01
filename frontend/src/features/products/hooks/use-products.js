@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createProductApi,
   deleteProductApi,
+  downloadProductImportTemplateApi,
   getProductApi,
   importProductsApi,
   listProductsApi,
@@ -64,4 +65,8 @@ export function useImportProducts() {
       queryClient.invalidateQueries({ queryKey: [DIVISIONS_QUERY_KEY] })
     },
   })
+}
+
+export function useDownloadProductImportTemplate() {
+  return useMutation({ mutationFn: downloadProductImportTemplateApi })
 }

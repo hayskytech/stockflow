@@ -36,11 +36,13 @@ export const API_ENDPOINTS = {
     LIST: "/products",
     BY_ID: (id) => `/products/${id}`,
     IMPORT: "/products/import",
+    IMPORT_TEMPLATE: "/products/import-template",
   },
   STOCK: {
     LIST: "/stock",
     BY_ID: (id) => `/stock/${id}`,
     IMPORT: "/stock/import",
+    IMPORT_TEMPLATE: "/stock/import-template",
     CREATE: "/stock",
   },
   MEDIA: {

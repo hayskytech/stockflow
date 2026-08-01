@@ -1,6 +1,9 @@
+import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
+import { StockFormModal } from "@/features/stock/components/StockFormModal"
+import { useCreateStockBatch } from "@/features/stock/hooks/use-stock"
 import { useAuthStore } from "@/store/auth.store"
 import { useProduct } from "@/features/products/hooks/use-products"
 import { formatDateTimeIST, stockBadge } from "@/lib/format"
@@ -15,6 +18,10 @@ export function ProductDetailPage() {
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
   const isStaff = useAuthStore((s) => s.user?.role === "staff")
   const canManage = isAdmin || isStaff
+
+  const [addStockOpen, setAddStockOpen] = useState(false)
+  const [addStockError, setAddStockError] = useState("")
+  const createStockBatch = useCreateStockBatch()
 
   const { data: product, isLoading, isError } = useProduct(id)
 
@@ -38,13 +45,37 @@ export function ProductDetailPage() {
 
   const stock = stockBadge(product.quantityAvailable, product.reorderLevel)
 
+  async function handleAddStock(value) {
+    setAddStockError("")
+    try {
+      await createStockBatch.mutateAsync(value)
+      setAddStockOpen(false)
+    } catch (err) {
+      setAddStockError(err.response?.data?.message ?? "Could not add stock")
+    }
+  }
+
   return (
     <PageWrapper>
       <PageHeader
         title={product.name}
-        description={product.productCode}
+        description={`${product.productCode} · ${product.categoryName}`}
         actions={
           <>
+            {canManage && product.quantityAvailable <= 0 ? (
+              <button
+                type="button"
+                id="product-detail-add-stock-button"
+                className="btn btn-outline-primary mr-2"
+                onClick={() => {
+                  setAddStockError("")
+                  setAddStockOpen(true)
+                }}
+              >
+                <i className="fas fa-plus mr-1" />
+                Add Stock
+              </button>
+            ) : null}
             {canManage ? (
               <button
                 type="button"
@@ -72,10 +103,11 @@ export function ProductDetailPage() {
                 />
               ) : (
                 <div
-                  className="d-flex align-items-center justify-content-center bg-light rounded mb-3 mx-auto"
+                  className="d-flex flex-column align-items-center justify-content-center bg-light rounded mb-3 mx-auto"
                   style={{ width: "100%", maxWidth: 260, height: 260 }}
                 >
                   <i className="fas fa-shirt fa-3x text-muted" />
+                  <div className="text-muted small mt-2">No Image available</div>
                 </div>
               )}
 
@@ -117,15 +149,16 @@ export function ProductDetailPage() {
                 <dd className="col-sm-8">{product.categoryName}</dd>
 
                 <dt className="col-sm-4">Sub-category</dt>
-                <dd className="col-sm-8">{product.subCategoryName ?? "—"}</dd>
+                <dd className="col-sm-8">{product.subCategoryName || "Not available"}</dd>
 
-                <dt className="col-sm-4">Color / Size</dt>
-                <dd className="col-sm-8">
-                  {product.color ?? "—"} {product.size ? `· ${product.size}` : ""}
-                </dd>
+                <dt className="col-sm-4">Color</dt>
+                <dd className="col-sm-8">{product.color || "Not available"}</dd>
+
+                <dt className="col-sm-4">Size</dt>
+                <dd className="col-sm-8">{product.size || "Not available"}</dd>
 
                 <dt className="col-sm-4">Description</dt>
-                <dd className="col-sm-8">{product.description ?? "—"}</dd>
+                <dd className="col-sm-8">{product.description || "Not available"}</dd>
               </dl>
             </div>
           </div>
@@ -135,16 +168,16 @@ export function ProductDetailPage() {
               <h5 className="card-title">Pricing &amp; Stock</h5>
               <dl className="row mb-0">
                 <dt className="col-sm-4">MRP</dt>
-                <dd className="col-sm-8">{formatMoney(product.mrp)}</dd>
+                <dd className="col-sm-8">{Number(product.mrp) > 0 ? formatMoney(product.mrp) : "Not set"}</dd>
 
                 <dt className="col-sm-4">WSP</dt>
-                <dd className="col-sm-8">{formatMoney(product.wsp)}</dd>
+                <dd className="col-sm-8">{Number(product.wsp) > 0 ? formatMoney(product.wsp) : "Not set"}</dd>
 
                 <dt className="col-sm-4">Quantity Available</dt>
-                <dd className="col-sm-8">{product.quantityAvailable}</dd>
+                <dd className="col-sm-8">{product.quantityAvailable} Units</dd>
 
                 <dt className="col-sm-4">Quantity Reserved</dt>
-                <dd className="col-sm-8">{product.quantityReserved}</dd>
+                <dd className="col-sm-8">{product.quantityReserved} Units</dd>
 
                 <dt className="col-sm-4">Reorder Level</dt>
                 <dd className="col-sm-8">{product.reorderLevel}</dd>
@@ -169,6 +202,18 @@ export function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {addStockOpen ? (
+        <StockFormModal
+          open={addStockOpen}
+          products={[{ id: product.id, name: product.name }]}
+          initialProductId={product.id}
+          onClose={() => setAddStockOpen(false)}
+          onSubmit={handleAddStock}
+          isSubmitting={createStockBatch.isPending}
+          serverError={addStockError}
+        />
+      ) : null}
     </PageWrapper>
   )
 }

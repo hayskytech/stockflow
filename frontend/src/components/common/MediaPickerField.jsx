@@ -1,6 +1,9 @@
 import { useState } from "react"
 import { MediaLibraryModal } from "@/components/common/MediaLibraryModal"
 import { resolveMediaUrl } from "@/lib/media"
+import { MEDIA } from "@/constants/app"
+
+const SUPPORTED_FORMATS_LABEL = MEDIA.ALLOWED_MIME_TYPES.map((type) => type.split("/")[1].toUpperCase()).join(", ")
 
 /** Thumbnail + "Choose image" trigger that opens the shared media library modal. */
 export function MediaPickerField({ label, imageUrl, onChange }) {
@@ -26,6 +29,9 @@ export function MediaPickerField({ label, imageUrl, onChange }) {
               Remove
             </button>
           ) : null}
+          <small className="form-text text-muted mb-0">
+            Supported formats: {SUPPORTED_FORMATS_LABEL} · Max {MEDIA.MAX_UPLOAD_MB}MB
+          </small>
         </div>
       </div>
 

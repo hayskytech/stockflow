@@ -1,13 +1,14 @@
 import { useState } from "react"
 import { useForm } from "@tanstack/react-form"
 import { productImportSchema } from "@/features/products/products.schema"
-import { useImportProducts } from "@/features/products/hooks/use-products"
+import { useDownloadProductImportTemplate, useImportProducts } from "@/features/products/hooks/use-products"
 
 /** Upload modal for the one-time bulk product catalog import (.xlsx/.csv). */
 export function ProductImportModal({ open, onClose }) {
   const [result, setResult] = useState(null)
   const [serverError, setServerError] = useState("")
   const importProducts = useImportProducts()
+  const downloadTemplate = useDownloadProductImportTemplate()
 
   const form = useForm({
     defaultValues: { file: null },
@@ -74,6 +75,15 @@ export function ProductImportModal({ open, onClose }) {
                   SubGroupName becomes the product&apos;s category — categories that don&apos;t exist yet are
                   created automatically under the GENERAL division.
                 </p>
+                <button
+                  type="button"
+                  id="product-import-download-template"
+                  className="btn btn-link p-0 mb-3"
+                  disabled={downloadTemplate.isPending}
+                  onClick={() => downloadTemplate.mutate()}
+                >
+                  {downloadTemplate.isPending ? "Preparing…" : "Download blank template"}
+                </button>
                 <form.Field name="file">
                   {(field) => (
                     <div className="form-group">

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createStockBatchApi,
   deleteStockApi,
+  downloadStockImportTemplateApi,
   getStockApi,
   importStockApi,
   listStockApi,
@@ -41,6 +42,10 @@ export function useImportStock() {
       queryClient.invalidateQueries({ queryKey: [STOCK_LEDGER_QUERY_KEY] })
     },
   })
+}
+
+export function useDownloadStockImportTemplate() {
+  return useMutation({ mutationFn: downloadStockImportTemplateApi })
 }
 
 /** Creates one stock intake batch against a product/invoice. */

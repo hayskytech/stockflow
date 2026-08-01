@@ -4,10 +4,10 @@ import { SearchSelect } from "@/components/ui/SearchSelect"
 import { createStockSchema } from "@/features/stock/stock.schema"
 
 /** Add-stock modal — one intake batch against a product/invoice. See CLAUDE.md D2. */
-export function StockFormModal({ open, products, onClose, onSubmit, isSubmitting, serverError }) {
+export function StockFormModal({ open, products, initialProductId, onClose, onSubmit, isSubmitting, serverError }) {
   const form = useForm({
     defaultValues: {
-      productId: "",
+      productId: initialProductId ?? "",
       quantity: "",
       invoiceNo: "",
       invoiceDate: "",
@@ -54,6 +54,7 @@ export function StockFormModal({ open, products, onClose, onSubmit, isSubmitting
                 value={field.state.value}
                 onChange={(value) => field.handleChange(value)}
                 options={products.map((product) => ({ value: product.id, label: product.name }))}
+                disabled={Boolean(initialProductId)}
               />
               {field.state.meta.errors.length > 0 ? (
                 <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
