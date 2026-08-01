@@ -68,7 +68,7 @@ export function OrderDetailPage() {
           <div className="card mb-4">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h5 className="card-title mb-0">Items</h5>
+                <h5 className="card-title float-none mb-0">Items</h5>
                 <div>
                   <OrderStatusBadge status={order.status} />
                 </div>
@@ -87,14 +87,20 @@ export function OrderDetailPage() {
                     {order.items.map((item) => (
                       <tr key={item.id}>
                         <td className="d-flex align-items-center">
-                          {item.productPhotoUrl ? (
-                            <img
-                              src={resolveMediaUrl(item.productPhotoUrl)}
-                              alt={item.productName}
-                              style={{ width: 40, height: 40, objectFit: "contain" }}
-                              className="mr-2"
-                            />
-                          ) : null}
+                          <div
+                            className="d-flex align-items-center justify-content-center bg-light rounded mr-2"
+                            style={{ width: 40, height: 40, flexShrink: 0 }}
+                          >
+                            {item.productPhotoUrl ? (
+                              <img
+                                src={resolveMediaUrl(item.productPhotoUrl)}
+                                alt={item.productName}
+                                style={{ width: 40, height: 40, objectFit: "contain" }}
+                              />
+                            ) : (
+                              <i className="fas fa-shirt text-muted" />
+                            )}
+                          </div>
                           <div>
                             <div>{item.productName}</div>
                             <div className="text-muted small">{item.productCode}</div>
@@ -126,7 +132,7 @@ export function OrderDetailPage() {
 
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">Shipping Details</h5>
+              <h5 className="card-title float-none">Shipping Details</h5>
               <p className="mb-1">
                 {order.shippingName} · {order.shippingPhone}
               </p>
@@ -142,14 +148,29 @@ export function OrderDetailPage() {
         <div className="col-md-4">
           <div className="card mb-4">
             <div className="card-body">
-              <h5 className="card-title">Payment</h5>
+              <h5 className="card-title float-none">Payment</h5>
               <p className="mb-1">
                 Method: <strong>{order.paymentMethod === "offline" ? "Offline (settled outside the app)" : "Bank Transfer"}</strong>
               </p>
-              <p className="mb-1">
-                Transaction ID:{" "}
-                <strong id="order-transaction-id">{order.transactionId ?? "—"}</strong>
-              </p>
+              {order.paymentMethod !== "offline" ? (
+                <p className="mb-1 d-flex align-items-center">
+                  Transaction ID:{" "}
+                  <strong id="order-transaction-id" className="ml-1">
+                    {order.transactionId ?? "—"}
+                  </strong>
+                  {order.transactionId ? (
+                    <button
+                      type="button"
+                      id="copy-transaction-id"
+                      className="btn btn-sm btn-link py-0"
+                      title="Copy transaction ID"
+                      onClick={() => navigator.clipboard.writeText(order.transactionId)}
+                    >
+                      <i className="fas fa-copy" />
+                    </button>
+                  ) : null}
+                </p>
+              ) : null}
               <p className="mb-2">
                 Status: <PaymentStatusBadge status={order.paymentStatus} />
               </p>
@@ -162,7 +183,7 @@ export function OrderDetailPage() {
                 </div>
               ) : null}
 
-              {order.paymentStatus === "pending" ? (
+              {order.paymentStatus === "pending" && order.status !== "cancelled" && order.status !== "rejected" ? (
                 <div className="d-flex">
                   <button
                     type="button"
@@ -185,10 +206,20 @@ export function OrderDetailPage() {
 
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">Order Actions</h5>
+              <h5 className="card-title float-none">Order Actions</h5>
               {order.status === "pending" ? (
                 <div className="d-flex flex-column">
-                  <button type="button" className="btn btn-success mb-2" onClick={() => handleStatusChange("accepted")}>
+                  {order.paymentStatus === "rejected" ? (
+                    <p className="text-danger small">
+                      Payment was rejected — this order can&apos;t be accepted until that&apos;s resolved.
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="btn btn-success mb-2"
+                    disabled={order.paymentStatus === "rejected"}
+                    onClick={() => handleStatusChange("accepted")}
+                  >
                     Accept Order
                   </button>
                   <button type="button" className="btn btn-outline-danger mb-2" onClick={() => handleStatusChange("rejected")}>

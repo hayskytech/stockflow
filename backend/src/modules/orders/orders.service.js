@@ -54,8 +54,9 @@ export async function listOrders(listQuery, filters, requester) {
     conditions.push('o.created_at >= ?');
     params.push(filters.dateFrom);
   }
+  // created_at is a UTC DATETIME — date_to is made inclusive by bounding below the next day.
   if (filters.dateTo) {
-    conditions.push('o.created_at <= ?');
+    conditions.push('o.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
     params.push(filters.dateTo);
   }
   if (search) {
@@ -240,6 +241,11 @@ export async function updateOrderStatus(id, status, requester) {
   }
   if (!ALLOWED_TRANSITIONS[order.status]?.includes(status)) {
     throw new AppError(409, `Order is ${order.status} and cannot be changed to ${status}`);
+  }
+  // A rejected payment can't fund a fulfilled order — block acceptance (and therefore the
+  // downstream dispatch, which requires 'accepted') until the payment status is reconsidered.
+  if (status === 'accepted' && order.paymentStatus === 'rejected') {
+    throw new AppError(409, 'Payment for this order was rejected — it cannot be accepted');
   }
 
   if (status === 'completed') {

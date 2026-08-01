@@ -9,6 +9,7 @@ import { useCreateOrder } from "@/features/orders/hooks/use-orders"
 import { manualOrderSchema } from "@/features/orders/orders.schema"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { PhoneField } from "@/components/ui/PhoneField"
+import { PincodeField } from "@/components/ui/PincodeField"
 import { SearchSelect } from "@/components/ui/SearchSelect"
 import { ROUTES } from "@/constants/routes"
 
@@ -238,7 +239,14 @@ export function NewOrderPage() {
                     <TextField form={form} name="shippingState" label="State" id="new-order-state" />
                   </div>
                   <div className="col-md-4">
-                    <TextField form={form} name="shippingPincode" label="Pincode" id="new-order-pincode" />
+                    <form.Field name="shippingPincode">
+                      {(field) => (
+                        <div className="form-group">
+                          <label htmlFor="new-order-pincode">Pincode</label>
+                          <PincodeField id="new-order-pincode" field={field} />
+                        </div>
+                      )}
+                    </form.Field>
                   </div>
                 </div>
               </div>
@@ -273,6 +281,7 @@ export function NewOrderPage() {
                         name="transactionId"
                         label="Transaction ID / UTR"
                         id="new-order-transaction-id"
+                        maxLength={100}
                       />
                     ) : null
                   }

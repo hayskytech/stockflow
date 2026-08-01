@@ -20,9 +20,11 @@ export function InfoTooltip({ text }) {
             bottom: "125%",
             left: "50%",
             transform: "translateX(-50%)",
-            whiteSpace: "nowrap",
+            whiteSpace: "normal",
+            width: "max-content",
+            maxWidth: "180px",
             fontSize: "0.8rem",
-            zIndex: 10,
+            zIndex: 1045,
           }}
         >
           {text}

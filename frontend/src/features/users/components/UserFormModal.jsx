@@ -4,6 +4,7 @@ import { createUserSchema, editUserSchema } from "@/features/users/users.schema"
 import { PasswordField } from "@/features/auth/components/PasswordField"
 import { PasswordRequirements } from "@/features/auth/components/PasswordRequirements"
 import { PhoneField } from "@/components/ui/PhoneField"
+import { PincodeField } from "@/components/ui/PincodeField"
 import { ROLES } from "@/constants/app"
 
 const ROLE_OPTIONS = [
@@ -240,16 +241,7 @@ export function UserFormModal({ open, user, onClose, onSubmit, isSubmitting, ser
               {(field) => (
                 <>
                   <label htmlFor="user-pincode">Pincode</label>
-                  <input
-                    id="user-pincode"
-                    className="form-control"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  {field.state.meta.errors.length > 0 ? (
-                    <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                  ) : null}
+                  <PincodeField id="user-pincode" field={field} />
                 </>
               )}
             </form.Field>

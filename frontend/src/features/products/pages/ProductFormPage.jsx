@@ -351,7 +351,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
               <div className="form-group">
                 <label htmlFor="product-mrp">
                   MRP
-                  <InfoTooltip text="Maximum Retail Price — the listed selling price shown to customers." />
+                  <InfoTooltip text="Listed price shown to customers." />
                 </label>
                 <NumberField id="product-mrp" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
               </div>
@@ -364,7 +364,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
               <div className="form-group">
                 <label htmlFor="product-wsp">
                   WSP
-                  <InfoTooltip text="Wholesale Price — must be less than or equal to the MRP." />
+                  <InfoTooltip text="Wholesale price. Must be ≤ MRP." />
                 </label>
                 <NumberField id="product-wsp" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
               </div>
@@ -375,7 +375,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
           <div className="form-group">
             <label htmlFor="product-stock">
               Stock
-              <InfoTooltip text="Units currently available to sell — this comes from stock intake and dispatches, not entered here." />
+              <InfoTooltip text="Available units, from stock intake." />
             </label>
             <input
               id="product-stock"

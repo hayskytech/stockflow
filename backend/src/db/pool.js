@@ -9,4 +9,5 @@ export const pool = mysql.createPool({
   password: ENV.DB_PASSWORD,
   connectionLimit: ENV.DB_POOL_LIMIT,
   dateStrings: true,
+  charset: 'utf8mb4',
 });

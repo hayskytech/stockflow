@@ -132,6 +132,7 @@ export function CategoriesPage() {
     try {
       await deleteCategory.mutateAsync(deletingCategory.id)
       if (selectedCategoryId === deletingCategory.id) setSelectedCategoryId("")
+      setCategoryServerError("")
       setDeletingCategory(null)
     } catch (err) {
       setCategoryServerError(err.response?.data?.message ?? "Could not delete category")
@@ -168,6 +169,7 @@ export function CategoriesPage() {
   async function handleSubCategoryDelete() {
     try {
       await deleteSubCategory.mutateAsync(deletingSubCategory.id)
+      setSubCategoryServerError("")
       setDeletingSubCategory(null)
     } catch (err) {
       setSubCategoryServerError(err.response?.data?.message ?? "Could not delete sub-category")

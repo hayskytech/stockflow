@@ -36,8 +36,9 @@ export async function listDispatches(listQuery, filters) {
     conditions.push('d.created_at >= ?');
     params.push(filters.dateFrom);
   }
+  // created_at is a UTC DATETIME — date_to is made inclusive by bounding below the next day.
   if (filters.dateTo) {
-    conditions.push('d.created_at <= ?');
+    conditions.push('d.created_at < DATE_ADD(?, INTERVAL 1 DAY)');
     params.push(filters.dateTo);
   }
   if (search) {

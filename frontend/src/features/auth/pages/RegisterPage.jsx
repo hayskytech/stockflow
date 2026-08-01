@@ -273,10 +273,12 @@ export function RegisterPage() {
                     <input
                       id="register-pincode"
                       type="text"
+                      inputMode="numeric"
                       className="form-control"
                       placeholder="Pincode"
+                      maxLength={6}
                       value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => field.handleChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       onBlur={field.handleBlur}
                     />
                     <div className="input-group-append">

@@ -5,6 +5,7 @@ import { checkoutSchema } from "@/features/checkout/checkout.schema"
 import { placeOrderApi } from "@/features/checkout/checkout.api"
 import { useMyProfile } from "@/features/checkout/hooks/use-my-profile"
 import { PhoneField } from "@/components/ui/PhoneField"
+import { PincodeField } from "@/components/ui/PincodeField"
 import { useCartStore } from "@/store/cart.store"
 import { useWarehouseDetails } from "@/hooks/use-warehouse-details"
 import { formatMoney } from "@/lib/format"
@@ -218,17 +219,7 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
                       {(field) => (
                         <>
                           <label htmlFor="checkout-pincode">Pincode</label>
-                          <input
-                            id="checkout-pincode"
-                            type="text"
-                            className="form-control"
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            onBlur={field.handleBlur}
-                          />
-                          {field.state.meta.errors.length > 0 ? (
-                            <span className="text-danger small">{field.state.meta.errors[0]?.message}</span>
-                          ) : null}
+                          <PincodeField id="checkout-pincode" field={field} />
                         </>
                       )}
                     </form.Field>
@@ -250,6 +241,7 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
                         id="checkout-transaction-id"
                         type="text"
                         className="form-control"
+                        maxLength={100}
                         value={field.state.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}

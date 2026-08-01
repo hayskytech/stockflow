@@ -75,14 +75,20 @@ export function MyOrderDetailPage() {
                     {order.items.map((item) => (
                       <tr key={item.id}>
                         <td className="d-flex align-items-center">
-                          {item.productPhotoUrl ? (
-                            <img
-                              src={resolveMediaUrl(item.productPhotoUrl)}
-                              alt={item.productName}
-                              style={{ width: 40, height: 40, objectFit: "contain" }}
-                              className="mr-2"
-                            />
-                          ) : null}
+                          <div
+                            className="d-flex align-items-center justify-content-center bg-light rounded mr-2"
+                            style={{ width: 40, height: 40, flexShrink: 0 }}
+                          >
+                            {item.productPhotoUrl ? (
+                              <img
+                                src={resolveMediaUrl(item.productPhotoUrl)}
+                                alt={item.productName}
+                                style={{ width: 40, height: 40, objectFit: "contain" }}
+                              />
+                            ) : (
+                              <i className="fas fa-shirt text-muted" />
+                            )}
+                          </div>
                           {item.productName}
                         </td>
                         <td>{item.quantity}</td>
@@ -124,11 +130,13 @@ export function MyOrderDetailPage() {
             <div className="card-body">
               <h5 className="card-title float-none">Payment</h5>
               <p className="mb-1">
-                Method: <strong>Bank Transfer</strong>
+                Method: <strong>{order.paymentMethod === "offline" ? "Offline (settled outside the app)" : "Bank Transfer"}</strong>
               </p>
-              <p className="mb-1">
-                Transaction ID: <strong>{order.transactionId}</strong>
-              </p>
+              {order.paymentMethod !== "offline" ? (
+                <p className="mb-1">
+                  Transaction ID: <strong>{order.transactionId ?? "—"}</strong>
+                </p>
+              ) : null}
               <p className="mb-0">
                 Status: <PaymentStatusBadge status={order.paymentStatus} />
               </p>
