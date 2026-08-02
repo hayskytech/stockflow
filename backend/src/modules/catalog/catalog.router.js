@@ -9,6 +9,7 @@ import {
   deleteCategory,
   deleteDivision,
   deleteSubCategory,
+  getCategory,
   listCategories,
   listDivisions,
   listSubCategories,
@@ -38,6 +39,7 @@ catalogRouter.delete('/divisions/:id', authenticate, requireRole('admin'), delet
 catalogRouter.get('/categories', categoryPagination, listCategories);
 catalogRouter.post('/categories', authenticate, requireRole('admin'), createCategory);
 catalogRouter.patch('/categories/reorder', authenticate, requireRole('admin'), reorderCategories);
+catalogRouter.get('/categories/:id', getCategory);
 catalogRouter.put('/categories/:id', authenticate, requireRole('admin'), updateCategory);
 catalogRouter.delete('/categories/:id', authenticate, requireRole('admin'), deleteCategory);
 

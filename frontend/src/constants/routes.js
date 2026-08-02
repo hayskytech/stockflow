@@ -17,6 +17,7 @@ export const ROUTES = {
   CATALOG: {
     DIVISIONS: "/catalog/divisions",
     CATEGORIES: "/catalog/categories",
+    CATEGORY_DETAIL: (id) => `/catalog/categories/${id}`,
   },
   SIZES: "/sizes",
   PRODUCTS: {

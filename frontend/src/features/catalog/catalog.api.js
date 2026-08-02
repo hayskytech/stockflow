@@ -41,6 +41,11 @@ export async function listCategoriesApi(params) {
   return toListResult(res)
 }
 
+export async function getCategoryApi(id) {
+  const { data } = await apiClient.get(API_ENDPOINTS.CATEGORIES.BY_ID(id))
+  return data
+}
+
 export async function createCategoryApi(input) {
   const { data } = await apiClient.post(API_ENDPOINTS.CATEGORIES.LIST, input)
   return data

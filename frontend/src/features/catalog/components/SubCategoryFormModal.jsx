@@ -2,10 +2,19 @@ import { useForm } from "@tanstack/react-form"
 import { Modal } from "@/components/ui/Modal"
 import { subCategorySchema } from "@/features/catalog/catalog.schema"
 
-export function SubCategoryFormModal({ open, subCategory, categories, onClose, onSubmit, isSubmitting, serverError }) {
+export function SubCategoryFormModal({
+  open,
+  subCategory,
+  categories,
+  defaultCategoryId,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  serverError,
+}) {
   const form = useForm({
     defaultValues: {
-      categoryId: subCategory?.categoryId ?? "",
+      categoryId: subCategory?.categoryId ?? defaultCategoryId ?? "",
       name: subCategory?.name ?? "",
       isActive: subCategory ? Boolean(subCategory.isActive) : true,
     },

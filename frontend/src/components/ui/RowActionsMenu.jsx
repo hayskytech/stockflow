@@ -56,8 +56,11 @@ export function RowActionsMenu({ actions }) {
     setMenuStyle({
       position: "fixed",
       top: rect.bottom + 4,
+      left: "auto",
       right: window.innerWidth - rect.right,
       zIndex: 1050,
+      minWidth: "auto",
+      width: "max-content",
     })
   }, [open])
 

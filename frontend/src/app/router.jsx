@@ -19,6 +19,7 @@ import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
 import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
 import { DivisionsPage } from "@/features/catalog/pages/DivisionsPage"
 import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
+import { CategoryDetailPage } from "@/features/catalog/pages/CategoryDetailPage"
 import { ProductsPage } from "@/features/products/pages/ProductsPage"
 import { ProductFormPage } from "@/features/products/pages/ProductFormPage"
 import { StockPage } from "@/features/stock/pages/StockPage"
@@ -145,6 +146,11 @@ export const router = createHashRouter([
         path: ROUTES.CATALOG.CATEGORIES,
         element: <CategoriesPage />,
         handle: { crumb: CRUMBS.CATEGORIES },
+      },
+      {
+        path: "/catalog/categories/:id",
+        element: <CategoryDetailPage />,
+        handle: { crumb: CRUMBS.CATEGORY_DETAIL },
       },
       {
         path: ROUTES.SIZES,

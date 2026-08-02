@@ -13,6 +13,7 @@ export const CRUMBS = {
   WAREHOUSE: () => trail({ label: "Warehouse" }),
   DIVISIONS: () => trail({ label: "Divisions" }),
   CATEGORIES: () => trail({ label: "Categories" }),
+  CATEGORY_DETAIL: () => trail({ label: "Categories", to: ROUTES.CATALOG.CATEGORIES }, { label: "Sub-categories" }),
   SIZES: () => trail({ label: "Sizes" }),
   PRODUCTS_LIST: () => trail({ label: "Products" }),
   PRODUCTS_NEW: () => trail({ label: "Products", to: ROUTES.PRODUCTS.LIST }, { label: "Add Product" }),

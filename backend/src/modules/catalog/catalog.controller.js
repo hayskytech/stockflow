@@ -98,6 +98,17 @@ export async function listCategories(req, res, next) {
   }
 }
 
+/** GET /api/categories/:id */
+export async function getCategory(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    const category = await catalogService.getCategoryById(id);
+    res.status(200).json(category);
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** POST /api/categories */
 export async function createCategory(req, res, next) {
   try {
