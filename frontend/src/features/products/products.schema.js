@@ -13,6 +13,11 @@ const discountPercent = z
   .number({ invalid_type_error: "Must be a number" })
   .min(0, "Must be zero or greater")
   .max(100, "Must be 100 or less")
+const piecesPerSet = z.coerce
+  .number({ invalid_type_error: "Must be a number" })
+  .int("Must be a whole number")
+  .min(1, "Must be at least 1")
+  .max(100, "Must be 100 or less")
 
 /** Optional first stock batch, created in the same request as the product. */
 const initialStockSchema = z.object({
@@ -37,6 +42,7 @@ export const productSchema = z
     description: z.string().trim().max(500, "Too long").optional().or(z.literal("")),
     color: z.string().trim().max(50, "Too long").optional().or(z.literal("")),
     size: z.string().trim().max(20, "Too long").optional().or(z.literal("")),
+    piecesPerSet,
     price: money,
     discountPercent,
     reorderLevel: nonNegativeInt,

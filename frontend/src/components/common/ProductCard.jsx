@@ -2,6 +2,7 @@ import { Link } from "react-router-dom"
 import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney, stockBadge } from "@/lib/format"
 import { effectivePrice } from "@/lib/pricing"
+import { SetBadge } from "@/components/ui/SetBadge"
 import { ROUTES } from "@/constants/routes"
 
 /**
@@ -39,6 +40,11 @@ export function ProductCard({ product }) {
             {product.name}
           </h6>
           {attributes ? <p className="text-muted small mb-2">{attributes}</p> : null}
+          {product.piecesPerSet > 1 ? (
+            <div className="mb-2">
+              <SetBadge piecesPerSet={product.piecesPerSet} />
+            </div>
+          ) : null}
 
           <div className="mt-auto d-flex align-items-center justify-content-between">
             <div>

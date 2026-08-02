@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
 import { BackorderBadge } from "@/components/ui/BackorderBadge"
+import { SetBadge } from "@/components/ui/SetBadge"
 import { useCancelMyOrder, useMyOrder } from "@/features/my-orders/hooks/use-my-orders"
 import { formatMoney, formatDateTimeIST } from "@/lib/format"
 import { resolveMediaUrl } from "@/lib/media"
@@ -88,7 +89,10 @@ export function MyOrderDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {order.items.map((item) => (
+                    {order.items.map((item) => {
+                      const isSet = Number(item.piecesPerSetAtOrder) > 1
+                      const setUnitPrice = item.effectivePriceAtOrder * item.piecesPerSetAtOrder
+                      return (
                       <tr key={item.id}>
                         <td className="d-flex align-items-center">
                           <div
@@ -106,12 +110,26 @@ export function MyOrderDetailPage() {
                             )}
                           </div>
                           {item.productName}
+                          {isSet ? (
+                            <span className="ml-2">
+                              <SetBadge piecesPerSet={item.piecesPerSetAtOrder} />
+                            </span>
+                          ) : null}
                         </td>
-                        <td>{item.quantity}</td>
-                        <td>{formatMoney(item.effectivePriceAtOrder)}</td>
-                        <td>{formatMoney(item.effectivePriceAtOrder * item.quantity)}</td>
+                        <td>
+                          {item.quantity}
+                          {isSet ? (
+                            <div className="text-muted small">{item.quantity * item.piecesPerSetAtOrder} pcs</div>
+                          ) : null}
+                        </td>
+                        <td>
+                          {formatMoney(setUnitPrice)}
+                          {isSet ? <div className="text-muted small">{formatMoney(item.effectivePriceAtOrder)}/pc</div> : null}
+                        </td>
+                        <td>{formatMoney(setUnitPrice * item.quantity)}</td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                   <tfoot>
                     <tr>

@@ -6,6 +6,8 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { InfoTooltip } from "@/components/ui/InfoTooltip"
 import { NumberField } from "@/components/ui/NumberField"
+import { formatMoney } from "@/lib/format"
+import { setEffectivePrice } from "@/lib/pricing"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
 import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
 import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
@@ -134,6 +136,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       description: product?.description ?? "",
       color: product?.color ?? "",
       size: product?.size ?? "",
+      piecesPerSet: product?.piecesPerSet ?? 1,
       price: product?.price !== undefined ? Number(product.price) : 0,
       discountPercent: product?.discountPercent !== undefined ? Number(product.discountPercent) : 0,
       reorderLevel: product?.reorderLevel ?? 0,
@@ -420,6 +423,37 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
               </div>
             )}
           </form.Field>
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-3">
+          <form.Field name="piecesPerSet">
+            {(field) => (
+              <div className="form-group">
+                <label htmlFor="product-pieces-per-set">
+                  Pieces per Set
+                  <InfoTooltip text="How many physical pieces make up one sellable unit/order. Leave at 1 for a single item." />
+                </label>
+                <NumberField id="product-pieces-per-set" field={field} step="1" min="1" max="100" />
+                {field.state.meta.errors.length > 0 ? (
+                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
+                ) : null}
+              </div>
+            )}
+          </form.Field>
+        </div>
+        <div className="col-md-9 d-flex align-items-center">
+          <form.Subscribe selector={(state) => [state.values.price, state.values.discountPercent, state.values.piecesPerSet]}>
+            {([price, discountPercent, piecesPerSet]) =>
+              Number(piecesPerSet) > 1 ? (
+                <p className="text-muted small mb-0" id="product-set-price-preview">
+                  Set price: <strong>{formatMoney(setEffectivePrice(price, discountPercent, piecesPerSet))}</strong>{" "}
+                  ({formatMoney(price)}/piece × {piecesPerSet})
+                </p>
+              ) : null
+            }
+          </form.Subscribe>
         </div>
       </div>
 

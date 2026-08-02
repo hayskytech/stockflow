@@ -9,7 +9,7 @@ import { PincodeField } from "@/components/ui/PincodeField"
 import { useCartStore } from "@/store/cart.store"
 import { useWarehouseDetails } from "@/hooks/use-warehouse-details"
 import { formatMoney } from "@/lib/format"
-import { effectivePrice } from "@/lib/pricing"
+import { setEffectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 export function CheckoutPage() {
@@ -63,7 +63,11 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
   const hasBackorderItems = items.some((item) => item.isBackorder)
   const allowBackorder = hasBackorderItems || backorderOptIn
 
-  const subtotal = items.reduce((sum, item) => sum + effectivePrice(item.price, item.discountPercent) * item.quantity, 0)
+  // item.price is per-piece; item.quantity counts sets (1 set = item.piecesPerSet pieces).
+  const subtotal = items.reduce(
+    (sum, item) => sum + setEffectivePrice(item.price, item.discountPercent, item.piecesPerSet ?? 1) * item.quantity,
+    0
+  )
 
   const form = useForm({
     defaultValues: {
@@ -369,21 +373,26 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
           <div className="card">
             <div className="card-body">
               <h5 className="card-title float-none">Order Summary</h5>
-              {items.map((item) => (
-                <div key={item.productId} className="d-flex justify-content-between small mb-2">
-                  <span>
-                    {item.name} × {item.quantity}
-                  </span>
-                  <span className="text-right">
-                    {Number(item.discountPercent) > 0 ? (
-                      <span className="text-muted mr-1">
-                        <s>{formatMoney(item.price * item.quantity)}</s>
-                      </span>
-                    ) : null}
-                    <span>{formatMoney(effectivePrice(item.price, item.discountPercent) * item.quantity)}</span>
-                  </span>
-                </div>
-              ))}
+              {items.map((item) => {
+                const isSet = Number(item.piecesPerSet) > 1
+                const setUnitPrice = setEffectivePrice(item.price, item.discountPercent, item.piecesPerSet ?? 1)
+                return (
+                  <div key={item.productId} className="d-flex justify-content-between small mb-2">
+                    <span>
+                      {item.name} × {item.quantity}
+                      {isSet ? ` set(s) of ${item.piecesPerSet}` : ""}
+                    </span>
+                    <span className="text-right">
+                      {Number(item.discountPercent) > 0 ? (
+                        <span className="text-muted mr-1">
+                          <s>{formatMoney((isSet ? item.price * item.piecesPerSet : item.price) * item.quantity)}</s>
+                        </span>
+                      ) : null}
+                      <span>{formatMoney(setUnitPrice * item.quantity)}</span>
+                    </span>
+                  </div>
+                )
+              })}
               <hr />
               <div className="d-flex justify-content-between font-weight-bold">
                 <span>Total</span>

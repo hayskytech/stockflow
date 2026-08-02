@@ -7,7 +7,8 @@ import { useCreateStockBatch } from "@/features/stock/hooks/use-stock"
 import { useAuthStore } from "@/store/auth.store"
 import { useProduct } from "@/features/products/hooks/use-products"
 import { formatDateTimeIST, stockBadge } from "@/lib/format"
-import { effectivePrice } from "@/lib/pricing"
+import { effectivePrice, setEffectivePrice } from "@/lib/pricing"
+import { SetBadge } from "@/components/ui/SetBadge"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
@@ -45,6 +46,7 @@ export function ProductDetailPage() {
   }
 
   const stock = stockBadge(product.quantityAvailable, product.reorderLevel)
+  const isSet = Number(product.piecesPerSet) > 1
 
   async function handleAddStock(value) {
     setAddStockError("")
@@ -136,9 +138,10 @@ export function ProductDetailPage() {
                 <h5 className="card-title mb-0">Details</h5>
                 <div>
                   <span className={`badge mr-2 ${stock.className}`}>{stock.label}</span>
-                  <span className={`badge ${product.isActive ? "badge-success" : "badge-secondary"}`}>
+                  <span className={`badge mr-2 ${product.isActive ? "badge-success" : "badge-secondary"}`}>
                     {product.isActive ? "Active" : "Inactive"}
                   </span>
+                  {isSet ? <SetBadge piecesPerSet={product.piecesPerSet} /> : null}
                 </div>
               </div>
 
@@ -179,11 +182,19 @@ export function ProductDetailPage() {
                 <dt className="col-sm-4">Effective Price</dt>
                 <dd className="col-sm-8">{formatMoney(effectivePrice(product.price, product.discountPercent))}</dd>
 
+                <dt className="col-sm-4">Pieces per Set</dt>
+                <dd className="col-sm-8">
+                  {product.piecesPerSet}
+                  {isSet
+                    ? ` (set price: ${formatMoney(setEffectivePrice(product.price, product.discountPercent, product.piecesPerSet))})`
+                    : ""}
+                </dd>
+
                 <dt className="col-sm-4">Quantity Available</dt>
-                <dd className="col-sm-8">{product.quantityAvailable} Units</dd>
+                <dd className="col-sm-8">{product.quantityAvailable} {isSet ? "Sets" : "Units"}</dd>
 
                 <dt className="col-sm-4">Quantity Reserved</dt>
-                <dd className="col-sm-8">{product.quantityReserved} Units</dd>
+                <dd className="col-sm-8">{product.quantityReserved} {isSet ? "Sets" : "Units"}</dd>
 
                 <dt className="col-sm-4">Reorder Level</dt>
                 <dd className="col-sm-8">{product.reorderLevel}</dd>

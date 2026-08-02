@@ -5,11 +5,12 @@ import { useRelatedProducts } from "@/features/product-detail/hooks/use-related-
 import { QuantitySelector } from "@/components/ui/QuantitySelector"
 import { ProductCard } from "@/components/common/ProductCard"
 import { LoginRequiredModal } from "@/components/common/LoginRequiredModal"
+import { SetBadge } from "@/components/ui/SetBadge"
 import { useCartStore } from "@/store/cart.store"
 import { useAuthStore } from "@/store/auth.store"
 import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney, stockBadge } from "@/lib/format"
-import { effectivePrice } from "@/lib/pricing"
+import { effectivePrice, setEffectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductDetailPage() {
@@ -43,6 +44,7 @@ export function ProductDetailPage() {
 
   const badge = stockBadge(product.quantityAvailable, product.reorderLevel)
   const hasDiscount = Number(product.discountPercent) > 0
+  const isSet = Number(product.piecesPerSet) > 1
   const attributes = [product.color, product.size].filter(Boolean).join(" · ")
   const breadcrumb = [product.divisionName, product.categoryName].filter(Boolean).join(" · ")
   const outOfStock = product.quantityAvailable <= 0
@@ -111,23 +113,34 @@ export function ProductDetailPage() {
           <h2 className="mb-2">{product.name}</h2>
           {attributes ? <p className="text-muted">{attributes}</p> : null}
 
-          <div className="d-flex align-items-center mb-3" style={{ gap: "0.75rem" }}>
+          <div className={`d-flex align-items-center flex-wrap ${isSet ? "mb-1" : "mb-3"}`} style={{ gap: "0.75rem" }}>
             <span className="h4 mb-0 font-weight-bold">
-              {formatMoney(effectivePrice(product.price, product.discountPercent))}
+              {formatMoney(
+                isSet
+                  ? setEffectivePrice(product.price, product.discountPercent, product.piecesPerSet)
+                  : effectivePrice(product.price, product.discountPercent)
+              )}
             </span>
             {hasDiscount ? (
               <span className="text-muted">
-                <s>{formatMoney(product.price)}</s>
+                <s>{formatMoney(isSet ? product.price * product.piecesPerSet : product.price)}</s>
               </span>
             ) : null}
             <span className={`badge ${badge.className}`}>{badge.label}</span>
+            {isSet ? <SetBadge piecesPerSet={product.piecesPerSet} /> : null}
           </div>
+
+          {isSet ? (
+            <p className="text-muted small mb-3">
+              {formatMoney(effectivePrice(product.price, product.discountPercent))} per piece × {product.piecesPerSet} pieces
+            </p>
+          ) : null}
 
           {product.description ? <p className="text-muted">{product.description}</p> : null}
 
           <div className="form-group">
             <label className="d-block small text-muted" htmlFor="product-detail-quantity">
-              Quantity
+              {isSet ? "Quantity (sets)" : "Quantity"}
             </label>
             <QuantitySelector
               id="product-detail-quantity"
@@ -136,6 +149,9 @@ export function ProductDetailPage() {
               max={outOfStock ? undefined : product.quantityAvailable}
               onChange={setQuantity}
             />
+            {isSet ? (
+              <small className="form-text text-muted">= {quantity * product.piecesPerSet} pieces</small>
+            ) : null}
           </div>
 
           {outOfStock ? (

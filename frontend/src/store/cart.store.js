@@ -57,6 +57,7 @@ export const useCartStore = create(
                 productPhotoUrl: product.productPhotoUrl,
                 color: product.color,
                 size: product.size,
+                piecesPerSet: product.piecesPerSet ?? 1,
                 maxQuantity,
                 isBackorder,
                 quantity: clampQuantity(quantity, maxQuantity),

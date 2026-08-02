@@ -310,6 +310,7 @@ CREATE TABLE products (
   description         VARCHAR(500)  NULL,
   color               VARCHAR(50)   NULL,
   size                VARCHAR(20)   NULL                             COMMENT 'S/M/L/XL or numeric size — picked from the sizes table, stored as plain text',
+  pieces_per_set      TINYINT UNSIGNED NOT NULL DEFAULT 1            COMMENT 'Physical pieces in one sellable unit — e.g. 3 for a "set of 3" shirt. 1 = sold as a single item',
   price               DECIMAL(10,2) NOT NULL DEFAULT 0.00            COMMENT 'Listed price shown to customers',
   discount_percent    DECIMAL(5,2)  NOT NULL DEFAULT 0.00            COMMENT 'Percentage off price — what the customer pays is price * (1 - discount_percent/100)',
   quantity_available  INT           NOT NULL DEFAULT 0               COMMENT 'Sellable stock on hand right now',
@@ -337,7 +338,8 @@ CREATE TABLE products (
   CONSTRAINT chk_products_price_nonneg       CHECK (price >= 0),
   CONSTRAINT chk_products_discount_percent_range CHECK (discount_percent >= 0 AND discount_percent <= 100),
   CONSTRAINT chk_products_qty_available_nonneg CHECK (quantity_available >= 0),
-  CONSTRAINT chk_products_qty_reserved_nonneg  CHECK (quantity_reserved >= 0)
+  CONSTRAINT chk_products_qty_reserved_nonneg  CHECK (quantity_reserved >= 0),
+  CONSTRAINT chk_products_pieces_per_set_pos   CHECK (pieces_per_set >= 1)
 
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
@@ -463,6 +465,7 @@ CREATE TABLE order_items (
   quantity    INT       NOT NULL                                    COMMENT 'Quantity requested',
   price_at_order            DECIMAL(10,2) NOT NULL DEFAULT 0.00      COMMENT 'Snapshot of products.price at order time',
   discount_percent_at_order DECIMAL(5,2)  NOT NULL DEFAULT 0.00      COMMENT 'Snapshot of products.discount_percent at order time - price never recomputed later',
+  pieces_per_set_at_order   TINYINT UNSIGNED NOT NULL DEFAULT 1      COMMENT 'Snapshot of products.pieces_per_set at order time',
 
   PRIMARY KEY (id),
   KEY idx_order_items_order_id   (order_id),

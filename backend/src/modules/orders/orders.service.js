@@ -96,6 +96,7 @@ export async function getOrderById(id, requester) {
   const items = await executeQuery(
     `SELECT oi.id, oi.product_id AS productId, oi.quantity,
             oi.price_at_order AS priceAtOrder, oi.discount_percent_at_order AS discountPercentAtOrder,
+            oi.pieces_per_set_at_order AS piecesPerSetAtOrder,
             ROUND(oi.price_at_order * (1 - oi.discount_percent_at_order / 100), 2) AS effectivePriceAtOrder,
             p.name AS productName, p.product_code AS productCode, p.product_photo_url AS productPhotoUrl
      FROM order_items oi
@@ -157,7 +158,8 @@ export async function createOrder(input, userId) {
     // The quantity is actually locked and reserved when the order is accepted.
     for (const item of sortedItems) {
       const [product] = await execute(
-        `SELECT id, name, price, discount_percent AS discountPercent, quantity_available AS quantityAvailable, is_active AS isActive
+        `SELECT id, name, price, discount_percent AS discountPercent, pieces_per_set AS piecesPerSet,
+                quantity_available AS quantityAvailable, is_active AS isActive
          FROM products WHERE id = ?`,
         [item.productId],
       );
@@ -182,8 +184,11 @@ export async function createOrder(input, userId) {
     // All-or-nothing: report every failing line in one response instead of one at a time.
     if (failures.length > 0) throw new AppError(409, failures.join('; '));
 
+    // product.price is always per-piece; quantity counts sets (1 set = product.piecesPerSet
+    // pieces) — a line's money total must scale by both.
     const totalAmount = validItems.reduce(
-      (sum, { quantity, product }) => sum + effectivePrice(product.price, product.discountPercent) * quantity,
+      (sum, { quantity, product }) =>
+        sum + effectivePrice(product.price, product.discountPercent) * product.piecesPerSet * quantity,
       0,
     );
 
@@ -232,9 +237,9 @@ export async function createOrder(input, userId) {
 
     for (const { productId, quantity, product } of validItems) {
       await execute(
-        `INSERT INTO order_items (id, order_id, product_id, quantity, price_at_order, discount_percent_at_order)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [crypto.randomUUID(), orderId, productId, quantity, product.price, product.discountPercent],
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price_at_order, discount_percent_at_order, pieces_per_set_at_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), orderId, productId, quantity, product.price, product.discountPercent, product.piecesPerSet],
       );
     }
   });

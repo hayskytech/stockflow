@@ -157,7 +157,9 @@ export function NewOrderPage() {
                                     onChange={(value) => field.handleChange(value)}
                                     options={activeProducts.map((product) => ({
                                       value: product.id,
-                                      label: `${product.name} — ${formatMoney(effectivePrice(product.price, product.discountPercent))} (${product.quantityAvailable} in stock)`,
+                                      label: `${product.name} — ${formatMoney(effectivePrice(product.price, product.discountPercent))}/pc${
+                                        product.piecesPerSet > 1 ? ` (Set of ${product.piecesPerSet})` : ""
+                                      } (${product.quantityAvailable} in stock)`,
                                     }))}
                                   />
                                   {field.state.meta.errors.length > 0 ? (
@@ -183,6 +185,16 @@ export function NewOrderPage() {
                                   {field.state.meta.errors.length > 0 ? (
                                     <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
                                   ) : null}
+                                  <form.Subscribe selector={(state) => state.values.items[index]?.productId}>
+                                    {(productId) => {
+                                      const selected = activeProducts.find((p) => p.id === productId)
+                                      return selected?.piecesPerSet > 1 ? (
+                                        <small className="form-text text-muted">
+                                          sets of {selected.piecesPerSet}
+                                        </small>
+                                      ) : null
+                                    }}
+                                  </form.Subscribe>
                                 </>
                               )}
                             </form.Field>

@@ -2,9 +2,10 @@ import { Link, useNavigate } from "react-router-dom"
 import { useCartStore } from "@/store/cart.store"
 import { QuantitySelector } from "@/components/ui/QuantitySelector"
 import { EmptyState } from "@/components/common/EmptyState"
+import { SetBadge } from "@/components/ui/SetBadge"
 import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney } from "@/lib/format"
-import { effectivePrice } from "@/lib/pricing"
+import { setEffectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 export function CartPage() {
@@ -13,7 +14,11 @@ export function CartPage() {
   const removeItem = useCartStore((s) => s.removeItem)
   const navigate = useNavigate()
 
-  const subtotal = items.reduce((sum, item) => sum + effectivePrice(item.price, item.discountPercent) * item.quantity, 0)
+  // item.price is per-piece; item.quantity counts sets (1 set = item.piecesPerSet pieces).
+  const subtotal = items.reduce(
+    (sum, item) => sum + setEffectivePrice(item.price, item.discountPercent, item.piecesPerSet ?? 1) * item.quantity,
+    0
+  )
 
   if (items.length === 0) {
     return (
@@ -36,7 +41,10 @@ export function CartPage() {
 
       <div className="row">
         <div className="col-12 col-md-8">
-          {items.map((item) => (
+          {items.map((item) => {
+            const isSet = Number(item.piecesPerSet) > 1
+            const setUnitPrice = setEffectivePrice(item.price, item.discountPercent, item.piecesPerSet ?? 1)
+            return (
             <div key={item.productId} className="card mb-3" id={`cart-item-${item.productId}`}>
               <div className="card-body d-flex flex-column flex-sm-row align-items-sm-center">
                 <div className="d-flex align-items-center flex-grow-1 mb-3 mb-sm-0">
@@ -60,15 +68,21 @@ export function CartPage() {
                     <h6 className="mb-1 text-truncate">
                       {item.name}
                       {item.isBackorder ? <span className="badge badge-warning ml-2">Back-order</span> : null}
+                      {isSet ? (
+                        <span className="ml-2">
+                          <SetBadge piecesPerSet={item.piecesPerSet} />
+                        </span>
+                      ) : null}
                     </h6>
                     <p className="text-muted small mb-1">{[item.color, item.size].filter(Boolean).join(" · ")}</p>
                     <div className="d-sm-none">
                       {Number(item.discountPercent) > 0 ? (
                         <span className="text-muted small mr-1">
-                          <s>{formatMoney(item.price)}</s>
+                          <s>{formatMoney(isSet ? item.price * item.piecesPerSet : item.price)}</s>
                         </span>
                       ) : null}
-                      <span className="font-weight-bold">{formatMoney(effectivePrice(item.price, item.discountPercent))}</span>
+                      <span className="font-weight-bold">{formatMoney(setUnitPrice)}</span>
+                      {isSet ? <span className="text-muted small ml-1">({formatMoney(item.price)}/pc)</span> : null}
                     </div>
                   </div>
                 </div>
@@ -76,10 +90,11 @@ export function CartPage() {
                 <div className="d-none d-sm-block text-center mx-3" style={{ minWidth: "80px" }}>
                   {Number(item.discountPercent) > 0 ? (
                     <div className="text-muted small">
-                      <s>{formatMoney(item.price)}</s>
+                      <s>{formatMoney(isSet ? item.price * item.piecesPerSet : item.price)}</s>
                     </div>
                   ) : null}
-                  <div className="font-weight-bold">{formatMoney(effectivePrice(item.price, item.discountPercent))}</div>
+                  <div className="font-weight-bold">{formatMoney(setUnitPrice)}</div>
+                  {isSet ? <div className="text-muted small">({formatMoney(item.price)}/pc)</div> : null}
                 </div>
 
                 <div className="d-flex align-items-center justify-content-between justify-content-sm-end">
@@ -95,7 +110,7 @@ export function CartPage() {
 
                   <div className="text-right" style={{ minWidth: "90px" }}>
                     <div className="font-weight-bold mb-2">
-                      {formatMoney(effectivePrice(item.price, item.discountPercent) * item.quantity)}
+                      {formatMoney(setUnitPrice * item.quantity)}
                     </div>
                     <button
                       type="button"
@@ -109,7 +124,8 @@ export function CartPage() {
                 </div>
               </div>
             </div>
-          ))}
+            )
+          })}
 
           <Link to={ROUTES.STORE.HOME} className="text-muted">
             <i className="fas fa-arrow-left mr-1" /> Continue shopping

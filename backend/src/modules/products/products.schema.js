@@ -4,6 +4,7 @@ const uuidField = z.string().uuid('Invalid id');
 const moneyField = z.number().nonnegative('Must be zero or greater').max(10000000, 'Must be 1,00,00,000 or less');
 const discountPercentField = z.number().min(0, 'Must be zero or greater').max(100, 'Must be 100 or less');
 const reorderLevelField = z.number().int().nonnegative('Must be zero or greater').max(100000, 'Must be 1,00,000 or less');
+const piecesPerSetField = z.number().int().min(1, 'Must be at least 1').max(100, 'Must be 100 or less');
 
 /** Optional first stock batch created in the same request as the product. Uses the
  *  product's own price/discountPercent/size rather than duplicating those fields here. */
@@ -26,6 +27,7 @@ export const createProductSchema = z
     description: z.string().trim().max(500, 'Description is too long').optional().nullable(),
     color: z.string().trim().max(50, 'Color is too long').optional().nullable(),
     size: z.string().trim().max(20, 'Size is too long').optional().nullable(),
+    piecesPerSet: piecesPerSetField.default(1),
     price: moneyField,
     discountPercent: discountPercentField.default(0),
     reorderLevel: reorderLevelField.default(0),
@@ -45,6 +47,7 @@ export const updateProductSchema = z
     description: z.string().trim().max(500).optional().nullable(),
     color: z.string().trim().max(50).optional().nullable(),
     size: z.string().trim().max(20).optional().nullable(),
+    piecesPerSet: piecesPerSetField.optional(),
     price: moneyField.optional(),
     discountPercent: discountPercentField.optional(),
     reorderLevel: reorderLevelField.optional(),

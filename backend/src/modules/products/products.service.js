@@ -88,6 +88,7 @@ async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keep
 const PRODUCT_COLUMNS = `
   p.id, p.product_code AS productCode, p.category_id AS categoryId,
   p.sub_category_id AS subCategoryId, p.name, p.description, p.color, p.size,
+  p.pieces_per_set AS piecesPerSet,
   p.price, p.discount_percent AS discountPercent,
   ROUND(p.price * (1 - p.discount_percent / 100), 2) AS effectivePrice,
   p.quantity_available AS quantityAvailable, p.quantity_reserved AS quantityReserved,
@@ -208,9 +209,9 @@ export async function createProduct(input) {
     await executeQuery(
       `INSERT INTO products (
          id, product_code, category_id, sub_category_id, name, description,
-         color, size, price, discount_percent, quantity_available, reorder_level,
+         color, size, pieces_per_set, price, discount_percent, quantity_available, reorder_level,
          product_photo_media_id, product_photo_url, is_active
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         input.productCode,
@@ -220,6 +221,7 @@ export async function createProduct(input) {
         input.description ?? null,
         input.color ?? null,
         input.size ?? null,
+        input.piecesPerSet ?? 1,
         input.price,
         input.discountPercent ?? 0,
         0, // quantity_available always starts at 0 — only Stock Import, order reserve/release, and dispatch move it
@@ -286,6 +288,7 @@ export async function updateProduct(id, input) {
     description: 'description',
     color: 'color',
     size: 'size',
+    piecesPerSet: 'pieces_per_set',
     price: 'price',
     discountPercent: 'discount_percent',
     reorderLevel: 'reorder_level',
