@@ -9,6 +9,7 @@ import { PincodeField } from "@/components/ui/PincodeField"
 import { useCartStore } from "@/store/cart.store"
 import { useWarehouseDetails } from "@/hooks/use-warehouse-details"
 import { formatMoney } from "@/lib/format"
+import { effectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 export function CheckoutPage() {
@@ -53,7 +54,7 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
   const [idempotencyKey] = useState(() => crypto.randomUUID())
   const [serverError, setServerError] = useState("")
 
-  const subtotal = items.reduce((sum, item) => sum + Number(item.wsp) * item.quantity, 0)
+  const subtotal = items.reduce((sum, item) => sum + effectivePrice(item.price, item.discountPercent) * item.quantity, 0)
 
   const form = useForm({
     defaultValues: {
@@ -337,12 +338,12 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
                     {item.name} × {item.quantity}
                   </span>
                   <span className="text-right">
-                    {Number(item.mrp) > Number(item.wsp) ? (
+                    {Number(item.discountPercent) > 0 ? (
                       <span className="text-muted mr-1">
-                        <s>{formatMoney(item.mrp * item.quantity)}</s>
+                        <s>{formatMoney(item.price * item.quantity)}</s>
                       </span>
                     ) : null}
-                    <span>{formatMoney(item.wsp * item.quantity)}</span>
+                    <span>{formatMoney(effectivePrice(item.price, item.discountPercent) * item.quantity)}</span>
                   </span>
                 </div>
               ))}

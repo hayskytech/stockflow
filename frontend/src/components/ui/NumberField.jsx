@@ -2,7 +2,7 @@
  * Numeric input wired to a TanStack Form field. Blurs on wheel so scrolling the page
  * over the field never changes its value (a bare `type="number"` input does by default).
  */
-export function NumberField({ id, field, min, max, step = "1", placeholder, disabled, className = "form-control", prefix }) {
+export function NumberField({ id, field, min, max, step = "1", placeholder, disabled, className = "form-control", prefix, suffix }) {
   const input = (
     <input
       id={id}
@@ -22,12 +22,19 @@ export function NumberField({ id, field, min, max, step = "1", placeholder, disa
 
   return (
     <>
-      {prefix ? (
+      {prefix || suffix ? (
         <div className="input-group">
-          <div className="input-group-prepend">
-            <span className="input-group-text">{prefix}</span>
-          </div>
+          {prefix ? (
+            <div className="input-group-prepend">
+              <span className="input-group-text">{prefix}</span>
+            </div>
+          ) : null}
           {input}
+          {suffix ? (
+            <div className="input-group-append">
+              <span className="input-group-text">{suffix}</span>
+            </div>
+          ) : null}
         </div>
       ) : (
         input

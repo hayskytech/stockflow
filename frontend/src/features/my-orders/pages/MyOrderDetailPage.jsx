@@ -92,8 +92,8 @@ export function MyOrderDetailPage() {
                           {item.productName}
                         </td>
                         <td>{item.quantity}</td>
-                        <td>{formatMoney(item.wspAtOrder)}</td>
-                        <td>{formatMoney(item.wspAtOrder * item.quantity)}</td>
+                        <td>{formatMoney(item.effectivePriceAtOrder)}</td>
+                        <td>{formatMoney(item.effectivePriceAtOrder * item.quantity)}</td>
                       </tr>
                     ))}
                   </tbody>

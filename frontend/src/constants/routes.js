@@ -18,6 +18,7 @@ export const ROUTES = {
     DIVISIONS: "/catalog/divisions",
     CATEGORIES: "/catalog/categories",
   },
+  SIZES: "/sizes",
   PRODUCTS: {
     LIST: "/products",
     NEW: "/products/new",
@@ -33,6 +34,7 @@ export const ROUTES = {
     DETAIL: (id) => `/media-library/${id}`,
   },
   HERO_SLIDES: "/hero-slides",
+  NOTICE: "/notice",
   ORDERS: {
     LIST: "/orders",
     NEW: "/orders/new",

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/requireRole.js';
-import { getOrderHistory, getStockMovement, getStockSummary } from './reports.controller.js';
+import { getMonthlyOrderSummary, getOrderHistory, getStockMovement, getStockSummary } from './reports.controller.js';
 
 export const reportsRouter = Router();
 
@@ -9,3 +9,4 @@ export const reportsRouter = Router();
 reportsRouter.get('/stock-summary', authenticate, requireRole('admin', 'staff'), getStockSummary);
 reportsRouter.get('/order-history', authenticate, requireRole('admin', 'staff'), getOrderHistory);
 reportsRouter.get('/stock-movement', authenticate, requireRole('admin', 'staff'), getStockMovement);
+reportsRouter.get('/monthly-orders', authenticate, requireRole('admin', 'staff'), getMonthlyOrderSummary);

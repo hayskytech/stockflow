@@ -9,6 +9,7 @@ import { NumberField } from "@/components/ui/NumberField"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
 import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
 import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
+import { useSizeOptions } from "@/hooks/use-size-options"
 import { productSchema } from "@/features/products/products.schema"
 import { useCreateProduct, useDeleteProduct, useProduct, useUpdateProduct } from "@/features/products/hooks/use-products"
 import { ROUTES } from "@/constants/routes"
@@ -26,8 +27,9 @@ export function ProductFormPage() {
   const [deleteError, setDeleteError] = useState("")
 
   async function handleSubmit(value) {
+    const { initialStock, ...rest } = value
     const input = {
-      ...value,
+      ...rest,
       subCategoryId: value.subCategoryId || undefined,
       description: value.description || undefined,
       color: value.color || undefined,
@@ -36,6 +38,14 @@ export function ProductFormPage() {
     if (id) {
       await updateProduct.mutateAsync({ id, input })
     } else {
+      if (initialStock?.addStock) {
+        input.initialStock = {
+          quantity: Number(initialStock.quantity),
+          invoiceNo: initialStock.invoiceNo,
+          invoiceDate: initialStock.invoiceDate || undefined,
+          note: initialStock.note || undefined,
+        }
+      }
       await createProduct.mutateAsync(input)
     }
     navigate(ROUTES.PRODUCTS.LIST)
@@ -113,6 +123,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
   const { data: divisions = [] } = useDivisionOptions()
   const { data: categories = [] } = useCategoryOptions(selectedDivisionId)
   const { data: subCategories = [] } = useSubCategoryOptions(selectedCategoryId)
+  const { data: sizes = [] } = useSizeOptions()
 
   const form = useForm({
     defaultValues: {
@@ -123,13 +134,13 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       description: product?.description ?? "",
       color: product?.color ?? "",
       size: product?.size ?? "",
-      mrp: product?.mrp !== undefined ? Number(product.mrp) : 0,
-      wsp: product?.wsp !== undefined ? Number(product.wsp) : 0,
+      price: product?.price !== undefined ? Number(product.price) : 0,
+      discountPercent: product?.discountPercent !== undefined ? Number(product.discountPercent) : 0,
       reorderLevel: product?.reorderLevel ?? 0,
-      unit: product?.unit ?? "pc",
       productPhotoMediaId: product?.productPhotoMediaId ?? null,
       galleryMediaIds: (product?.galleryImages ?? []).map((img) => img.mediaId),
       isActive: product ? Boolean(product.isActive) : true,
+      initialStock: { addStock: false, quantity: "", invoiceNo: "", invoiceDate: "", note: "" },
     },
     validators: { onSubmit: productSchema },
     onSubmit: async ({ value }) => {
@@ -328,14 +339,25 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
             {(field) => (
               <div className="form-group">
                 <label htmlFor="product-size">Size (optional)</label>
-                <input
+                <select
                   id="product-size"
                   className="form-control"
-                  placeholder="S / M / L / 32…"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
-                />
+                >
+                  <option value="">None</option>
+                  {/* An existing product's size may predate this predefined list — keep it selectable
+                      so re-saving the form doesn't silently blank it out. */}
+                  {field.state.value && !sizes.some((s) => s.value === field.state.value) ? (
+                    <option value={field.state.value}>{field.state.value} (not in list)</option>
+                  ) : null}
+                  {sizes.map((size) => (
+                    <option key={size.id} value={size.value}>
+                      {size.value}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </form.Field>
@@ -346,47 +368,49 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
 
       <div className="row">
         <div className="col-md-3">
-          <form.Field name="mrp">
+          <form.Field name="price">
             {(field) => (
               <div className="form-group">
-                <label htmlFor="product-mrp">
-                  MRP
+                <label htmlFor="product-price">
+                  Price
                   <InfoTooltip text="Listed price shown to customers." />
                 </label>
-                <NumberField id="product-mrp" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
+                <NumberField id="product-price" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
               </div>
             )}
           </form.Field>
         </div>
         <div className="col-md-3">
-          <form.Field name="wsp">
+          <form.Field name="discountPercent">
             {(field) => (
               <div className="form-group">
-                <label htmlFor="product-wsp">
-                  WSP
-                  <InfoTooltip text="Wholesale price. Must be ≤ MRP." />
+                <label htmlFor="product-discount-percent">
+                  Discount %
+                  <InfoTooltip text="Percentage off price. What the customer pays." />
                 </label>
-                <NumberField id="product-wsp" field={field} step="0.01" min="0" max="10000000" prefix="₹" />
+                <NumberField id="product-discount-percent" field={field} step="0.01" min="0" max="100" suffix="%" />
               </div>
             )}
           </form.Field>
         </div>
-        <div className="col-md-3">
-          <div className="form-group">
-            <label htmlFor="product-stock">
-              Stock
-              <InfoTooltip text="Available units, from stock intake." />
-            </label>
-            <input
-              id="product-stock"
-              className="form-control"
-              value={product ? `${product.quantityAvailable} available` : "Starts at 0"}
-              disabled
-              readOnly
-            />
-            <small className="form-text text-muted">Add inventory via Stock Import.</small>
+        {product ? (
+          <div className="col-md-3">
+            <div className="form-group">
+              <label htmlFor="product-stock">
+                Stock
+                <InfoTooltip text="Available units, from stock intake." />
+              </label>
+              <input
+                id="product-stock"
+                className="form-control"
+                value={`${product.quantityAvailable} available`}
+                disabled
+                readOnly
+              />
+              <small className="form-text text-muted">Add more via Stock Import.</small>
+            </div>
           </div>
-        </div>
+        ) : null}
         <div className="col-md-3">
           <form.Field name="reorderLevel">
             {(field) => (
@@ -399,26 +423,112 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
         </div>
       </div>
 
-      <div className="row">
-        <div className="col-md-4">
-          <form.Field name="unit">
-            {(field) => (
-              <div className="form-group">
-                <label htmlFor="product-unit">Unit</label>
-                <input
-                  id="product-unit"
-                  className="form-control"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-                {field.state.meta.errors.length > 0 ? (
-                  <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-                ) : null}
-              </div>
-            )}
-          </form.Field>
+      {!product ? (
+        <div className="row">
+          <div className="col-12">
+            <form.Field name="initialStock.addStock">
+              {(field) => (
+                <div className="form-group form-check">
+                  <input
+                    id="product-add-stock"
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                  />
+                  <label className="form-check-label" htmlFor="product-add-stock">
+                    Add initial stock
+                  </label>
+                </div>
+              )}
+            </form.Field>
+          </div>
+
+          <form.Subscribe selector={(state) => state.values.initialStock.addStock}>
+            {(addStock) =>
+              addStock ? (
+                <>
+                  <div className="col-md-3">
+                    <form.Field name="initialStock.quantity">
+                      {(field) => (
+                        <div className="form-group">
+                          <label htmlFor="product-initial-stock-quantity">Quantity</label>
+                          <input
+                            id="product-initial-stock-quantity"
+                            type="number"
+                            min="1"
+                            className="form-control"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                          {field.state.meta.errors.length > 0 ? (
+                            <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.Field>
+                  </div>
+                  <div className="col-md-3">
+                    <form.Field name="initialStock.invoiceNo">
+                      {(field) => (
+                        <div className="form-group">
+                          <label htmlFor="product-initial-stock-invoice-no">Invoice number</label>
+                          <input
+                            id="product-initial-stock-invoice-no"
+                            className="form-control"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                          {field.state.meta.errors.length > 0 ? (
+                            <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
+                          ) : null}
+                        </div>
+                      )}
+                    </form.Field>
+                  </div>
+                  <div className="col-md-3">
+                    <form.Field name="initialStock.invoiceDate">
+                      {(field) => (
+                        <div className="form-group">
+                          <label htmlFor="product-initial-stock-invoice-date">Invoice date (optional)</label>
+                          <input
+                            id="product-initial-stock-invoice-date"
+                            type="date"
+                            className="form-control"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                        </div>
+                      )}
+                    </form.Field>
+                  </div>
+                  <div className="col-md-3">
+                    <form.Field name="initialStock.note">
+                      {(field) => (
+                        <div className="form-group">
+                          <label htmlFor="product-initial-stock-note">Note (optional)</label>
+                          <input
+                            id="product-initial-stock-note"
+                            className="form-control"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                        </div>
+                      )}
+                    </form.Field>
+                  </div>
+                </>
+              ) : null
+            }
+          </form.Subscribe>
         </div>
+      ) : null}
+
+      <div className="row">
         <div className="col-md-4 d-flex align-items-center">
           <form.Field name="isActive">
             {(field) => (

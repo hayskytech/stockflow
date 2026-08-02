@@ -32,23 +32,28 @@ export function StoreSidebar() {
 
   return (
     <aside id="store-sidebar" className="card shadow-sm mb-4">
+      <div className="store-sidebar-header d-flex align-items-center justify-content-between">
+        <h6 className="font-weight-bold m-0">
+          <i className="fas fa-sliders-h mr-2" aria-hidden="true" />
+          Filters
+        </h6>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            id="store-sidebar-clear-all"
+            className="btn btn-link btn-sm p-0"
+            onClick={clearFilters}
+          >
+            Clear all
+          </button>
+        ) : null}
+      </div>
       <div className="card-body">
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <h6 className="font-weight-bold m-0">Filters</h6>
-          {hasActiveFilters ? (
-            <button
-              type="button"
-              id="store-sidebar-clear-all"
-              className="btn btn-link btn-sm p-0"
-              onClick={clearFilters}
-            >
-              Clear all
-            </button>
-          ) : null}
-        </div>
-
         <div className="mb-4">
-          <h6 className="text-uppercase text-muted small font-weight-bold mb-2">Category</h6>
+          <h6 className="store-sidebar-section-title category mb-2">
+            <i className="fas fa-tags" aria-hidden="true" />
+            Category
+          </h6>
 
           <div className="form-group mb-2">
             <label htmlFor="store-filter-division" className="small text-muted mb-1">
@@ -111,23 +116,32 @@ export function StoreSidebar() {
         </div>
 
         <div>
-          <h6 className="text-uppercase text-muted small font-weight-bold mb-2">Price</h6>
+          <h6 className="store-sidebar-section-title price mb-2">
+            <i className="fas fa-rupee-sign" aria-hidden="true" />
+            Price
+          </h6>
           <ul className="list-unstyled mb-0">
-            {PRICE_BANDS.map((band, index) => (
-              <li key={band.label} className="form-check mb-1">
-                <input
-                  type="radio"
-                  className="form-check-input"
-                  id={`store-filter-price-${index}`}
-                  name="store-price-band"
-                  checked={minPrice === band.min && maxPrice === band.max}
-                  onChange={() => setPriceRange(band.min, band.max)}
-                />
-                <label className="form-check-label" htmlFor={`store-filter-price-${index}`}>
-                  {band.label}
-                </label>
-              </li>
-            ))}
+            {PRICE_BANDS.map((band, index) => {
+              const isActive = minPrice === band.min && maxPrice === band.max
+              return (
+                <li key={band.label}>
+                  <label
+                    htmlFor={`store-filter-price-${index}`}
+                    className={`form-check store-price-band mb-2${isActive ? " active" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      className="form-check-input"
+                      id={`store-filter-price-${index}`}
+                      name="store-price-band"
+                      checked={isActive}
+                      onChange={() => setPriceRange(band.min, band.max)}
+                    />
+                    <span className="form-check-label">{band.label}</span>
+                  </label>
+                </li>
+              )
+            })}
           </ul>
           {minPrice !== undefined || maxPrice !== undefined ? (
             <button

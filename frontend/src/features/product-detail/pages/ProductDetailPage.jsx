@@ -9,6 +9,7 @@ import { useCartStore } from "@/store/cart.store"
 import { useAuthStore } from "@/store/auth.store"
 import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney, stockBadge } from "@/lib/format"
+import { effectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductDetailPage() {
@@ -40,7 +41,7 @@ export function ProductDetailPage() {
   }
 
   const badge = stockBadge(product.quantityAvailable, product.reorderLevel)
-  const hasDiscount = Number(product.mrp) > Number(product.wsp)
+  const hasDiscount = Number(product.discountPercent) > 0
   const attributes = [product.color, product.size].filter(Boolean).join(" · ")
   const breadcrumb = [product.divisionName, product.categoryName].filter(Boolean).join(" · ")
   const outOfStock = product.quantityAvailable <= 0
@@ -110,10 +111,12 @@ export function ProductDetailPage() {
           {attributes ? <p className="text-muted">{attributes}</p> : null}
 
           <div className="d-flex align-items-center mb-3" style={{ gap: "0.75rem" }}>
-            <span className="h4 mb-0 font-weight-bold">{formatMoney(product.wsp)}</span>
+            <span className="h4 mb-0 font-weight-bold">
+              {formatMoney(effectivePrice(product.price, product.discountPercent))}
+            </span>
             {hasDiscount ? (
               <span className="text-muted">
-                <s>{formatMoney(product.mrp)}</s>
+                <s>{formatMoney(product.price)}</s>
               </span>
             ) : null}
             <span className={`badge ${badge.className}`}>{badge.label}</span>

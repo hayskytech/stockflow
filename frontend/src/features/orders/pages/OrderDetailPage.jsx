@@ -79,7 +79,7 @@ export function OrderDetailPage() {
                     <tr>
                       <th>Product</th>
                       <th>Qty</th>
-                      <th>WSP</th>
+                      <th>Price</th>
                       <th>Line Total</th>
                     </tr>
                   </thead>
@@ -107,8 +107,8 @@ export function OrderDetailPage() {
                           </div>
                         </td>
                         <td>{item.quantity}</td>
-                        <td>{formatMoney(item.wspAtOrder)}</td>
-                        <td>{formatMoney(item.wspAtOrder * item.quantity)}</td>
+                        <td>{formatMoney(item.effectivePriceAtOrder)}</td>
+                        <td>{formatMoney(item.effectivePriceAtOrder * item.quantity)}</td>
                       </tr>
                     ))}
                   </tbody>

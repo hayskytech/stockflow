@@ -81,7 +81,7 @@ export function StockImportModal({ open, onClose }) {
               >
                 <p className="text-muted">
                   Upload the stock excel/CSV exported from your inventory software (columns: Product,
-                  ProductSubGroup, Mrp, InvoiceNo, WSalePrice, Quantity, InvoiceDate, Size, Note).
+                  ProductSubGroup, Price, InvoiceNo, DiscountPercent, Quantity, InvoiceDate, Size, Note).
                 </p>
                 <button
                   type="button"

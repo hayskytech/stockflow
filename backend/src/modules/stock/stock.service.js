@@ -6,7 +6,9 @@ import { buildImportTemplate, parseRowsFromFile } from '../../utils/importFile.j
 import { pairKey, parseStockRow } from './stock.parsing.js';
 
 const STOCK_COLUMNS = `
-  s.id, s.quantity, s.mrp, s.wsp, s.size, s.invoice_no AS invoiceNo, s.invoice_date AS invoiceDate,
+  s.id, s.quantity, s.price, s.discount_percent AS discountPercent,
+  ROUND(s.price * (1 - s.discount_percent / 100), 2) AS effectivePrice,
+  s.size, s.invoice_no AS invoiceNo, s.invoice_date AS invoiceDate,
   s.note, s.created_at AS createdAt, s.updated_at AS updatedAt,
   s.product_id AS productId, p.name AS productName, p.product_code AS productCode, c.name AS categoryName
 `;
@@ -17,8 +19,8 @@ const SORT_COLUMNS = {
   quantity: 's.quantity',
   invoice_no: 's.invoice_no',
   invoice_date: 's.invoice_date',
-  mrp: 's.mrp',
-  wsp: 's.wsp',
+  price: 's.price',
+  discount_percent: 's.discount_percent',
   created_at: 's.created_at',
 };
 
@@ -114,7 +116,7 @@ export async function deleteStock(id) {
  * products.quantity_available, and writes one stock_ledger 'in'/'import' row — all in
  * one transaction.
  */
-export async function createStockBatch({ productId, invoiceNo, invoiceDate, mrp, wsp, size, note, quantity }) {
+export async function createStockBatch({ productId, invoiceNo, invoiceDate, price, discountPercent, size, note, quantity }) {
   const [product] = await executeQuery(
     `SELECT id, name, is_active AS isActive FROM products WHERE id = ?`,
     [productId],
@@ -124,9 +126,9 @@ export async function createStockBatch({ productId, invoiceNo, invoiceDate, mrp,
 
   await withTransaction(async (execute) => {
     await execute(
-      `INSERT INTO stock (id, product_id, quantity, mrp, wsp, size, invoice_no, invoice_date, note)
+      `INSERT INTO stock (id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [crypto.randomUUID(), productId, quantity, mrp, wsp, size ?? null, invoiceNo, invoiceDate ?? null, note ?? null],
+      [crypto.randomUUID(), productId, quantity, price, discountPercent ?? 0, size ?? null, invoiceNo, invoiceDate ?? null, note ?? null],
     );
     await execute(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ?`, [quantity, productId]);
     await execute(
@@ -140,7 +142,7 @@ export async function createStockBatch({ productId, invoiceNo, invoiceDate, mrp,
 }
 
 const IMPORT_COLUMNS = [
-  'Product', 'ProductSubGroup', 'Mrp', 'InvoiceNo', 'WSalePrice', 'Quantity', 'InvoiceDate', 'Size', 'Note',
+  'Product', 'ProductSubGroup', 'Price', 'InvoiceNo', 'DiscountPercent', 'Quantity', 'InvoiceDate', 'Size', 'Note',
 ];
 
 /** Blank .xlsx with the header row importStock() expects — downloaded from the import dialog. */
@@ -149,8 +151,8 @@ export async function getStockImportTemplate() {
 }
 
 /**
- * Bulk-imports stock rows from an uploaded .xlsx/.csv (columns: Product, ProductSubGroup, Mrp,
- * InvoiceNo, WSalePrice, Quantity, InvoiceDate, Size, Note — Itemcode is ignored). All-or-nothing:
+ * Bulk-imports stock rows from an uploaded .xlsx/.csv (columns: Product, ProductSubGroup, Price,
+ * InvoiceNo, DiscountPercent, Quantity, InvoiceDate, Size, Note — Itemcode is ignored). All-or-nothing:
  * if any row is invalid, unmatched, or the invoice was already imported, nothing is inserted.
  */
 export async function importStock(buffer, originalName) {
@@ -231,9 +233,9 @@ export async function importStock(buffer, originalName) {
     for (const row of parsedRows) {
       const productId = productLookup.get(pairKey(row.product, row.subGroup));
       await execute(
-        `INSERT INTO stock (id, product_id, quantity, mrp, wsp, size, invoice_no, invoice_date, note)
+        `INSERT INTO stock (id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [crypto.randomUUID(), productId, row.quantity, row.mrp, row.wsp, row.size, row.invoiceNo, row.invoiceDate, row.note],
+        [crypto.randomUUID(), productId, row.quantity, row.price, row.discountPercent, row.size, row.invoiceNo, row.invoiceDate, row.note],
       );
       productCounts.set(productId, (productCounts.get(productId) ?? 0) + row.quantity);
     }

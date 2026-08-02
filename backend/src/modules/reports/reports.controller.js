@@ -1,5 +1,5 @@
 import { AppError } from '../../middleware/errorHandler.js';
-import { orderHistoryQuerySchema, stockMovementQuerySchema } from './reports.schema.js';
+import { monthlyOrderSummaryQuerySchema, orderHistoryQuerySchema, stockMovementQuerySchema } from './reports.schema.js';
 import * as reportsService from './reports.service.js';
 
 function parseOrThrow(schema, data) {
@@ -35,6 +35,17 @@ export async function getOrderHistory(req, res, next) {
     const { days } = parseOrThrow(orderHistoryQuerySchema, { days: req.query.days });
     const history = await reportsService.getOrderHistory(days);
     res.status(200).json(history);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/reports/monthly-orders */
+export async function getMonthlyOrderSummary(req, res, next) {
+  try {
+    const { months } = parseOrThrow(monthlyOrderSummaryQuerySchema, { months: req.query.months });
+    const summary = await reportsService.getMonthlyOrderSummary(months);
+    res.status(200).json(summary);
   } catch (err) {
     next(err);
   }

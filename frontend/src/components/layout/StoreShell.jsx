@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom"
 import { StoreTopbar } from "@/components/layout/StoreTopbar"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
+import { useNoticePublic } from "@/hooks/use-notice-public"
 import { ROLES } from "@/constants/app"
 
 /** Storefront layout — top navbar only, no admin sidebar. Used by customers, and by admin/staff
@@ -11,6 +12,7 @@ export function StoreShell() {
   const userId = useAuthStore((s) => s.user?.id)
   const role = useAuthStore((s) => s.user?.role)
   const syncOwner = useCartStore((s) => s.syncOwner)
+  const { data: notice } = useNoticePublic()
 
   // Plain component state (not persisted) — dismissal only needs to survive in-app navigation,
   // since StoreShell stays mounted across /store/* routes and resets naturally on a full reload.
@@ -25,6 +27,14 @@ export function StoreShell() {
   return (
     <div className="storefront min-vh-100 bg-light">
       <StoreTopbar />
+      {notice?.message ? (
+        <div id="store-notice-bar" className="store-notice-bar">
+          <div className="store-notice-bar-track">
+            <span>{notice.message}</span>
+            <span aria-hidden="true">{notice.message}</span>
+          </div>
+        </div>
+      ) : null}
       {role !== ROLES.CUSTOMER && !staffBannerDismissed ? (
         <div
           id="store-staff-banner"

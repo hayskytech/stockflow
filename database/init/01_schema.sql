@@ -116,6 +116,21 @@ CREATE TABLE warehouse (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Single-row warehouse settings';
 
+CREATE TABLE notice (
+  id          TINYINT UNSIGNED NOT NULL DEFAULT 1                 COMMENT 'Always 1 - single row',
+  message     VARCHAR(500)  NULL                                  COMMENT 'Scrolling notice text shown on the storefront when active',
+  is_active   BOOLEAN       NOT NULL DEFAULT FALSE,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  CONSTRAINT chk_notice_single_row CHECK (id = 1)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Single-row admin-editable storefront notice board';
+
 
 -- =============================================================================
 -- TABLE: divisions
@@ -197,6 +212,31 @@ CREATE TABLE sub_categories (
 
 
 -- =============================================================================
+-- TABLE: sizes
+-- Admin-managed predefined size list (e.g. S/M/L/XL, or numeric 28/30/32...).
+-- products.size and stock.size store this value directly as plain text, not a
+-- foreign key reference.
+-- =============================================================================
+CREATE TABLE sizes (
+  id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
+  value         VARCHAR(20)   NOT NULL,
+  is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
+  sort_order    INT           NOT NULL DEFAULT 0                    COMMENT 'Manual drag-and-drop display order',
+  created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_sizes_value (value),
+  KEY idx_sizes_is_active  (is_active),
+  KEY idx_sizes_sort_order (sort_order)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Predefined size picklist for the product/stock size dropdowns';
+
+
+-- =============================================================================
 -- TABLE: media
 -- Centralized media library (WordPress-style) - every uploaded image is one
 -- row here, reused across features by reference. Files live on disk under
@@ -269,13 +309,12 @@ CREATE TABLE products (
   name                VARCHAR(150)  NOT NULL,
   description         VARCHAR(500)  NULL,
   color               VARCHAR(50)   NULL,
-  size                VARCHAR(10)   NULL                             COMMENT 'S/M/L/XL or numeric size',
-  mrp                 DECIMAL(10,2) NOT NULL DEFAULT 0.00            COMMENT 'Maximum retail price',
-  wsp                 DECIMAL(10,2) NOT NULL DEFAULT 0.00            COMMENT 'Wholesale/order price charged to users',
+  size                VARCHAR(20)   NULL                             COMMENT 'S/M/L/XL or numeric size — picked from the sizes table, stored as plain text',
+  price               DECIMAL(10,2) NOT NULL DEFAULT 0.00            COMMENT 'Listed price shown to customers',
+  discount_percent    DECIMAL(5,2)  NOT NULL DEFAULT 0.00            COMMENT 'Percentage off price — what the customer pays is price * (1 - discount_percent/100)',
   quantity_available  INT           NOT NULL DEFAULT 0               COMMENT 'Sellable stock on hand right now',
   quantity_reserved   INT           NOT NULL DEFAULT 0               COMMENT 'Held against pending/accepted orders not yet dispatched',
   reorder_level       INT           NOT NULL DEFAULT 0               COMMENT 'Threshold for low-stock warning',
-  unit                VARCHAR(20)   NOT NULL DEFAULT 'pc',
   product_photo_url   VARCHAR(500)  NULL                              COMMENT 'Denormalized URL of product_photo_media_id, cached for fast list reads',
   product_photo_media_id CHAR(36)   NULL                              COMMENT 'FK into the shared media library - source of truth for reuse/cleanup',
   is_active           BOOLEAN       NOT NULL DEFAULT TRUE,
@@ -295,9 +334,8 @@ CREATE TABLE products (
     FOREIGN KEY (sub_category_id) REFERENCES sub_categories (id) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_products_photo_media_id
     FOREIGN KEY (product_photo_media_id) REFERENCES media (id) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT chk_products_mrp_nonneg         CHECK (mrp >= 0),
-  CONSTRAINT chk_products_wsp_nonneg         CHECK (wsp >= 0),
-  CONSTRAINT chk_products_wsp_le_mrp         CHECK (wsp <= mrp),
+  CONSTRAINT chk_products_price_nonneg       CHECK (price >= 0),
+  CONSTRAINT chk_products_discount_percent_range CHECK (discount_percent >= 0 AND discount_percent <= 100),
   CONSTRAINT chk_products_qty_available_nonneg CHECK (quantity_available >= 0),
   CONSTRAINT chk_products_qty_reserved_nonneg  CHECK (quantity_reserved >= 0)
 
@@ -378,7 +416,7 @@ CREATE TABLE orders (
   payment_method  ENUM('bank_transfer','offline') NOT NULL DEFAULT 'bank_transfer' COMMENT 'offline = manual order entered by admin/staff, payment settled outside the app',
   transaction_id  VARCHAR(100)  NULL                                COMMENT 'Bank transfer reference/UTR number entered by the customer - NULL for offline orders',
   payment_status  ENUM('pending','verified','rejected') NOT NULL DEFAULT 'pending',
-  total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0.00                COMMENT 'Sum of wsp_at_order * quantity - the amount owed',
+  total_amount    DECIMAL(12,2) NOT NULL DEFAULT 0.00                COMMENT 'Sum of (price_at_order * (1 - discount_percent_at_order/100)) * quantity - the amount owed',
 
   shipping_name           VARCHAR(100)  NOT NULL,
   shipping_phone          VARCHAR(20)   NOT NULL,
@@ -421,8 +459,8 @@ CREATE TABLE order_items (
   order_id    CHAR(36)  NOT NULL,
   product_id  CHAR(36)  NOT NULL,
   quantity    INT       NOT NULL                                    COMMENT 'Quantity requested',
-  mrp_at_order DECIMAL(10,2) NOT NULL                                COMMENT 'Snapshot of products.mrp at order time',
-  wsp_at_order DECIMAL(10,2) NOT NULL                                COMMENT 'Snapshot of products.wsp at order time - price never recomputed later',
+  price_at_order            DECIMAL(10,2) NOT NULL DEFAULT 0.00      COMMENT 'Snapshot of products.price at order time',
+  discount_percent_at_order DECIMAL(5,2)  NOT NULL DEFAULT 0.00      COMMENT 'Snapshot of products.discount_percent at order time - price never recomputed later',
 
   PRIMARY KEY (id),
   KEY idx_order_items_order_id   (order_id),
@@ -442,18 +480,19 @@ CREATE TABLE order_items (
 -- =============================================================================
 -- TABLE: stock
 -- One row per stock intake batch (e.g. one line of a supplier invoice), not per
--- physical unit - quantity-based tracking, no barcodes. mrp/wsp/size are captured
--- per batch since they can vary within the same product (e.g. by size) —
--- products.mrp/wsp remain only as defaults used when a product is first created
--- manually. products.quantity_available/quantity_reserved are the source of
--- truth for stock on hand; this table is the receipt/batch ledger of intake events.
+-- physical unit - quantity-based tracking, no barcodes. price/discount_percent/size
+-- are captured per batch since they can vary within the same product (e.g. by
+-- size) — products.price/discount_percent remain only as defaults used when a
+-- product is first created manually. products.quantity_available/quantity_reserved
+-- are the source of truth for stock on hand; this table is the receipt/batch
+-- ledger of intake events.
 -- =============================================================================
 CREATE TABLE stock (
   id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
   product_id    CHAR(36)      NOT NULL,
   quantity      INT           NOT NULL                              COMMENT 'Units received in this batch',
-  mrp           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  wsp           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  price             DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  discount_percent  DECIMAL(5,2)  NOT NULL DEFAULT 0.00,
   size          VARCHAR(20)   NULL,
   invoice_no    VARCHAR(100)  NOT NULL                              COMMENT 'Supplier invoice this batch arrived on',
   invoice_date  DATE          NULL,
@@ -469,9 +508,8 @@ CREATE TABLE stock (
   CONSTRAINT fk_stock_product_id
     FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT chk_stock_quantity_pos CHECK (quantity > 0),
-  CONSTRAINT chk_stock_mrp_nonneg   CHECK (mrp >= 0),
-  CONSTRAINT chk_stock_wsp_nonneg   CHECK (wsp >= 0),
-  CONSTRAINT chk_stock_wsp_le_mrp   CHECK (wsp <= mrp)
+  CONSTRAINT chk_stock_price_nonneg CHECK (price >= 0),
+  CONSTRAINT chk_stock_discount_percent_range CHECK (discount_percent >= 0 AND discount_percent <= 100)
 
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4

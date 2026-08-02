@@ -1,14 +1,28 @@
 import { useState } from "react"
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
-import { useStockMovement } from "@/features/reports/hooks/use-reports"
+import { useMonthlyOrderSummary, useStockMovement } from "@/features/reports/hooks/use-reports"
+import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { formatDateIST } from "@/lib/format"
 
 const DAY_OPTIONS = [7, 14, 30, 90]
+const MONTH_OPTIONS = [6, 12, 24]
+
+const MONTH_FORMATTER = new Intl.DateTimeFormat("en-IN", { month: "short", year: "numeric" })
+
+/** "2026-07" -> "Jul 2026" — monthlyOrders keys are already date-only calendar buckets. */
+function formatMonthLabel(monthKey) {
+  const [year, month] = monthKey.split("-").map(Number)
+  return MONTH_FORMATTER.format(new Date(year, month - 1, 1))
+}
 
 export function ReportsPage() {
   const [days, setDays] = useState(14)
+  const [months, setMonths] = useState(6)
   const { data: movement, isLoading } = useStockMovement(days)
+  const { data: monthlySummary, isLoading: isLoadingMonthly } = useMonthlyOrderSummary(months)
+  const formatMoney = useFormatMoney()
 
   return (
     <PageWrapper>
@@ -106,6 +120,90 @@ export function ReportsPage() {
                   ))}
               </tbody>
             </table>
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h3 className="card-title float-none mb-0">Monthly Orders</h3>
+          <select
+            id="report-monthly-months"
+            className="form-control form-control-sm w-auto"
+            value={months}
+            onChange={(e) => setMonths(Number(e.target.value))}
+          >
+            {MONTH_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                Last {option} months
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="card-body">
+          {isLoadingMonthly ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status" />
+            </div>
+          ) : (
+            <>
+              <div className="row mb-4">
+                <div className="col-md-6">
+                  <div className="info-box">
+                    <span className="info-box-icon bg-secondary"><i className="fas fa-receipt" /></span>
+                    <div className="info-box-content">
+                      <span className="info-box-text">Total Orders</span>
+                      <span className="info-box-number" id="report-monthly-total-orders">
+                        {monthlySummary.totalOrders}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="info-box">
+                    <span className="info-box-icon bg-primary"><i className="fas fa-sack-dollar" /></span>
+                    <div className="info-box-content">
+                      <span className="info-box-text">Total Amount Purchased</span>
+                      <span className="info-box-number" id="report-monthly-total-amount">
+                        {formatMoney(monthlySummary.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={monthlySummary.monthlyOrders} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="month" tickFormatter={formatMonthLabel} fontSize={12} />
+                  <YAxis allowDecimals={false} fontSize={12} />
+                  <Tooltip labelFormatter={formatMonthLabel} formatter={(value) => [value, "Orders"]} />
+                  <Bar dataKey="count" fill="#007bff" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+
+              <table className="table mt-3 mb-0" id="report-monthly-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th className="text-right">Orders</th>
+                    <th className="text-right">Amount Purchased</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlySummary.monthlyOrders
+                    .slice()
+                    .reverse()
+                    .map((row) => (
+                      <tr key={row.month}>
+                        <td>{formatMonthLabel(row.month)}</td>
+                        <td className="text-right">{row.count}</td>
+                        <td className="text-right">{formatMoney(row.revenue)}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
       </div>

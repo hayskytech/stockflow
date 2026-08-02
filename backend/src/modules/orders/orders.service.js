@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { executeQuery } from '../../db/query.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AppError } from '../../middleware/errorHandler.js';
+import { effectivePrice } from '../../utils/pricing.js';
 
 const ORDER_COLUMNS = `
   o.id, o.order_number AS orderNumber, o.status,
@@ -90,7 +91,8 @@ export async function getOrderById(id, requester) {
 
   const items = await executeQuery(
     `SELECT oi.id, oi.product_id AS productId, oi.quantity,
-            oi.mrp_at_order AS mrpAtOrder, oi.wsp_at_order AS wspAtOrder,
+            oi.price_at_order AS priceAtOrder, oi.discount_percent_at_order AS discountPercentAtOrder,
+            ROUND(oi.price_at_order * (1 - oi.discount_percent_at_order / 100), 2) AS effectivePriceAtOrder,
             p.name AS productName, p.product_code AS productCode, p.product_photo_url AS productPhotoUrl
      FROM order_items oi
      JOIN products p ON p.id = oi.product_id
@@ -149,7 +151,7 @@ export async function createOrder(input, userId) {
     // The quantity is actually locked and reserved when the order is accepted.
     for (const item of sortedItems) {
       const [product] = await execute(
-        `SELECT id, name, mrp, wsp, quantity_available AS quantityAvailable, is_active AS isActive
+        `SELECT id, name, price, discount_percent AS discountPercent, quantity_available AS quantityAvailable, is_active AS isActive
          FROM products WHERE id = ?`,
         [item.productId],
       );
@@ -167,7 +169,10 @@ export async function createOrder(input, userId) {
     // All-or-nothing: report every failing line in one response instead of one at a time.
     if (failures.length > 0) throw new AppError(409, failures.join('; '));
 
-    const totalAmount = validItems.reduce((sum, { quantity, product }) => sum + Number(product.wsp) * quantity, 0);
+    const totalAmount = validItems.reduce(
+      (sum, { quantity, product }) => sum + effectivePrice(product.price, product.discountPercent) * quantity,
+      0,
+    );
 
     // The order row must exist before order_items can point their order_id FK at it.
     const maxAttempts = 5;
@@ -213,9 +218,9 @@ export async function createOrder(input, userId) {
 
     for (const { productId, quantity, product } of validItems) {
       await execute(
-        `INSERT INTO order_items (id, order_id, product_id, quantity, mrp_at_order, wsp_at_order)
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price_at_order, discount_percent_at_order)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [crypto.randomUUID(), orderId, productId, quantity, product.mrp, product.wsp],
+        [crypto.randomUUID(), orderId, productId, quantity, product.price, product.discountPercent],
       );
     }
   });

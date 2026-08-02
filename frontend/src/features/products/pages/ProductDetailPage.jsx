@@ -7,6 +7,7 @@ import { useCreateStockBatch } from "@/features/stock/hooks/use-stock"
 import { useAuthStore } from "@/store/auth.store"
 import { useProduct } from "@/features/products/hooks/use-products"
 import { formatDateTimeIST, stockBadge } from "@/lib/format"
+import { effectivePrice } from "@/lib/pricing"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
@@ -167,11 +168,16 @@ export function ProductDetailPage() {
             <div className="card-body">
               <h5 className="card-title">Pricing &amp; Stock</h5>
               <dl className="row mb-0">
-                <dt className="col-sm-4">MRP</dt>
-                <dd className="col-sm-8">{Number(product.mrp) > 0 ? formatMoney(product.mrp) : "Not set"}</dd>
+                <dt className="col-sm-4">Price</dt>
+                <dd className="col-sm-8">{Number(product.price) > 0 ? formatMoney(product.price) : "Not set"}</dd>
 
-                <dt className="col-sm-4">WSP</dt>
-                <dd className="col-sm-8">{Number(product.wsp) > 0 ? formatMoney(product.wsp) : "Not set"}</dd>
+                <dt className="col-sm-4">Discount</dt>
+                <dd className="col-sm-8">
+                  {Number(product.discountPercent) > 0 ? `${product.discountPercent}%` : "None"}
+                </dd>
+
+                <dt className="col-sm-4">Effective Price</dt>
+                <dd className="col-sm-8">{formatMoney(effectivePrice(product.price, product.discountPercent))}</dd>
 
                 <dt className="col-sm-4">Quantity Available</dt>
                 <dd className="col-sm-8">{product.quantityAvailable} Units</dd>
@@ -181,9 +187,6 @@ export function ProductDetailPage() {
 
                 <dt className="col-sm-4">Reorder Level</dt>
                 <dd className="col-sm-8">{product.reorderLevel}</dd>
-
-                <dt className="col-sm-4">Unit</dt>
-                <dd className="col-sm-8">{product.unit}</dd>
               </dl>
             </div>
           </div>

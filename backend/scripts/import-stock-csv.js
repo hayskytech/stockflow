@@ -15,9 +15,9 @@
  *      entire file. Real legacy exports have both — this script defaults to skipping
  *      and reporting bad rows instead of blocking the other 99% of a 50,000-row file.
  *      Pass --strict to restore the interactive endpoint's abort-on-any-error behavior.
- *   4. It's idempotent by batch key (product + invoice + size + mrp + wsp): re-running
- *      the script (after a crash, or just to pick up files you haven't run yet) skips
- *      rows whose exact batch already exists in `stock` instead of erroring, so it's
+ *   4. It's idempotent by batch key (product + invoice + size + price + discountPercent):
+ *      re-running the script (after a crash, or just to pick up files you haven't run yet)
+ *      skips rows whose exact batch already exists in `stock` instead of erroring, so it's
  *      safe to re-run over files that partially or fully succeeded.
  *
  * Usage (from backend/):
@@ -31,8 +31,8 @@
  *                   Default: skip bad rows, import the rest, report rejects.
  *   --chunk-size=N  Rows per INSERT/transaction (default 500).
  *
- * Column format (same as the interactive import): Product, ProductSubGroup, Mrp,
- * InvoiceNo, WSalePrice, Quantity, InvoiceDate, Size, Note (Itemcode is ignored).
+ * Column format (same as the interactive import): Product, ProductSubGroup, Price,
+ * InvoiceNo, DiscountPercent, Quantity, InvoiceDate, Size, Note (Itemcode is ignored).
  * Products/categories must already exist — this does not auto-create them.
  */
 import crypto from 'crypto';
@@ -49,11 +49,11 @@ const PAIR_MATCH_CHUNK = 300;
 
 /** Natural batch identity — matches the grouping used to collapse per-unit stock into
  * batches (see database/init/05_remove_stock_barcodes.sql). Two rows with the same key
- * represent the same intake batch. mrp/wsp are normalized to a fixed 2-decimal string
- * since mysql2 returns DECIMAL columns as strings (e.g. "899.00") while freshly parsed
- * file rows carry plain numbers (899). */
+ * represent the same intake batch. price/discountPercent are normalized to a fixed
+ * 2-decimal string since mysql2 returns DECIMAL columns as strings (e.g. "899.00") while
+ * freshly parsed file rows carry plain numbers (899). */
 function batchKey(row) {
-  return [row.productId, row.invoiceNo, row.size ?? '', Number(row.mrp).toFixed(2), Number(row.wsp).toFixed(2)].join(' ');
+  return [row.productId, row.invoiceNo, row.size ?? '', Number(row.price).toFixed(2), Number(row.discountPercent).toFixed(2)].join(' ');
 }
 
 function parseArgs(argv) {
@@ -156,13 +156,13 @@ async function resolveProductIds(validRows, strict) {
 }
 
 /** Splits rows into { importable, alreadyInStock } based on batch keys already present in
- * `stock` (product + invoice + size + mrp + wsp) — this is what makes re-running the script safe. */
+ * `stock` (product + invoice + size + price + discountPercent) — this is what makes re-running the script safe. */
 async function filterAlreadyInStock(resolvedRows) {
   const invoiceNumbers = [...new Set(resolvedRows.map((r) => r.invoiceNo))];
   const existing = new Set();
   for (const invoicesChunk of chunk(invoiceNumbers, BATCH_CHECK_CHUNK)) {
     const rows = await executeQuery(
-      `SELECT product_id AS productId, invoice_no AS invoiceNo, size, mrp, wsp
+      `SELECT product_id AS productId, invoice_no AS invoiceNo, size, price, discount_percent AS discountPercent
        FROM stock WHERE invoice_no IN (${invoicesChunk.map(() => '?').join(',')})`,
       invoicesChunk,
     );
@@ -190,10 +190,10 @@ async function insertRows(rows, chunkSize, fileLabel, onProgress) {
     const rowsChunk = chunks[c];
     await withTransaction(async (execute) => {
       await execute(
-        `INSERT INTO stock (id, product_id, quantity, mrp, wsp, size, invoice_no, invoice_date, note)
+        `INSERT INTO stock (id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
          VALUES ${rowsChunk.map(() => `(?, ?, ?, ?, ?, ?, ?, ?, ?)`).join(', ')}`,
         rowsChunk.flatMap((row) => [
-          crypto.randomUUID(), row.productId, row.quantity, row.mrp, row.wsp, row.size, row.invoiceNo, row.invoiceDate, row.note,
+          crypto.randomUUID(), row.productId, row.quantity, row.price, row.discountPercent, row.size, row.invoiceNo, row.invoiceDate, row.note,
         ]),
       );
 

@@ -1,18 +1,20 @@
 import { useForm } from "@tanstack/react-form"
 import { Modal } from "@/components/ui/Modal"
 import { SearchSelect } from "@/components/ui/SearchSelect"
+import { useSizeOptions } from "@/hooks/use-size-options"
 import { createStockSchema } from "@/features/stock/stock.schema"
 
-/** Add-stock modal — one intake batch against a product/invoice. See CLAUDE.md D2. */
+/** Add-stock modal — one intake batch against a product/invoice. */
 export function StockFormModal({ open, products, initialProductId, onClose, onSubmit, isSubmitting, serverError }) {
+  const { data: sizes = [] } = useSizeOptions()
   const form = useForm({
     defaultValues: {
       productId: initialProductId ?? "",
       quantity: "",
       invoiceNo: "",
       invoiceDate: "",
-      mrp: "",
-      wsp: "",
+      price: "",
+      discountPercent: "",
       size: "",
       note: "",
     },
@@ -90,14 +92,20 @@ export function StockFormModal({ open, products, initialProductId, onClose, onSu
               {(field) => (
                 <div className="form-group">
                   <label htmlFor="stock-size">Size</label>
-                  <input
+                  <select
                     id="stock-size"
-                    type="text"
                     className="form-control"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                  />
+                  >
+                    <option value="">None</option>
+                    {sizes.map((size) => (
+                      <option key={size.id} value={size.value}>
+                        {size.value}
+                      </option>
+                    ))}
+                  </select>
                   {field.state.meta.errors.length > 0 ? (
                     <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
                   ) : null}
@@ -109,12 +117,12 @@ export function StockFormModal({ open, products, initialProductId, onClose, onSu
 
         <div className="row">
           <div className="col-md-6">
-            <form.Field name="mrp">
+            <form.Field name="price">
               {(field) => (
                 <div className="form-group">
-                  <label htmlFor="stock-mrp">MRP</label>
+                  <label htmlFor="stock-price">Price</label>
                   <input
-                    id="stock-mrp"
+                    id="stock-price"
                     type="number"
                     min="0"
                     step="0.01"
@@ -131,14 +139,15 @@ export function StockFormModal({ open, products, initialProductId, onClose, onSu
             </form.Field>
           </div>
           <div className="col-md-6">
-            <form.Field name="wsp">
+            <form.Field name="discountPercent">
               {(field) => (
                 <div className="form-group">
-                  <label htmlFor="stock-wsp">WSP</label>
+                  <label htmlFor="stock-discount-percent">Discount %</label>
                   <input
-                    id="stock-wsp"
+                    id="stock-discount-percent"
                     type="number"
                     min="0"
+                    max="100"
                     step="0.01"
                     className="form-control"
                     value={field.state.value}

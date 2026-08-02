@@ -38,6 +38,8 @@ import { UsersPage } from "@/features/users/pages/UsersPage"
 import { UserViewPage } from "@/features/users/pages/UserViewPage"
 import { SettingsPage } from "@/features/settings/pages/SettingsPage"
 import { HeroSlidesPage } from "@/features/heroSlides/pages/HeroSlidesPage"
+import { NoticePage } from "@/features/notice/pages/NoticePage"
+import { SizesPage } from "@/features/sizes/pages/SizesPage"
 import { UppyUploader } from "@/components/common/UppyUploader"
 
 export const router = createHashRouter([
@@ -145,6 +147,11 @@ export const router = createHashRouter([
         handle: { crumb: CRUMBS.CATEGORIES },
       },
       {
+        path: ROUTES.SIZES,
+        element: <SizesPage />,
+        handle: { crumb: CRUMBS.SIZES },
+      },
+      {
         path: ROUTES.PRODUCTS.LIST,
         element: <ProductsPage />,
         handle: { crumb: CRUMBS.PRODUCTS_LIST },
@@ -192,6 +199,15 @@ export const router = createHashRouter([
           </ProtectedRoute>
         ),
         handle: { crumb: CRUMBS.HERO_SLIDES },
+      },
+      {
+        path: ROUTES.NOTICE,
+        element: (
+          <ProtectedRoute allow={[ROLES.ADMIN]}>
+            <NoticePage />
+          </ProtectedRoute>
+        ),
+        handle: { crumb: CRUMBS.NOTICE },
       },
       {
         path: ROUTES.ORDERS.LIST,

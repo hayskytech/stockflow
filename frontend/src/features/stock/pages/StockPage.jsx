@@ -11,6 +11,7 @@ import { StockImportModal } from "@/features/stock/components/StockImportModal"
 import { StockFormModal } from "@/features/stock/components/StockFormModal"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { SearchSelect } from "@/components/ui/SearchSelect"
+import { effectivePrice } from "@/lib/pricing"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 
 export function StockPage() {
@@ -77,8 +78,19 @@ export function StockPage() {
     { key: "categoryName", label: "Category", hideable: true },
     { key: "quantity", label: "Quantity" },
     { key: "size", label: "Size", render: (row) => row.size ?? "—", hideable: true },
-    { key: "mrp", label: "MRP", render: (row) => formatMoney(row.mrp), hideable: true },
-    { key: "wsp", label: "WSP", render: (row) => formatMoney(row.wsp), hideable: true },
+    { key: "price", label: "Price", render: (row) => formatMoney(row.price), hideable: true },
+    {
+      key: "discountPercent",
+      label: "Discount",
+      render: (row) => (Number(row.discountPercent) > 0 ? `${row.discountPercent}%` : "—"),
+      hideable: true,
+    },
+    {
+      key: "effectivePrice",
+      label: "Effective Price",
+      render: (row) => formatMoney(effectivePrice(row.price, row.discountPercent)),
+      hideable: true,
+    },
     {
       key: "invoiceNo",
       label: "Invoice",

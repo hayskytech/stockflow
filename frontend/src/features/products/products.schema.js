@@ -9,6 +9,24 @@ const nonNegativeInt = z
   .int("Must be a whole number")
   .nonnegative("Must be zero or greater")
   .max(100000, "Must be 1,00,000 or less")
+const discountPercent = z
+  .number({ invalid_type_error: "Must be a number" })
+  .min(0, "Must be zero or greater")
+  .max(100, "Must be 100 or less")
+
+/** Optional first stock batch, created in the same request as the product. */
+const initialStockSchema = z.object({
+  addStock: z.boolean(),
+  quantity: z.coerce
+    .number({ invalid_type_error: "Quantity must be a number" })
+    .int("Quantity must be a whole number")
+    .min(1, "Quantity must be at least 1")
+    .max(10000, "Quantity cannot exceed 10000")
+    .optional(),
+  invoiceNo: z.string().trim().max(100, "Too long").optional(),
+  invoiceDate: z.string().optional(),
+  note: z.string().trim().max(500, "Too long").optional(),
+})
 
 export const productSchema = z
   .object({
@@ -18,18 +36,22 @@ export const productSchema = z
     name: z.string().trim().min(1, "Name is required").max(150, "Too long"),
     description: z.string().trim().max(500, "Too long").optional().or(z.literal("")),
     color: z.string().trim().max(50, "Too long").optional().or(z.literal("")),
-    size: z.string().trim().max(10, "Too long").optional().or(z.literal("")),
-    mrp: money,
-    wsp: money,
+    size: z.string().trim().max(20, "Too long").optional().or(z.literal("")),
+    price: money,
+    discountPercent,
     reorderLevel: nonNegativeInt,
-    unit: z.string().trim().min(1, "Required").max(20, "Too long"),
     productPhotoMediaId: z.string().optional().nullable(),
     galleryMediaIds: z.array(z.string()).max(5, "Maximum 5 gallery images allowed").optional(),
     isActive: z.boolean().optional(),
+    initialStock: initialStockSchema,
   })
-  .refine((data) => data.wsp <= data.mrp, {
-    message: "WSP cannot be greater than MRP",
-    path: ["wsp"],
+  .refine((data) => !data.initialStock.addStock || data.initialStock.quantity > 0, {
+    message: "Quantity is required",
+    path: ["initialStock", "quantity"],
+  })
+  .refine((data) => !data.initialStock.addStock || data.initialStock.invoiceNo?.trim(), {
+    message: "Invoice number is required",
+    path: ["initialStock", "invoiceNo"],
   })
 
 const IMPORT_EXTENSIONS = [".xlsx", ".csv"]

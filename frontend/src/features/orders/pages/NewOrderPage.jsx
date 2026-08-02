@@ -8,6 +8,7 @@ import { useUserOptions } from "@/hooks/use-user-options"
 import { useCreateOrder } from "@/features/orders/hooks/use-orders"
 import { manualOrderSchema } from "@/features/orders/orders.schema"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { effectivePrice } from "@/lib/pricing"
 import { PhoneField } from "@/components/ui/PhoneField"
 import { PincodeField } from "@/components/ui/PincodeField"
 import { SearchSelect } from "@/components/ui/SearchSelect"
@@ -154,7 +155,7 @@ export function NewOrderPage() {
                                     onChange={(value) => field.handleChange(value)}
                                     options={activeProducts.map((product) => ({
                                       value: product.id,
-                                      label: `${product.name} — ${formatMoney(product.wsp)} (${product.quantityAvailable} in stock)`,
+                                      label: `${product.name} — ${formatMoney(effectivePrice(product.price, product.discountPercent))} (${product.quantityAvailable} in stock)`,
                                     }))}
                                   />
                                   {field.state.meta.errors.length > 0 ? (

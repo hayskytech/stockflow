@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { getCategoryById, getSubCategoryById } from '../catalog/catalog.service.js';
 import { attachUsage, detachUsage, getMediaById } from '../media/media.service.js';
+import { createStockBatch } from '../stock/stock.service.js';
 import { executeQuery } from '../../db/query.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AppError } from '../../middleware/errorHandler.js';
@@ -87,8 +88,10 @@ async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keep
 const PRODUCT_COLUMNS = `
   p.id, p.product_code AS productCode, p.category_id AS categoryId,
   p.sub_category_id AS subCategoryId, p.name, p.description, p.color, p.size,
-  p.mrp, p.wsp, p.quantity_available AS quantityAvailable, p.quantity_reserved AS quantityReserved,
-  p.reorder_level AS reorderLevel, p.unit, p.product_photo_url AS productPhotoUrl,
+  p.price, p.discount_percent AS discountPercent,
+  ROUND(p.price * (1 - p.discount_percent / 100), 2) AS effectivePrice,
+  p.quantity_available AS quantityAvailable, p.quantity_reserved AS quantityReserved,
+  p.reorder_level AS reorderLevel, p.product_photo_url AS productPhotoUrl,
   p.product_photo_media_id AS productPhotoMediaId, p.is_active AS isActive,
   p.created_at AS createdAt, p.updated_at AS updatedAt,
   c.name AS categoryName, c.division_id AS divisionId, d.name AS divisionName, sc.name AS subCategoryName
@@ -106,8 +109,8 @@ const PRODUCT_JOINS = `
 const SORT_COLUMNS = {
   name: 'p.name',
   product_code: 'p.product_code',
-  mrp: 'p.mrp',
-  wsp: 'p.wsp',
+  price: 'p.price',
+  discount_percent: 'p.discount_percent',
   quantity_available: 'p.quantity_available',
   created_at: 'p.created_at',
 };
@@ -158,11 +161,11 @@ export async function listProducts(listQuery, filters) {
     params.push(filters.isActive);
   }
   if (filters.minPrice !== undefined) {
-    conditions.push('p.wsp >= ?');
+    conditions.push('(p.price * (1 - p.discount_percent / 100)) >= ?');
     params.push(filters.minPrice);
   }
   if (filters.maxPrice !== undefined) {
-    conditions.push('p.wsp <= ?');
+    conditions.push('(p.price * (1 - p.discount_percent / 100)) <= ?');
     params.push(filters.maxPrice);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -205,9 +208,9 @@ export async function createProduct(input) {
     await executeQuery(
       `INSERT INTO products (
          id, product_code, category_id, sub_category_id, name, description,
-         color, size, mrp, wsp, quantity_available, reorder_level, unit,
+         color, size, price, discount_percent, quantity_available, reorder_level,
          product_photo_media_id, product_photo_url, is_active
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         input.productCode,
@@ -217,11 +220,10 @@ export async function createProduct(input) {
         input.description ?? null,
         input.color ?? null,
         input.size ?? null,
-        input.mrp,
-        input.wsp,
+        input.price,
+        input.discountPercent ?? 0,
         0, // quantity_available always starts at 0 — only Stock Import, order reserve/release, and dispatch move it
         input.reorderLevel ?? 0,
-        input.unit ?? 'pc',
         photoMedia?.id ?? null,
         photoMedia?.url ?? null,
         input.isActive ?? true,
@@ -244,6 +246,22 @@ export async function createProduct(input) {
     );
     await attachUsage(media.id, MEDIA_ENTITY_TYPE, id);
   }
+
+  // Optional first batch, added after the product row exists so createStockBatch's own
+  // product lookup finds it — see stock.service.js for the reserve/ledger transaction this runs.
+  if (input.initialStock) {
+    await createStockBatch({
+      productId: id,
+      quantity: input.initialStock.quantity,
+      invoiceNo: input.initialStock.invoiceNo,
+      invoiceDate: input.initialStock.invoiceDate ?? null,
+      note: input.initialStock.note ?? null,
+      price: input.price,
+      discountPercent: input.discountPercent ?? 0,
+      size: input.size ?? null,
+    });
+  }
+
   return getProductById(id);
 }
 
@@ -252,12 +270,7 @@ export async function updateProduct(id, input) {
 
   const nextCategoryId = input.categoryId ?? existing.categoryId;
   const nextSubCategoryId = input.subCategoryId !== undefined ? input.subCategoryId : existing.subCategoryId;
-  const nextMrp = input.mrp !== undefined ? input.mrp : Number(existing.mrp);
-  const nextWsp = input.wsp !== undefined ? input.wsp : Number(existing.wsp);
 
-  if (nextWsp > nextMrp) {
-    throw new AppError(400, 'Wholesale price (WSP) cannot be greater than MRP');
-  }
   if (input.categoryId !== undefined) {
     await getCategoryById(input.categoryId); // 404s if the target category doesn't exist
   }
@@ -273,10 +286,9 @@ export async function updateProduct(id, input) {
     description: 'description',
     color: 'color',
     size: 'size',
-    mrp: 'mrp',
-    wsp: 'wsp',
+    price: 'price',
+    discountPercent: 'discount_percent',
     reorderLevel: 'reorder_level',
-    unit: 'unit',
     isActive: 'is_active',
   };
 
@@ -345,8 +357,8 @@ export async function getProductImportTemplate() {
 
 /**
  * Bulk-creates products from an uploaded .xlsx/.csv (columns: SubGroupName, Product Code,
- * Product Name — this is the one-time catalog load, so mrp/wsp/stock aren't in the sheet and
- * are left at their defaults; edit individual products afterwards). A SubGroupName with no
+ * Product Name — this is the one-time catalog load, so price/discount/stock aren't in the sheet
+ * and are left at their defaults; edit individual products afterwards). A SubGroupName with no
  * matching category auto-creates that category under the GENERAL division. All-or-nothing:
  * if any row is invalid or has a duplicate code, the whole file is rejected.
  */
@@ -426,8 +438,8 @@ export async function importProducts(buffer, originalName) {
     }
     for (const row of parsedRows) {
       await execute(
-        `INSERT INTO products (id, product_code, category_id, name, mrp, wsp, quantity_available, reorder_level, unit, is_active)
-         VALUES (?, ?, ?, ?, 0, 0, 0, 0, 'pc', TRUE)`,
+        `INSERT INTO products (id, product_code, category_id, name, price, discount_percent, quantity_available, reorder_level, is_active)
+         VALUES (?, ?, ?, ?, 0, 0, 0, 0, TRUE)`,
         [crypto.randomUUID(), row.productCode, categoryLookup.get(row.subGroupName.toLowerCase()), row.productName],
       );
     }

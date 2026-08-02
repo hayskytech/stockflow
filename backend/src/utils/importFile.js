@@ -15,7 +15,7 @@ function cellValue(cell) {
 
 /**
  * Parses an uploaded .xlsx or .csv buffer into row objects keyed by the first row's header
- * names, e.g. [{ rowNumber: 2, data: { Product: 'X', Mrp: 100, ... } }]. Row 1 is always
+ * names, e.g. [{ rowNumber: 2, data: { Product: 'X', Price: 100, ... } }]. Row 1 is always
  * treated as the header row. Blank rows are skipped. Callers own all field-level validation —
  * this only does the shared "read the sheet" step.
  */

@@ -22,12 +22,14 @@ export const createStockSchema = z
       .max(10000, "Quantity cannot exceed 10000"),
     invoiceNo: z.string().trim().min(1, "Invoice number is required").max(100, "Invoice number must be 100 characters or less"),
     invoiceDate: z.string(),
-    mrp: z.coerce.number({ invalid_type_error: "MRP must be a number" }).min(0, "MRP must be ≥ 0"),
-    wsp: z.coerce.number({ invalid_type_error: "WSP must be a number" }).min(0, "WSP must be ≥ 0"),
+    price: z.coerce.number({ invalid_type_error: "Price must be a number" }).min(0, "Price must be ≥ 0"),
+    discountPercent: z.coerce
+      .number({ invalid_type_error: "Discount must be a number" })
+      .min(0, "Discount must be ≥ 0")
+      .max(100, "Discount must be ≤ 100"),
     size: z.string().trim().max(20, "Size must be 20 characters or less"),
     note: z.string().trim().max(500, "Note must be 500 characters or less"),
   })
-  .refine((value) => value.wsp <= value.mrp, { message: "WSP cannot be greater than MRP", path: ["wsp"] })
   .refine((value) => !value.invoiceDate || value.invoiceDate <= new Date().toISOString().slice(0, 10), {
     message: "Invoice date cannot be in the future",
     path: ["invoiceDate"],

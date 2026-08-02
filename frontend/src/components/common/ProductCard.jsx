@@ -1,16 +1,18 @@
 import { Link } from "react-router-dom"
 import { resolveMediaUrl } from "@/lib/media"
 import { formatMoney, stockBadge } from "@/lib/format"
+import { effectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 /**
- * Ecommerce product tile: photo, name, WSP price (with MRP struck-through), stock badge.
- * Links to the product detail page. Shared across storefront features (home + product-detail's
- * related products), so it lives here rather than inside a single feature (CLAUDE.md).
+ * Ecommerce product tile: photo, name, effective price (with the listed price struck-through
+ * when discounted), stock badge. Links to the product detail page. Shared across storefront
+ * features (home + product-detail's related products), so it lives here rather than inside a
+ * single feature (CLAUDE.md).
  */
 export function ProductCard({ product }) {
   const badge = stockBadge(product.quantityAvailable, product.reorderLevel)
-  const hasDiscount = Number(product.mrp) > Number(product.wsp)
+  const hasDiscount = Number(product.discountPercent) > 0
   const attributes = [product.color, product.size].filter(Boolean).join(" · ")
 
   return (
@@ -42,10 +44,12 @@ export function ProductCard({ product }) {
             <div>
               {hasDiscount ? (
                 <div className="text-muted small">
-                  <s>{formatMoney(product.mrp)}</s>
+                  <s>{formatMoney(product.price)}</s>
                 </div>
               ) : null}
-              <div className="font-weight-bold text-dark">{formatMoney(product.wsp)}</div>
+              <div className="font-weight-bold text-dark">
+                {formatMoney(effectivePrice(product.price, product.discountPercent))}
+              </div>
             </div>
             <span className={`badge ${badge.className}`}>{badge.label}</span>
           </div>

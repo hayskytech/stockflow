@@ -10,6 +10,7 @@ import { useProductsStore } from "@/features/products/products.store"
 import { useProducts } from "@/features/products/hooks/use-products"
 import { ProductImportModal } from "@/features/products/components/ProductImportModal"
 import { resolveMediaUrl } from "@/lib/media"
+import { effectivePrice } from "@/lib/pricing"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
@@ -76,8 +77,19 @@ export function ProductsPage() {
         </div>
       ),
     },
-    { key: "mrp", label: "MRP", render: (row) => formatMoney(row.mrp), hideable: true },
-    { key: "wsp", label: "WSP", render: (row) => formatMoney(row.wsp), hideable: true },
+    { key: "price", label: "Price", render: (row) => formatMoney(row.price), hideable: true },
+    {
+      key: "discountPercent",
+      label: "Discount",
+      render: (row) => (Number(row.discountPercent) > 0 ? `${row.discountPercent}%` : "—"),
+      hideable: true,
+    },
+    {
+      key: "effectivePrice",
+      label: "Effective Price",
+      render: (row) => formatMoney(effectivePrice(row.price, row.discountPercent)),
+      hideable: true,
+    },
     {
       key: "quantityAvailable",
       label: "Stock",

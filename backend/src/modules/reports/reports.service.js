@@ -153,3 +153,39 @@ export async function getOrderHistory(days) {
     dailyOrders,
   };
 }
+
+/**
+ * Monthly totals — orders placed and amount purchased, grouped by calendar month over a rolling
+ * window. `revenue` excludes rejected/cancelled orders, matching totalOrderValue above; `count`
+ * includes every order placed that month regardless of status, matching dailyOrders.count above.
+ */
+export async function getMonthlyOrderSummary(months) {
+  const monthlyRows = await executeQuery(
+    `SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count,
+            COALESCE(SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN total_amount ELSE 0 END), 0) AS revenue
+     FROM orders
+     WHERE created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
+     GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+     ORDER BY month ASC`,
+    [months - 1],
+  );
+  const monthlyByKey = new Map(monthlyRows.map((row) => [row.month, row]));
+
+  // Fills in zero-order months so the trend shows a continuous series, not just active months.
+  const monthlyOrders = [];
+  let totalOrders = 0;
+  let totalAmount = 0;
+  const now = new Date();
+  for (let i = months - 1; i >= 0; i -= 1) {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const month = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    const existing = monthlyByKey.get(month);
+    const count = existing?.count ?? 0;
+    const revenue = Number(existing?.revenue ?? 0);
+    totalOrders += count;
+    totalAmount += revenue;
+    monthlyOrders.push({ month, count, revenue });
+  }
+
+  return { totalOrders, totalAmount, monthlyOrders };
+}

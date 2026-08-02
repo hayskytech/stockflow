@@ -45,7 +45,7 @@ function handleUpload(req, res, next) {
 }
 
 const stockPagination = pagination({
-  sortable: ['quantity', 'invoice_no', 'invoice_date', 'mrp', 'wsp', 'created_at'],
+  sortable: ['quantity', 'invoice_no', 'invoice_date', 'price', 'discount_percent', 'created_at'],
   defaultSort: 'created_at',
 });
 

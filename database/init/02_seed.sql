@@ -24,6 +24,21 @@ INSERT INTO warehouse (
 );
 
 -- =============================================================================
+-- Notice board (single row, inactive by default)
+-- =============================================================================
+INSERT INTO notice (id, message, is_active) VALUES (1, NULL, FALSE);
+
+-- =============================================================================
+-- Sizes (starter list — admin can add more, e.g. numeric sizes, from the Sizes page)
+-- =============================================================================
+INSERT INTO sizes (id, value, sort_order) VALUES
+  (UUID(), 'S', 1),
+  (UUID(), 'M', 2),
+  (UUID(), 'L', 3),
+  (UUID(), 'XL', 4),
+  (UUID(), 'XXL', 5);
+
+-- =============================================================================
 -- Initial admin user
 --
 -- Default credentials:

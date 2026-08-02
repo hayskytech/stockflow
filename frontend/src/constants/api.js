@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
   },
   WAREHOUSE: "/warehouse",
   WAREHOUSE_PUBLIC: "/warehouse/public",
+  NOTICE: "/notice",
+  NOTICE_PUBLIC: "/notice/public",
   DIVISIONS: {
     LIST: "/divisions",
     BY_ID: (id) => `/divisions/${id}`,
@@ -37,6 +39,11 @@ export const API_ENDPOINTS = {
     BY_ID: (id) => `/products/${id}`,
     IMPORT: "/products/import",
     IMPORT_TEMPLATE: "/products/import-template",
+  },
+  SIZES: {
+    LIST: "/sizes",
+    BY_ID: (id) => `/sizes/${id}`,
+    REORDER: "/sizes/reorder",
   },
   STOCK: {
     LIST: "/stock",
@@ -76,6 +83,7 @@ export const API_ENDPOINTS = {
     STOCK_SUMMARY: "/reports/stock-summary",
     ORDER_HISTORY: "/reports/order-history",
     STOCK_MOVEMENT: "/reports/stock-movement",
+    MONTHLY_ORDERS: "/reports/monthly-orders",
   },
   SETTINGS: {
     DELETE_ALL_DATA: "/settings/delete-all-data",

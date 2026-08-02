@@ -2,7 +2,19 @@ import { z } from 'zod';
 
 const uuidField = z.string().uuid('Invalid id');
 const moneyField = z.number().nonnegative('Must be zero or greater').max(10000000, 'Must be 1,00,00,000 or less');
+const discountPercentField = z.number().min(0, 'Must be zero or greater').max(100, 'Must be 100 or less');
 const reorderLevelField = z.number().int().nonnegative('Must be zero or greater').max(100000, 'Must be 1,00,000 or less');
+
+/** Optional first stock batch created in the same request as the product. Uses the
+ *  product's own price/discountPercent/size rather than duplicating those fields here. */
+const initialStockField = z
+  .object({
+    quantity: z.number().int().min(1, 'Quantity must be at least 1').max(10000, 'Quantity cannot exceed 10000'),
+    invoiceNo: z.string().trim().min(1, 'Invoice number is required').max(100, 'Invoice number is too long'),
+    invoiceDate: z.string().trim().min(1).optional().nullable(),
+    note: z.string().trim().max(500, 'Note is too long').optional().nullable(),
+  })
+  .optional();
 
 /** POST /api/products */
 export const createProductSchema = z
@@ -13,21 +25,17 @@ export const createProductSchema = z
     name: z.string().trim().min(1, 'Name is required').max(150, 'Name is too long'),
     description: z.string().trim().max(500, 'Description is too long').optional().nullable(),
     color: z.string().trim().max(50, 'Color is too long').optional().nullable(),
-    size: z.string().trim().max(10, 'Size is too long').optional().nullable(),
-    mrp: moneyField,
-    wsp: moneyField,
+    size: z.string().trim().max(20, 'Size is too long').optional().nullable(),
+    price: moneyField,
+    discountPercent: discountPercentField.default(0),
     reorderLevel: reorderLevelField.default(0),
-    unit: z.string().trim().min(1).max(20).default('pc'),
     productPhotoMediaId: uuidField.optional().nullable(),
     galleryMediaIds: z.array(uuidField).max(5, 'Maximum 5 gallery images allowed').optional(),
     isActive: z.boolean().optional(),
-  })
-  .refine((data) => data.wsp <= data.mrp, {
-    message: 'Wholesale price (WSP) cannot be greater than MRP',
-    path: ['wsp'],
+    initialStock: initialStockField,
   });
 
-/** PUT /api/products/:id — partial update; wsp<=mrp checked in the service since either may be omitted */
+/** PUT /api/products/:id — partial update */
 export const updateProductSchema = z
   .object({
     productCode: z.string().trim().min(1).max(50).optional(),
@@ -36,11 +44,10 @@ export const updateProductSchema = z
     name: z.string().trim().min(1).max(150).optional(),
     description: z.string().trim().max(500).optional().nullable(),
     color: z.string().trim().max(50).optional().nullable(),
-    size: z.string().trim().max(10).optional().nullable(),
-    mrp: moneyField.optional(),
-    wsp: moneyField.optional(),
+    size: z.string().trim().max(20).optional().nullable(),
+    price: moneyField.optional(),
+    discountPercent: discountPercentField.optional(),
     reorderLevel: reorderLevelField.optional(),
-    unit: z.string().trim().min(1).max(20).optional(),
     productPhotoMediaId: uuidField.optional().nullable(),
     galleryMediaIds: z.array(uuidField).max(5, 'Maximum 5 gallery images allowed').optional(),
     isActive: z.boolean().optional(),

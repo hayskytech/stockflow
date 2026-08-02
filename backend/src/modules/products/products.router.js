@@ -19,7 +19,7 @@ import {
 export const productsRouter = Router();
 
 const productsPagination = pagination({
-  sortable: ['name', 'product_code', 'mrp', 'wsp', 'quantity_available', 'created_at'],
+  sortable: ['name', 'product_code', 'price', 'discount_percent', 'quantity_available', 'created_at'],
   defaultSort: 'created_at',
 });
 
