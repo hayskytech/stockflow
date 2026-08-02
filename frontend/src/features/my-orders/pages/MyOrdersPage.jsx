@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { DataTable } from "@/components/common/DataTable"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
+import { BackorderBadge } from "@/components/ui/BackorderBadge"
 import { useMyOrders } from "@/features/my-orders/hooks/use-my-orders"
 import { formatMoney, formatDateTimeIST } from "@/lib/format"
 import { ROUTES } from "@/constants/routes"
@@ -20,7 +21,20 @@ export function MyOrdersPage() {
     },
     { key: "createdAt", label: "Placed", render: (row) => formatDateTimeIST(row.createdAt) },
     { key: "totalAmount", label: "Amount", render: (row) => formatMoney(row.totalAmount) },
-    { key: "status", label: "Status", render: (row) => <OrderStatusBadge status={row.status} /> },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => (
+        <>
+          <OrderStatusBadge status={row.status} />
+          {row.isBackorder ? (
+            <div className="mt-1">
+              <BackorderBadge />
+            </div>
+          ) : null}
+        </>
+      ),
+    },
     { key: "paymentStatus", label: "Payment", render: (row) => <PaymentStatusBadge status={row.paymentStatus} /> },
   ]
 

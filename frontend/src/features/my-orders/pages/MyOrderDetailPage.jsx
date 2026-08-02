@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
+import { BackorderBadge } from "@/components/ui/BackorderBadge"
 import { useCancelMyOrder, useMyOrder } from "@/features/my-orders/hooks/use-my-orders"
 import { formatMoney, formatDateTimeIST } from "@/lib/format"
 import { resolveMediaUrl } from "@/lib/media"
@@ -53,13 +54,28 @@ export function MyOrderDetailPage() {
 
       {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
 
+      {order.isBackorder && order.status === "pending" ? (
+        <div className="alert alert-warning" id="my-order-backorder-banner">
+          <i className="fas fa-clock mr-2" />
+          <strong>Back-order — awaiting restock.</strong> One or more items weren&apos;t in stock when you placed
+          this order. We&apos;ll accept it as soon as stock is available.
+        </div>
+      ) : null}
+
       <div className="row">
         <div className="col-12 col-md-8">
           <div className="card mb-4">
             <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="card-title float-none mb-0">Items</h5>
-                <OrderStatusBadge status={order.status} />
+                <div>
+                  <OrderStatusBadge status={order.status} />
+                  {order.isBackorder ? (
+                    <span className="ml-2">
+                      <BackorderBadge />
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <div className="table-responsive">
                 <table className="table">

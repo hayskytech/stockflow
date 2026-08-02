@@ -57,7 +57,10 @@ export function CartPage() {
                   </div>
 
                   <div style={{ minWidth: 0 }}>
-                    <h6 className="mb-1 text-truncate">{item.name}</h6>
+                    <h6 className="mb-1 text-truncate">
+                      {item.name}
+                      {item.isBackorder ? <span className="badge badge-warning ml-2">Back-order</span> : null}
+                    </h6>
                     <p className="text-muted small mb-1">{[item.color, item.size].filter(Boolean).join(" · ")}</p>
                     <div className="d-sm-none">
                       {Number(item.discountPercent) > 0 ? (

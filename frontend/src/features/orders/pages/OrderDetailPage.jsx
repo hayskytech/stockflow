@@ -4,6 +4,7 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
+import { BackorderBadge } from "@/components/ui/BackorderBadge"
 import { useOrder, useUpdateOrderStatus, useUpdatePaymentStatus } from "@/features/orders/hooks/use-orders"
 import { formatDateTimeIST } from "@/lib/format"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
@@ -63,6 +64,14 @@ export function OrderDetailPage() {
 
       {serverError ? <div className="alert alert-danger">{serverError}</div> : null}
 
+      {order.isBackorder && order.status === "pending" ? (
+        <div className="alert alert-warning" id="order-backorder-banner">
+          <i className="fas fa-clock mr-2" />
+          <strong>Back-order — awaiting restock.</strong> At least one item didn&apos;t have enough stock when this
+          order was placed. Accepting will re-check stock and succeed once it's available.
+        </div>
+      ) : null}
+
       <div className="row">
         <div className="col-md-8">
           <div className="card mb-4">
@@ -71,6 +80,11 @@ export function OrderDetailPage() {
                 <h5 className="card-title float-none mb-0">Items</h5>
                 <div>
                   <OrderStatusBadge status={order.status} />
+                  {order.isBackorder ? (
+                    <span className="ml-2">
+                      <BackorderBadge />
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div className="table-responsive">

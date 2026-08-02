@@ -412,6 +412,7 @@ CREATE TABLE orders (
   requested_by  CHAR(36)      NOT NULL                              COMMENT 'User who placed the order',
   status        ENUM('pending','accepted','rejected','dispatched','completed','cancelled')
                 NOT NULL DEFAULT 'pending',
+  is_backorder  BOOLEAN       NOT NULL DEFAULT FALSE            COMMENT 'At least one line was accepted against insufficient stock at order time',
 
   payment_method  ENUM('bank_transfer','offline') NOT NULL DEFAULT 'bank_transfer' COMMENT 'offline = manual order entered by admin/staff, payment settled outside the app',
   transaction_id  VARCHAR(100)  NULL                                COMMENT 'Bank transfer reference/UTR number entered by the customer - NULL for offline orders',
@@ -436,6 +437,7 @@ CREATE TABLE orders (
   UNIQUE KEY uq_orders_order_number    (order_number),
   UNIQUE KEY uq_orders_idempotency_key (idempotency_key),
   KEY idx_orders_status          (status),
+  KEY idx_orders_is_backorder    (is_backorder),
   KEY idx_orders_requested_by    (requested_by),
   KEY idx_orders_created_at      (created_at),
   KEY idx_orders_payment_status  (payment_status),

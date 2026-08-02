@@ -23,6 +23,7 @@ export function ProductDetailPage() {
   const [justAdded, setJustAdded] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState(null)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [backorderConsent, setBackorderConsent] = useState(false)
 
   useEffect(() => {
     setSelectedImageUrl(null)
@@ -55,7 +56,7 @@ export function ProductDetailPage() {
       setLoginModalOpen(true)
       return
     }
-    addItem(product, quantity)
+    addItem(product, quantity, { isBackorder: outOfStock })
     setJustAdded(true)
   }
 
@@ -124,43 +125,61 @@ export function ProductDetailPage() {
 
           {product.description ? <p className="text-muted">{product.description}</p> : null}
 
-          {!outOfStock ? (
-            <>
-              <div className="form-group">
-                <label className="d-block small text-muted" htmlFor="product-detail-quantity">
-                  Quantity
-                </label>
-                <QuantitySelector
-                  id="product-detail-quantity"
-                  value={quantity}
-                  min={1}
-                  max={product.quantityAvailable}
-                  onChange={setQuantity}
+          <div className="form-group">
+            <label className="d-block small text-muted" htmlFor="product-detail-quantity">
+              Quantity
+            </label>
+            <QuantitySelector
+              id="product-detail-quantity"
+              value={quantity}
+              min={1}
+              max={outOfStock ? undefined : product.quantityAvailable}
+              onChange={setQuantity}
+            />
+          </div>
+
+          {outOfStock ? (
+            <div className="alert alert-secondary">
+              <p className="mb-2">This product is currently out of stock.</p>
+              <div className="custom-control custom-checkbox">
+                <input
+                  id="backorder-consent-checkbox"
+                  type="checkbox"
+                  className="custom-control-input"
+                  checked={backorderConsent}
+                  onChange={(e) => setBackorderConsent(e.target.checked)}
                 />
+                <label className="custom-control-label" htmlFor="backorder-consent-checkbox">
+                  Order anyway — I&apos;m okay waiting for restock (back-order)
+                </label>
               </div>
+            </div>
+          ) : null}
 
-              <button id="add-to-cart-button" type="button" className="btn btn-primary btn-lg" onClick={handleAddToCart}>
-                <i className="fas fa-cart-plus mr-2" />
-                Add to Cart
+          <button
+            id="add-to-cart-button"
+            type="button"
+            className="btn btn-primary btn-lg"
+            disabled={outOfStock && !backorderConsent}
+            onClick={handleAddToCart}
+          >
+            <i className="fas fa-cart-plus mr-2" />
+            {outOfStock ? "Order — Back-order" : "Add to Cart"}
+          </button>
+
+          {justAdded ? (
+            <div className="alert alert-success mt-3 py-2 d-flex align-items-center justify-content-between">
+              <span>{outOfStock ? "Added to your cart as a back-order." : "Added to your cart."}</span>
+              <button
+                id="view-cart-button"
+                type="button"
+                className="btn btn-sm btn-outline-success"
+                onClick={() => navigate(ROUTES.STORE.CART)}
+              >
+                View Cart
               </button>
-
-              {justAdded ? (
-                <div className="alert alert-success mt-3 py-2 d-flex align-items-center justify-content-between">
-                  <span>Added to your cart.</span>
-                  <button
-                    id="view-cart-button"
-                    type="button"
-                    className="btn btn-sm btn-outline-success"
-                    onClick={() => navigate(ROUTES.STORE.CART)}
-                  >
-                    View Cart
-                  </button>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className="alert alert-secondary">This product is currently out of stock.</div>
-          )}
+            </div>
+          ) : null}
         </div>
       </div>
 

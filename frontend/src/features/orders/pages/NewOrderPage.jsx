@@ -61,6 +61,7 @@ export function NewOrderPage() {
     defaultValues: {
       requestedFor: "",
       items: [{ productId: "", quantity: 1 }],
+      allowBackorder: false,
       paymentMethod: "offline",
       transactionId: "",
       shippingName: "",
@@ -79,6 +80,7 @@ export function NewOrderPage() {
         const order = await createOrder.mutateAsync({
           requestedFor: value.requestedFor,
           items: value.items.map((item) => ({ productId: item.productId, quantity: Number(item.quantity) })),
+          allowBackorder: value.allowBackorder || undefined,
           paymentMethod: value.paymentMethod,
           transactionId: value.paymentMethod === "bank_transfer" ? value.transactionId.trim() : undefined,
           shippingName: value.shippingName.trim(),
@@ -206,6 +208,23 @@ export function NewOrderPage() {
                         <i className="fas fa-plus mr-1" />
                         Add item
                       </button>
+                    </div>
+                  )}
+                </form.Field>
+
+                <form.Field name="allowBackorder">
+                  {(field) => (
+                    <div className="custom-control custom-checkbox mt-3">
+                      <input
+                        id="new-order-allow-backorder"
+                        type="checkbox"
+                        className="custom-control-input"
+                        checked={field.state.value}
+                        onChange={(e) => field.handleChange(e.target.checked)}
+                      />
+                      <label className="custom-control-label" htmlFor="new-order-allow-backorder">
+                        Allow back-order — place this order even if an item doesn&apos;t have enough stock right now
+                      </label>
                     </div>
                   )}
                 </form.Field>

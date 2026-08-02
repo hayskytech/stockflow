@@ -20,6 +20,9 @@ export const createOrderSchema = z
     transactionId: z.string().trim().min(6, 'Enter a valid transaction id').max(100, 'Transaction id is too long').optional(),
     // Admin/staff only: place the order on behalf of this customer (controller enforces role).
     requestedFor: uuidField.optional(),
+    // Opt-in: let a line through even if quantity_available is short — that line becomes a
+    // back-order, fulfilled later once stock lands, instead of blocking the whole order.
+    allowBackorder: z.boolean().optional(),
     shippingName: z.string().trim().min(2, 'Full name is required').max(100, 'Too long'),
     shippingPhone: phoneField,
     shippingAddressLine1: z.string().trim().min(3, 'Address is required').max(200, 'Too long'),
@@ -57,6 +60,10 @@ export const listOrdersQuerySchema = z.object({
   scope: z.enum(['own', 'all']).optional(),
   // Admin/staff only — the UserView "Orders"/"Payments" tabs filter to one specific user's orders.
   customerId: uuidField.optional(),
+  isBackorder: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === 'true')),
 });
 
 export const idParamSchema = z.object({ id: uuidField });

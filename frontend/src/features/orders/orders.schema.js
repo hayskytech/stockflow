@@ -14,6 +14,7 @@ export const manualOrderSchema = z
   .object({
     requestedFor: z.string().uuid("Choose the customer this order is for"),
     items: z.array(orderItemSchema).min(1, "Add at least one item"),
+    allowBackorder: z.boolean(),
     paymentMethod: z.enum(["offline", "bank_transfer"]),
     transactionId: z.string().trim(),
     shippingName: z.string().trim().min(2, "Full name is required").max(100, "Too long"),

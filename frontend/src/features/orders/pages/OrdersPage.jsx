@@ -6,6 +6,7 @@ import { DataTable } from "@/components/common/DataTable"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
+import { BackorderBadge } from "@/components/ui/BackorderBadge"
 import { useOrdersStore } from "@/features/orders/orders.store"
 import { useOrders, useUpdateOrderStatus } from "@/features/orders/hooks/use-orders"
 import { formatDateTimeIST } from "@/lib/format"
@@ -22,6 +23,8 @@ export function OrdersPage() {
   const setSearch = useOrdersStore((s) => s.setSearch)
   const statusFilter = useOrdersStore((s) => s.statusFilter)
   const setStatusFilter = useOrdersStore((s) => s.setStatusFilter)
+  const backorderFilter = useOrdersStore((s) => s.backorderFilter)
+  const setBackorderFilter = useOrdersStore((s) => s.setBackorderFilter)
   const dateFrom = useOrdersStore((s) => s.dateFrom)
   const setDateFrom = useOrdersStore((s) => s.setDateFrom)
   const dateTo = useOrdersStore((s) => s.dateTo)
@@ -35,6 +38,7 @@ export function OrdersPage() {
     per_page: 10,
     search: search || undefined,
     status: statusFilter || undefined,
+    is_backorder: backorderFilter ? "true" : undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
   })
@@ -68,7 +72,20 @@ export function OrdersPage() {
       ),
     },
     { key: "totalAmount", label: "Amount", render: (row) => formatMoney(row.totalAmount) },
-    { key: "status", label: "Status", render: (row) => <OrderStatusBadge status={row.status} /> },
+    {
+      key: "status",
+      label: "Status",
+      render: (row) => (
+        <>
+          <OrderStatusBadge status={row.status} />
+          {row.isBackorder ? (
+            <div className="mt-1">
+              <BackorderBadge />
+            </div>
+          ) : null}
+        </>
+      ),
+    },
     {
       key: "paymentStatus",
       label: "Payment",
@@ -179,6 +196,21 @@ export function OrdersPage() {
                 }}
               />
             </div>
+          </div>
+
+          <div className="mb-3">
+            <button
+              type="button"
+              id="orders-backorder-filter-chip"
+              className={`btn btn-sm ${backorderFilter ? "btn-warning" : "btn-outline-warning"}`}
+              onClick={() => {
+                setBackorderFilter(!backorderFilter)
+                setPage(1)
+              }}
+            >
+              <i className="fas fa-clock mr-1" />
+              Back-orders only
+            </button>
           </div>
 
           {serverError ? <div className="alert alert-danger">{serverError}</div> : null}

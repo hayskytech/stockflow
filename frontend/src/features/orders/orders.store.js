@@ -8,6 +8,9 @@ export const useOrdersStore = create((set) => ({
   statusFilter: "",
   setStatusFilter: (statusFilter) => set({ statusFilter }),
 
+  backorderFilter: false,
+  setBackorderFilter: (backorderFilter) => set({ backorderFilter }),
+
   dateFrom: "",
   setDateFrom: (dateFrom) => set({ dateFrom }),
 

@@ -5,7 +5,7 @@ import { AppError } from '../../middleware/errorHandler.js';
 import { effectivePrice } from '../../utils/pricing.js';
 
 const ORDER_COLUMNS = `
-  o.id, o.order_number AS orderNumber, o.status,
+  o.id, o.order_number AS orderNumber, o.status, o.is_backorder AS isBackorder,
   o.payment_method AS paymentMethod, o.transaction_id AS transactionId, o.payment_status AS paymentStatus,
   o.total_amount AS totalAmount,
   o.shipping_name AS shippingName, o.shipping_phone AS shippingPhone,
@@ -50,6 +50,10 @@ export async function listOrders(listQuery, filters, requester) {
   if (filters.status) {
     conditions.push('o.status = ?');
     params.push(filters.status);
+  }
+  if (filters.isBackorder !== undefined) {
+    conditions.push('o.is_backorder = ?');
+    params.push(filters.isBackorder);
   }
   if (filters.dateFrom) {
     conditions.push('o.created_at >= ?');
@@ -143,6 +147,8 @@ export async function createOrder(input, userId) {
 
   const orderId = crypto.randomUUID();
 
+  let isBackorder = false;
+
   await withTransaction(async (execute) => {
     const failures = [];
     const validItems = [];
@@ -156,11 +162,18 @@ export async function createOrder(input, userId) {
         [item.productId],
       );
       if (!product) {
+        // Nonexistent/inactive products hard-fail regardless of allowBackorder — that flag is
+        // about quantity shortfalls only, never about ordering something that isn't sellable.
         failures.push(`One of the selected products no longer exists`);
       } else if (!product.isActive) {
         failures.push(`${product.name} is no longer available`);
       } else if (product.quantityAvailable < item.quantity) {
-        failures.push(`${product.name} — only ${product.quantityAvailable} left in stock`);
+        if (input.allowBackorder) {
+          isBackorder = true;
+          validItems.push({ ...item, product });
+        } else {
+          failures.push(`${product.name} — only ${product.quantityAvailable} left in stock`);
+        }
       } else {
         validItems.push({ ...item, product });
       }
@@ -181,14 +194,15 @@ export async function createOrder(input, userId) {
       try {
         await execute(
           `INSERT INTO orders (
-             id, order_number, requested_by, status, payment_method, transaction_id, payment_status,
+             id, order_number, requested_by, status, is_backorder, payment_method, transaction_id, payment_status,
              total_amount, shipping_name, shipping_phone, shipping_address_line1, shipping_address_line2,
              shipping_city, shipping_state, shipping_pincode, idempotency_key, notes
-           ) VALUES (?, ?, ?, 'pending', ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           ) VALUES (?, ?, ?, 'pending', ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             orderId,
             orderNumber,
             ownerId,
+            isBackorder,
             input.paymentMethod ?? 'bank_transfer',
             input.transactionId ?? null,
             totalAmount.toFixed(2),

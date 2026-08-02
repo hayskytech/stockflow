@@ -53,6 +53,15 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
   // creating a duplicate.
   const [idempotencyKey] = useState(() => crypto.randomUUID())
   const [serverError, setServerError] = useState("")
+  // Some items were already flagged as back-order when added to the cart (product was out of
+  // stock at the time). A second case — stock sold out between add-to-cart and checkout — is
+  // only discoverable from the 409 the server returns on submit: `stockRanOutOnSubmit` reveals
+  // an explicit opt-in checkbox instead of forcing it on, so the customer still knowingly agrees.
+  const [stockRanOutOnSubmit, setStockRanOutOnSubmit] = useState(false)
+  const [backorderOptIn, setBackorderOptIn] = useState(false)
+
+  const hasBackorderItems = items.some((item) => item.isBackorder)
+  const allowBackorder = hasBackorderItems || backorderOptIn
 
   const subtotal = items.reduce((sum, item) => sum + effectivePrice(item.price, item.discountPercent) * item.quantity, 0)
 
@@ -84,6 +93,7 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
           shippingPincode: value.pincode,
           notes: value.notes,
           idempotencyKey,
+          allowBackorder: allowBackorder || undefined,
         })
         // Navigate before clearing the cart — clearing first drops `items` to empty while
         // CheckoutPage is still mounted, which trips its own `items.length === 0` guard and
@@ -91,6 +101,9 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
         navigate(ROUTES.STORE.ORDER_DETAIL(order.id))
         clearCart()
       } catch (err) {
+        if (err.response?.status === 409 && !allowBackorder) {
+          setStockRanOutOnSubmit(true)
+        }
         setServerError(err.response?.data?.message ?? "Could not place order. Please try again.")
       }
     },
@@ -99,6 +112,15 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
   return (
     <div>
       <h2 className="mb-4">Checkout</h2>
+
+      {hasBackorderItems ? (
+        <div className="alert alert-warning" id="checkout-backorder-notice">
+          <i className="fas fa-triangle-exclamation mr-2" />
+          Your cart includes item(s) that are currently out of stock. This order will be placed as a{" "}
+          <strong>back-order</strong> — it ships once the item(s) are restocked.
+        </div>
+      ) : null}
+
       <div className="row">
         <div className="col-12 col-md-7">
           <div className="card mb-4">
@@ -271,6 +293,21 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
                 </form.Field>
 
                 {serverError ? <div className="alert alert-danger py-2">{serverError}</div> : null}
+
+                {stockRanOutOnSubmit ? (
+                  <div className="custom-control custom-checkbox mb-3">
+                    <input
+                      id="checkout-backorder-retry-checkbox"
+                      type="checkbox"
+                      className="custom-control-input"
+                      checked={backorderOptIn}
+                      onChange={(e) => setBackorderOptIn(e.target.checked)}
+                    />
+                    <label className="custom-control-label" htmlFor="checkout-backorder-retry-checkbox">
+                      Order anyway — I&apos;m okay waiting for restock (back-order), then submit again
+                    </label>
+                  </div>
+                ) : null}
 
                 <form.Subscribe selector={(state) => state.isSubmitting}>
                   {(isSubmitting) => (

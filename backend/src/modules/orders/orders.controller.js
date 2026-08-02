@@ -24,6 +24,7 @@ export async function listOrders(req, res, next) {
       dateTo: req.query.date_to,
       scope: req.query.scope,
       customerId: req.query.customer_id,
+      isBackorder: req.query.is_backorder,
     });
     const { rows, total } = await ordersService.listOrders(req.listQuery, filters, req.user);
     setPaginationHeaders(res, total, req.listQuery.perPage);
