@@ -140,6 +140,18 @@
   font-weight: 600;
 }
 
+#store-nav-menu .nav-link.btn-link {
+  color: #495057;
+  font-weight: 500;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+#store-nav-menu .nav-item:hover .nav-link.btn-link,
+#store-nav-menu .nav-item.show .nav-link.btn-link {
+  color: #007bff;
+}
+
 .store-notice-bar {
   background: linear-gradient(90deg, #ffc107, #ff9800);
   color: #212529;

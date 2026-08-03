@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { StoreTopbar } from "@/components/layout/StoreTopbar"
+import { StoreNavMenu } from "@/components/layout/StoreNavMenu"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
 import { useNoticePublic } from "@/hooks/use-notice-public"
@@ -27,6 +28,7 @@ export function StoreShell() {
   return (
     <div className="storefront min-vh-100 bg-light">
       <StoreTopbar />
+      <StoreNavMenu />
       {notice?.message ? (
         <div id="store-notice-bar" className="store-notice-bar">
           <div className="store-notice-bar-track">
