@@ -4,42 +4,53 @@ import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-opti
 import { useHomeStore } from "@/features/home/home.store"
 import { ROUTES } from "@/constants/routes"
 
+/** True on devices where hover is the primary input (desktop/mouse) — on these, hover
+ *  alone should control the dropdown, since a click-to-toggle on top of hover-to-open
+ *  means a click right after the hover-open instantly closes it again. */
+function hasHoverSupport() {
+  return typeof window !== "undefined" && window.matchMedia?.("(hover: hover)").matches
+}
+
 /** One division's dropdown trigger + its categories as sub-menu items. Fetches its own
  *  categories so the parent menu doesn't need to load every division's categories upfront. */
 function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
-  const { data: categories = [] } = useCategoryOptions(division.id)
-  const setDivisionFilter = useHomeStore((s) => s.setDivisionFilter)
-  const setCategoryFilter = useHomeStore((s) => s.setCategoryFilter)
+  const { data: categories = [] } = useCategoryOptions(division.id, true)
   const navigate = useNavigate()
 
   function goToDivision() {
-    setDivisionFilter(division.id)
-    navigate(ROUTES.STORE.HOME)
+    navigate(ROUTES.STORE.DIVISION_DETAIL(division.id))
     onClose()
   }
 
   function goToCategory(category) {
-    setDivisionFilter(division.id)
-    setCategoryFilter(category.id)
-    navigate(ROUTES.STORE.HOME)
+    navigate(ROUTES.STORE.CATEGORY_DETAIL(category.id))
     onClose()
   }
 
+  function handleTriggerClick() {
+    if (!hasHoverSupport() && !isOpen) {
+      onOpen(division.id)
+      return
+    }
+    goToDivision()
+  }
+
   return (
-    <li className={`nav-item dropdown ${isOpen ? "show" : ""}`}>
+    <li
+      className={`nav-item dropdown ${isOpen ? "show" : ""}`}
+      onMouseEnter={() => onOpen(division.id)}
+      onMouseLeave={onClose}
+    >
       <button
         type="button"
         id={`store-nav-division-${division.id}`}
         className="nav-link btn btn-link"
-        onClick={() => (isOpen ? onClose() : onOpen(division.id))}
+        onClick={handleTriggerClick}
       >
         {division.name}
+        <i className="fas fa-caret-down ml-1" />
       </button>
       <div className={`dropdown-menu ${isOpen ? "show" : ""}`}>
-        <button type="button" className="dropdown-item font-weight-bold" onClick={goToDivision}>
-          All {division.name}
-        </button>
-        {categories.length > 0 ? <div className="dropdown-divider" /> : null}
         {categories.map((category) => (
           <button
             key={category.id}
@@ -57,10 +68,11 @@ function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
 }
 
 /** Secondary storefront nav row: Home + one menu item per division, with that division's
- *  categories listed as a dropdown of sub-menu items. Drives the same home.store filters
- *  used by StoreSidebar, so picking a category here matches picking it in the sidebar. */
+ *  categories listed as a dropdown of sub-menu items. Picking "Home" resets the Home page's
+ *  own filter sidebar; picking a division/category here navigates straight to its dedicated
+ *  Division/Category page instead. */
 export function StoreNavMenu() {
-  const { data: divisions = [] } = useDivisionOptions()
+  const { data: divisions = [] } = useDivisionOptions(true)
   const [openDivisionId, setOpenDivisionId] = useState(null)
   const clearFilters = useHomeStore((s) => s.clearFilters)
   const navigate = useNavigate()

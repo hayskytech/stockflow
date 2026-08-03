@@ -152,6 +152,10 @@
   color: #007bff;
 }
 
+#store-nav-menu .dropdown-menu {
+  margin-top: 0;
+}
+
 .store-notice-bar {
   background: linear-gradient(90deg, #ffc107, #ff9800);
   color: #212529;

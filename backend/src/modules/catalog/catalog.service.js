@@ -49,10 +49,20 @@ async function assertNameNotTaken(table, name, message, { scopeColumn, scopeValu
 // Divisions
 // ---------------------------------------------------------------------------
 
-export async function listDivisions(listQuery) {
+export async function listDivisions(listQuery, filters = {}) {
   const { perPage, offset, search, orderby, order } = listQuery;
-  const where = search ? 'WHERE name LIKE ?' : '';
-  const params = search ? [`%${search}%`] : [];
+
+  const conditions = [];
+  const params = [];
+  if (search) {
+    conditions.push('name LIKE ?');
+    params.push(`%${search}%`);
+  }
+  if (filters.isActive !== undefined) {
+    conditions.push('is_active = ?');
+    params.push(filters.isActive);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const [rows, countRows] = await Promise.all([
     executeQuery(
@@ -226,6 +236,10 @@ export async function listCategories(listQuery, filters) {
     conditions.push('c.division_id = ?');
     params.push(filters.divisionId);
   }
+  if (filters.isActive !== undefined) {
+    conditions.push('c.is_active = ?');
+    params.push(filters.isActive);
+  }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const [rows, countRows] = await Promise.all([
@@ -348,6 +362,10 @@ export async function listSubCategories(listQuery, filters) {
   if (filters.categoryId) {
     conditions.push('category_id = ?');
     params.push(filters.categoryId);
+  }
+  if (filters.isActive !== undefined) {
+    conditions.push('is_active = ?');
+    params.push(filters.isActive);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 

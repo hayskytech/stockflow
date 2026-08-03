@@ -11,34 +11,41 @@ import { API_ENDPOINTS } from "@/constants/api"
 
 export const CATALOG_OPTIONS_QUERY_KEY = "catalogOptions"
 
-export function useDivisionOptions() {
+/**
+ * `isActive` is left undefined (no filter, admin sees everything including deactivated rows)
+ * by default — callers browsing the public storefront (nav, sidebar, division/category pages)
+ * pass `isActive: true` explicitly so customers never see a deactivated division/category.
+ */
+export function useDivisionOptions(isActive) {
   return useQuery({
-    queryKey: [CATALOG_OPTIONS_QUERY_KEY, "divisions"],
+    queryKey: [CATALOG_OPTIONS_QUERY_KEY, "divisions", isActive ?? null],
     queryFn: async () => {
-      const { data } = await apiClient.get(API_ENDPOINTS.DIVISIONS.LIST, { params: { per_page: 100, order: "asc" } })
-      return data
-    },
-  })
-}
-
-export function useCategoryOptions(divisionId) {
-  return useQuery({
-    queryKey: [CATALOG_OPTIONS_QUERY_KEY, "categories", divisionId ?? null],
-    queryFn: async () => {
-      const { data } = await apiClient.get(API_ENDPOINTS.CATEGORIES.LIST, {
-        params: { per_page: 100, division_id: divisionId || undefined, order: "asc" },
+      const { data } = await apiClient.get(API_ENDPOINTS.DIVISIONS.LIST, {
+        params: { per_page: 100, order: "asc", is_active: isActive },
       })
       return data
     },
   })
 }
 
-export function useSubCategoryOptions(categoryId) {
+export function useCategoryOptions(divisionId, isActive) {
   return useQuery({
-    queryKey: [CATALOG_OPTIONS_QUERY_KEY, "subCategories", categoryId ?? null],
+    queryKey: [CATALOG_OPTIONS_QUERY_KEY, "categories", divisionId ?? null, isActive ?? null],
+    queryFn: async () => {
+      const { data } = await apiClient.get(API_ENDPOINTS.CATEGORIES.LIST, {
+        params: { per_page: 100, division_id: divisionId || undefined, order: "asc", is_active: isActive },
+      })
+      return data
+    },
+  })
+}
+
+export function useSubCategoryOptions(categoryId, isActive) {
+  return useQuery({
+    queryKey: [CATALOG_OPTIONS_QUERY_KEY, "subCategories", categoryId ?? null, isActive ?? null],
     queryFn: async () => {
       const { data } = await apiClient.get(API_ENDPOINTS.SUB_CATEGORIES.LIST, {
-        params: { per_page: 100, category_id: categoryId || undefined, order: "asc" },
+        params: { per_page: 100, category_id: categoryId || undefined, order: "asc", is_active: isActive },
       })
       return data
     },

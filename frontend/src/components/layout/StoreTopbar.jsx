@@ -61,7 +61,11 @@ export function StoreTopbar() {
               ) : null}
             </Link>
           </li>
-          <li className={`nav-item dropdown ${menuOpen ? "show" : ""}`}>
+          <li
+            className={`nav-item dropdown ${menuOpen ? "show" : ""}`}
+            onMouseEnter={() => setMenuOpen(true)}
+            onMouseLeave={() => setMenuOpen(false)}
+          >
             <button
               type="button"
               className="nav-link btn btn-link text-white"
@@ -69,6 +73,7 @@ export function StoreTopbar() {
             >
               <i className="far fa-user mr-md-1" />
               <span className="d-none d-md-inline">{user?.name ?? "Account"}</span>
+              <i className="fas fa-caret-down ml-1" />
             </button>
             <div className={`dropdown-menu dropdown-menu-right ${menuOpen ? "show" : ""}`}>
               {user ? (

@@ -12,6 +12,8 @@ import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
 import { ProfilePage } from "@/features/auth/pages/ProfilePage"
 import { HomePage } from "@/features/home/pages/HomePage"
 import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
+import { DivisionPage } from "@/features/division-detail/pages/DivisionPage"
+import { CategoryPage } from "@/features/category-detail/pages/CategoryPage"
 import { ProductDetailPage as AdminProductDetailPage } from "@/features/products/pages/ProductDetailPage"
 import { CartPage } from "@/features/cart/pages/CartPage"
 import { CheckoutPage } from "@/features/checkout/pages/CheckoutPage"
@@ -79,6 +81,14 @@ export const router = createHashRouter([
       {
         path: "products/:id",
         element: <ProductDetailPage />,
+      },
+      {
+        path: "divisions/:id",
+        element: <DivisionPage />,
+      },
+      {
+        path: "categories/:id",
+        element: <CategoryPage />,
       },
       {
         path: "cart",

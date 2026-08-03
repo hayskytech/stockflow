@@ -31,9 +31,20 @@ export const updateCategorySchema = createCategorySchema.partial().refine((data)
   message: 'At least one field is required',
 });
 
-/** GET /api/categories?division_id=... */
+const isActiveQueryField = z
+  .enum(['true', 'false'])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v === 'true'));
+
+/** GET /api/divisions?is_active=... */
+export const listDivisionsQuerySchema = z.object({
+  isActive: isActiveQueryField,
+});
+
+/** GET /api/categories?division_id=&is_active=... */
 export const listCategoriesQuerySchema = z.object({
   divisionId: uuidField.optional(),
+  isActive: isActiveQueryField,
 });
 
 /** POST /api/sub-categories */
@@ -50,9 +61,10 @@ export const updateSubCategorySchema = createSubCategorySchema
     message: 'At least one field is required',
   });
 
-/** GET /api/sub-categories?category_id=... */
+/** GET /api/sub-categories?category_id=&is_active=... */
 export const listSubCategoriesQuerySchema = z.object({
   categoryId: uuidField.optional(),
+  isActive: isActiveQueryField,
 });
 
 export const idParamSchema = z.object({ id: uuidField });

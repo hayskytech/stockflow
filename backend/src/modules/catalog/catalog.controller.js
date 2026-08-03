@@ -7,6 +7,7 @@ import {
   createSubCategorySchema,
   idParamSchema,
   listCategoriesQuerySchema,
+  listDivisionsQuerySchema,
   listSubCategoriesQuerySchema,
   reorderCategoriesSchema,
   reorderDivisionsSchema,
@@ -30,7 +31,8 @@ function parseOrThrow(schema, data) {
 /** GET /api/divisions */
 export async function listDivisions(req, res, next) {
   try {
-    const { rows, total } = await catalogService.listDivisions(req.listQuery);
+    const filters = parseOrThrow(listDivisionsQuerySchema, { isActive: req.query.is_active });
+    const { rows, total } = await catalogService.listDivisions(req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -112,7 +114,10 @@ export async function reorderDivisions(req, res, next) {
 /** GET /api/categories */
 export async function listCategories(req, res, next) {
   try {
-    const filters = parseOrThrow(listCategoriesQuerySchema, { divisionId: req.query.division_id });
+    const filters = parseOrThrow(listCategoriesQuerySchema, {
+      divisionId: req.query.division_id,
+      isActive: req.query.is_active,
+    });
     const { rows, total } = await catalogService.listCategories(req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
@@ -184,7 +189,10 @@ export async function reorderCategories(req, res, next) {
 /** GET /api/sub-categories */
 export async function listSubCategories(req, res, next) {
   try {
-    const filters = parseOrThrow(listSubCategoriesQuerySchema, { categoryId: req.query.category_id });
+    const filters = parseOrThrow(listSubCategoriesQuerySchema, {
+      categoryId: req.query.category_id,
+      isActive: req.query.is_active,
+    });
     const { rows, total } = await catalogService.listSubCategories(req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);

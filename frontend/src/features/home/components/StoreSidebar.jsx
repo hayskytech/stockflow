@@ -22,9 +22,9 @@ export function StoreSidebar() {
   const setPriceRange = useHomeStore((s) => s.setPriceRange)
   const clearFilters = useHomeStore((s) => s.clearFilters)
 
-  const { data: divisions = [] } = useDivisionOptions()
-  const { data: categories = [] } = useCategoryOptions(divisionFilter || undefined)
-  const { data: subCategories = [] } = useSubCategoryOptions(categoryFilter || undefined)
+  const { data: divisions = [] } = useDivisionOptions(true)
+  const { data: categories = [] } = useCategoryOptions(divisionFilter || undefined, true)
+  const { data: subCategories = [] } = useSubCategoryOptions(categoryFilter || undefined, true)
 
   const hasActiveFilters = Boolean(
     divisionFilter || categoryFilter || subCategoryFilter || minPrice !== undefined || maxPrice !== undefined,

@@ -14,7 +14,12 @@ export function NumberField({ id, field, min, max, step = "1", placeholder, disa
       placeholder={placeholder}
       disabled={disabled}
       value={field.state.value}
-      onChange={(e) => field.handleChange(e.target.valueAsNumber || 0)}
+      onChange={(e) => {
+        const { value, valueAsNumber } = e.target
+        // Keep the raw string while empty or mid-typing (e.g. "-", "1.") instead of
+        // snapping to 0, which made the field impossible to clear or edit past a NaN state.
+        field.handleChange(value === "" || Number.isNaN(valueAsNumber) ? value : valueAsNumber)
+      }}
       onBlur={field.handleBlur}
       onWheel={(e) => e.currentTarget.blur()}
     />

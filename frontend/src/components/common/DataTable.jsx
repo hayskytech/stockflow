@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { EmptyState } from "@/components/common/EmptyState"
+import { Pagination } from "@/components/common/Pagination"
 
 /** Persists which hideable columns are hidden, keyed per-table, so the choice survives a reload. */
 function useHiddenColumns(tableKey, hideableKeys) {
@@ -144,32 +145,7 @@ export function DataTable({
         </table>
       </div>
 
-      {totalPages > 1 ? (
-        <nav className="d-flex justify-content-end">
-          <ul className="pagination pagination-sm mb-0">
-            <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
-              <button type="button" className="page-link" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
-                Previous
-              </button>
-            </li>
-            <li className="page-item disabled">
-              <span className="page-link">
-                Page {page} of {totalPages}
-              </span>
-            </li>
-            <li className={`page-item ${page >= totalPages ? "disabled" : ""}`}>
-              <button
-                type="button"
-                className="page-link"
-                onClick={() => onPageChange(page + 1)}
-                disabled={page >= totalPages}
-              >
-                Next
-              </button>
-            </li>
-          </ul>
-        </nav>
-      ) : null}
+      <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
     </div>
   )
 }
