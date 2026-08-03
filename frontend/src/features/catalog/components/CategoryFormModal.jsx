@@ -2,10 +2,19 @@ import { useForm } from "@tanstack/react-form"
 import { Modal } from "@/components/ui/Modal"
 import { categorySchema } from "@/features/catalog/catalog.schema"
 
-export function CategoryFormModal({ open, category, divisions, onClose, onSubmit, isSubmitting, serverError }) {
+export function CategoryFormModal({
+  open,
+  category,
+  divisions,
+  defaultDivisionId,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  serverError,
+}) {
   const form = useForm({
     defaultValues: {
-      divisionId: category?.divisionId ?? "",
+      divisionId: category?.divisionId ?? defaultDivisionId ?? "",
       name: category?.name ?? "",
       isActive: category ? Boolean(category.isActive) : true,
     },

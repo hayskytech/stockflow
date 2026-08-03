@@ -97,6 +97,65 @@ export async function createDivision(input) {
   return getDivisionById(id);
 }
 
+/**
+ * Bulk-adds divisions from raw textarea lines. Never rejects the whole batch for bad rows —
+ * blank lines, names over the column's 100-char limit, names already in the DB, and names
+ * repeated within the same submission are all sorted into `skipped` with a reason instead.
+ */
+export async function bulkImportDivisions(rawNames) {
+  const existing = await executeQuery(`SELECT name FROM divisions`);
+  const existingNormalized = new Set(existing.map((row) => normalizeName(row.name)));
+
+  const seenNormalized = new Set();
+  const toCreate = [];
+  const skipped = [];
+
+  for (const raw of rawNames) {
+    const name = raw.trim();
+    if (!name) continue;
+    if (name.length > 100) {
+      skipped.push({ name, reason: 'Name is too long' });
+      continue;
+    }
+    const norm = normalizeName(name);
+    if (existingNormalized.has(norm)) {
+      skipped.push({ name, reason: 'Already exists' });
+      continue;
+    }
+    if (seenNormalized.has(norm)) {
+      skipped.push({ name, reason: 'Duplicated in the list' });
+      continue;
+    }
+    seenNormalized.add(norm);
+    toCreate.push(name);
+  }
+
+  if (toCreate.length === 0) return { created: [], skipped };
+
+  let sortOrder = await nextSortOrder('divisions');
+  const createdIds = [];
+  await withTransaction(async (execute) => {
+    for (const name of toCreate) {
+      const id = crypto.randomUUID();
+      await execute(`INSERT INTO divisions (id, name, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
+        id,
+        name,
+        true,
+        sortOrder,
+      ]);
+      createdIds.push(id);
+      sortOrder += 1;
+    }
+  });
+
+  const created = await executeQuery(
+    `SELECT ${DIVISION_COLUMNS} FROM divisions WHERE id IN (${createdIds.map(() => '?').join(', ')}) ORDER BY sort_order ASC`,
+    createdIds,
+  );
+
+  return { created, skipped };
+}
+
 /** Persists a full manual reorder — every existing division id must be present exactly once. */
 export async function reorderDivisions(orderedIds) {
   const existing = await executeQuery(`SELECT id FROM divisions`);

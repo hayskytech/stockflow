@@ -27,8 +27,10 @@ export function StoreShell() {
 
   return (
     <div className="storefront min-vh-100 bg-light">
-      <StoreTopbar />
-      <StoreNavMenu />
+      <div className="sticky-top">
+        <StoreTopbar />
+        <StoreNavMenu />
+      </div>
       {notice?.message ? (
         <div id="store-notice-bar" className="store-notice-bar">
           <div className="store-notice-bar-track">

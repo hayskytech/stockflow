@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
   DIVISIONS: {
     LIST: "/divisions",
     BY_ID: (id) => `/divisions/${id}`,
+    BULK_IMPORT: "/divisions/bulk-import",
     REORDER: "/divisions/reorder",
   },
   CATEGORIES: {

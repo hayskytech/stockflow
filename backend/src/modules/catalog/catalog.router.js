@@ -3,6 +3,7 @@ import { authenticate } from '../../middleware/auth.js';
 import { pagination } from '../../middleware/pagination.js';
 import { requireRole } from '../../middleware/requireRole.js';
 import {
+  bulkImportDivisions,
   createCategory,
   createDivision,
   createSubCategory,
@@ -10,6 +11,7 @@ import {
   deleteDivision,
   deleteSubCategory,
   getCategory,
+  getDivision,
   listCategories,
   listDivisions,
   listSubCategories,
@@ -30,7 +32,9 @@ const subCategoryPagination = pagination({ sortable: ['name', 'sort_order', 'cre
 // Divisions — reads are public (storefront filter sidebar needs no login), writes admin-only.
 // `/reorder` is declared before `/:id` so it's never captured by that param route.
 catalogRouter.get('/divisions', divisionPagination, listDivisions);
+catalogRouter.get('/divisions/:id', getDivision);
 catalogRouter.post('/divisions', authenticate, requireRole('admin'), createDivision);
+catalogRouter.post('/divisions/bulk-import', authenticate, requireRole('admin'), bulkImportDivisions);
 catalogRouter.patch('/divisions/reorder', authenticate, requireRole('admin'), reorderDivisions);
 catalogRouter.put('/divisions/:id', authenticate, requireRole('admin'), updateDivision);
 catalogRouter.delete('/divisions/:id', authenticate, requireRole('admin'), deleteDivision);

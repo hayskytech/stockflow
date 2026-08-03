@@ -16,6 +16,7 @@ export const ROUTES = {
   WAREHOUSE: "/warehouse",
   CATALOG: {
     DIVISIONS: "/catalog/divisions",
+    DIVISION_DETAIL: (id) => `/catalog/divisions/${id}`,
     CATEGORIES: "/catalog/categories",
     CATEGORY_DETAIL: (id) => `/catalog/categories/${id}`,
   },

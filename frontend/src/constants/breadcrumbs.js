@@ -12,6 +12,7 @@ export const CRUMBS = {
   DASHBOARD: () => [DASHBOARD_CRUMB],
   WAREHOUSE: () => trail({ label: "Warehouse" }),
   DIVISIONS: () => trail({ label: "Divisions" }),
+  DIVISION_DETAIL: () => trail({ label: "Divisions", to: ROUTES.CATALOG.DIVISIONS }, { label: "Categories" }),
   CATEGORIES: () => trail({ label: "Categories" }),
   CATEGORY_DETAIL: () => trail({ label: "Categories", to: ROUTES.CATALOG.CATEGORIES }, { label: "Sub-categories" }),
   SIZES: () => trail({ label: "Sizes" }),

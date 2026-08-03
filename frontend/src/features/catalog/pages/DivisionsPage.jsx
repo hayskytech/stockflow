@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -7,6 +8,7 @@ import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { DragHandle, useSortableList } from "@/components/common/SortableList"
 import { useAuthStore } from "@/store/auth.store"
 import { DivisionFormModal } from "@/features/catalog/components/DivisionFormModal"
+import { ImportDivisionsModal } from "@/features/catalog/components/ImportDivisionsModal"
 import {
   useCreateDivision,
   useDeleteDivision,
@@ -14,6 +16,7 @@ import {
   useReorderDivisions,
   useUpdateDivision,
 } from "@/features/catalog/hooks/use-divisions"
+import { ROUTES } from "@/constants/routes"
 
 export function DivisionsPage() {
   const isAdmin = useAuthStore((s) => s.user?.role === "admin")
@@ -22,6 +25,7 @@ export function DivisionsPage() {
   const [search, setSearch] = useState("")
   const [editingDivision, setEditingDivision] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [deletingDivision, setDeletingDivision] = useState(null)
   const [serverError, setServerError] = useState("")
 
@@ -85,7 +89,11 @@ export function DivisionsPage() {
 
   const columns = [
     ...(canReorder ? [{ key: "drag", label: "", render: () => <DragHandle /> }] : []),
-    { key: "name", label: "Name" },
+    {
+      key: "name",
+      label: "Name",
+      render: (row) => <Link to={ROUTES.CATALOG.DIVISION_DETAIL(row.id)}>{row.name}</Link>,
+    },
     {
       key: "isActive",
       label: "Status",
@@ -124,10 +132,21 @@ export function DivisionsPage() {
         description="Top-level product lines — Kids Wear, Mens Wear, Ladies Wear…"
         actions={
           isAdmin ? (
-            <button type="button" className="btn btn-primary" onClick={openAddModal}>
-              <i className="fas fa-plus mr-1" />
-              Add Division
-            </button>
+            <>
+              <button
+                type="button"
+                id="divisions-import-open-btn"
+                className="btn btn-secondary mr-2"
+                onClick={() => setIsImportModalOpen(true)}
+              >
+                <i className="fas fa-file-import mr-1" />
+                Import
+              </button>
+              <button type="button" id="divisions-add-btn" className="btn btn-primary" onClick={openAddModal}>
+                <i className="fas fa-plus mr-1" />
+                Add Division
+              </button>
+            </>
           ) : null
         }
       />
@@ -181,6 +200,8 @@ export function DivisionsPage() {
           serverError={serverError}
         />
       ) : null}
+
+      <ImportDivisionsModal open={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
 
       <ConfirmDialog
         open={Boolean(deletingDivision)}

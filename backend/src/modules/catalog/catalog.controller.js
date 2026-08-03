@@ -1,6 +1,7 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
 import {
+  bulkImportDivisionsSchema,
   createCategorySchema,
   createDivisionSchema,
   createSubCategorySchema,
@@ -37,6 +38,17 @@ export async function listDivisions(req, res, next) {
   }
 }
 
+/** GET /api/divisions/:id */
+export async function getDivision(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    const division = await catalogService.getDivisionById(id);
+    res.status(200).json(division);
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** POST /api/divisions */
 export async function createDivision(req, res, next) {
   try {
@@ -66,6 +78,17 @@ export async function deleteDivision(req, res, next) {
     const { id } = parseOrThrow(idParamSchema, req.params);
     await catalogService.deleteDivision(id);
     res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** POST /api/divisions/bulk-import */
+export async function bulkImportDivisions(req, res, next) {
+  try {
+    const { names } = parseOrThrow(bulkImportDivisionsSchema, req.body);
+    const result = await catalogService.bulkImportDivisions(names);
+    res.status(201).json(result);
   } catch (err) {
     next(err);
   }

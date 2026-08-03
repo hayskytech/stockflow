@@ -29,7 +29,7 @@ export function StoreTopbar() {
   }
 
   return (
-    <nav className="navbar navbar-expand navbar-dark bg-primary sticky-top">
+    <nav className="navbar navbar-expand navbar-dark bg-primary">
       <div className="container flex-wrap">
         <Link to={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
           {siteTitle}

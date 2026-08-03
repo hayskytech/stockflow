@@ -14,6 +14,11 @@ export const updateDivisionSchema = createDivisionSchema.partial().refine((data)
   message: 'At least one field is required',
 });
 
+/** POST /api/divisions/bulk-import — raw lines from a textarea; blanks/duplicates/oversized names are sorted into `skipped`, not rejected */
+export const bulkImportDivisionsSchema = z.object({
+  names: z.array(z.string()).min(1, 'At least one name is required').max(500, 'Cannot import more than 500 divisions at once'),
+});
+
 /** POST /api/categories */
 export const createCategorySchema = z.object({
   divisionId: uuidField,

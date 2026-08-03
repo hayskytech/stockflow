@@ -16,8 +16,18 @@ export async function listDivisionsApi(params) {
   return toListResult(res)
 }
 
+export async function getDivisionApi(id) {
+  const { data } = await apiClient.get(API_ENDPOINTS.DIVISIONS.BY_ID(id))
+  return data
+}
+
 export async function createDivisionApi(input) {
   const { data } = await apiClient.post(API_ENDPOINTS.DIVISIONS.LIST, input)
+  return data
+}
+
+export async function bulkImportDivisionsApi(names) {
+  const { data } = await apiClient.post(API_ENDPOINTS.DIVISIONS.BULK_IMPORT, { names })
   return data
 }
 

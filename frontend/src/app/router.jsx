@@ -18,6 +18,7 @@ import { CheckoutPage } from "@/features/checkout/pages/CheckoutPage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
 import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
 import { DivisionsPage } from "@/features/catalog/pages/DivisionsPage"
+import { DivisionDetailPage } from "@/features/catalog/pages/DivisionDetailPage"
 import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
 import { CategoryDetailPage } from "@/features/catalog/pages/CategoryDetailPage"
 import { ProductsPage } from "@/features/products/pages/ProductsPage"
@@ -141,6 +142,11 @@ export const router = createHashRouter([
         path: ROUTES.CATALOG.DIVISIONS,
         element: <DivisionsPage />,
         handle: { crumb: CRUMBS.DIVISIONS },
+      },
+      {
+        path: "/catalog/divisions/:id",
+        element: <DivisionDetailPage />,
+        handle: { crumb: CRUMBS.DIVISION_DETAIL },
       },
       {
         path: ROUTES.CATALOG.CATEGORIES,
