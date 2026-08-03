@@ -22,12 +22,15 @@ const piecesPerSet = z.coerce
 /** Optional first stock batch, created in the same request as the product. */
 const initialStockSchema = z.object({
   addStock: z.boolean(),
-  quantity: z.coerce
-    .number({ invalid_type_error: "Quantity must be a number" })
-    .int("Quantity must be a whole number")
-    .min(1, "Quantity must be at least 1")
-    .max(10000, "Quantity cannot exceed 10000")
-    .optional(),
+  quantity: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce
+      .number({ invalid_type_error: "Quantity must be a number" })
+      .int("Quantity must be a whole number")
+      .min(1, "Quantity must be at least 1")
+      .max(10000, "Quantity cannot exceed 10000")
+      .optional()
+  ),
   invoiceNo: z.string().trim().max(100, "Too long").optional(),
   invoiceDate: z.string().optional(),
   note: z.string().trim().max(500, "Too long").optional(),

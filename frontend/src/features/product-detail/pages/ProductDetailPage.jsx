@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { useProductDetail } from "@/features/product-detail/hooks/use-product-detail"
 import { useRelatedProducts } from "@/features/product-detail/hooks/use-related-products"
 import { QuantitySelector } from "@/components/ui/QuantitySelector"
@@ -64,9 +64,13 @@ export function ProductDetailPage() {
 
   return (
     <div>
-      <Link to={ROUTES.STORE.HOME} className="text-muted small mb-3 d-inline-block">
+      <button
+        type="button"
+        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate(ROUTES.STORE.HOME))}
+        className="btn btn-link text-muted small mb-3 p-0 border-0"
+      >
         <i className="fas fa-arrow-left mr-1" /> Back to shopping
-      </Link>
+      </button>
 
       <div className="row bg-white rounded shadow-sm p-3 p-md-4" id={`product-detail-${product.id}`}>
         <div className="col-12 col-md-5">
