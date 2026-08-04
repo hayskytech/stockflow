@@ -13,6 +13,8 @@ pipeline {
     parameters {
         booleanParam(name: 'DEPLOY_FRONTEND', defaultValue: true, description: 'Build & upload the frontend')
         booleanParam(name: 'DEPLOY_BACKEND', defaultValue: true, description: 'Upload backend source, npm install and restart the Node app')
+        booleanParam(name: 'NODE_INSTALL', defaultValue: false, description: 'npm install backend packages in CPANEL')
+        booleanParam(name: 'NODE_RESTART', defaultValue: false, description: 'Restart backend process in CPANEL')
         string(name: 'VITE_API_URL', defaultValue: 'https://wholesale.southcenter.in/api', description: 'Baked into the frontend build as VITE_API_URL')
     }
 
@@ -106,9 +108,9 @@ pipeline {
                 )
             }
         }
-        /*
+       
         stage('Install backend deps on server (SSH)') {
-            when { expression { params.DEPLOY_BACKEND } }
+            when { expression { params.NODE_INSTALL } }
             steps {
                 // "SSH Username with private key" credential — bound as a temp key file, no ssh-agent
                 // process needed (the SSH Agent plugin is unreliable on plain Windows agents).
@@ -137,7 +139,7 @@ pipeline {
         }
 
         stage('Restart backend app (cPanel API)') {
-            when { expression { params.DEPLOY_BACKEND } }
+            when { expression { params.NODE_RESTART } }
             steps {
                 withCredentials([string(credentialsId: 'cpanel-api-token', variable: 'CPANEL_API_TOKEN')]) {
                     powershell '''
@@ -150,7 +152,7 @@ pipeline {
                 }
             }
         }
-        */
+        
     }
 
     post {
