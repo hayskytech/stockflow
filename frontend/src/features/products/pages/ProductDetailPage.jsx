@@ -65,7 +65,7 @@ export function ProductDetailPage() {
         description={`${product.productCode} · ${product.categoryName}`}
         actions={
           <>
-            {canManage && product.quantityAvailable <= 0 ? (
+            {canManage ? (
               <button
                 type="button"
                 id="product-detail-add-stock-button"
