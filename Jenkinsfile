@@ -141,7 +141,7 @@ pipeline {
         stage('Restart backend app (cPanel API)') {
             when { expression { params.NODE_RESTART } }
             steps {
-                withCredentials([string(credentialsId: 'cpanel-api-token', variable: 'CPANEL_API_TOKEN')]) {
+                withCredentials([string(credentialsId: 'cpanel-token', variable: 'CPANEL_API_TOKEN')]) {
                     powershell '''
                         $headers = @{ Authorization = "cpanel $($env:CPANEL_USER):$($env:CPANEL_API_TOKEN)" }
                         $url = "https://$($env:CPANEL_API_HOST)/execute/NodeJSSelector/restart_app?app_name=$([uri]::EscapeDataString($env:CPANEL_APP_NAME))"
