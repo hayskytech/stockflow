@@ -72,7 +72,10 @@ pipeline {
                         usePromotionTimestamp: false
                     ]],
                     continueOnError: false,
-                    failOnError: true
+                    failOnError: true,
+                    alwaysPublishFromMaster: false,
+                    masterNodeName: '',
+                    paramPublish: null
                 )
             }
         }
@@ -96,7 +99,10 @@ pipeline {
                         usePromotionTimestamp: false
                     ]],
                     continueOnError: false,
-                    failOnError: true
+                    failOnError: true,
+                    alwaysPublishFromMaster: false,
+                    masterNodeName: '',
+                    paramPublish: null
                 )
             }
         }
