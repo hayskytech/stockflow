@@ -150,7 +150,11 @@ pipeline {
                     // cpsessNNNNNNNNNN session segment and use an API token in the Authorization header
                     // instead of the session cookie the browser sent.
                     powershell '''
-                        $headers = @{ Authorization = "cpanel $($env:CPANEL_USER):$($env:CPANEL_API_TOKEN)" }
+                        $headers = @{
+                            Authorization = "cpanel $($env:CPANEL_USER):$($env:CPANEL_API_TOKEN)"
+                            Referer       = "https://$($env:CPANEL_API_HOST)/"
+                            Origin        = "https://$($env:CPANEL_API_HOST)"
+                        }
                         $url = "https://$($env:CPANEL_API_HOST)/3rdparty/cloudlinux/cloudlinux-selector.cgi?cgiaction=sendRequest"
                         $appRoot = [uri]::EscapeDataString($env:CPANEL_APP_NAME)
                         $body = "command=cloudlinux-selector&method=restart&params[interpreter]=nodejs&params[app-root]=$appRoot"
