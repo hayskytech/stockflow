@@ -106,7 +106,7 @@ pipeline {
                 )
             }
         }
-
+        /*
         stage('Install backend deps on server (SSH)') {
             when { expression { params.DEPLOY_BACKEND } }
             steps {
@@ -150,6 +150,7 @@ pipeline {
                 }
             }
         }
+        */
     }
 
     post {
