@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom"
 import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
-import { useHomeStore } from "@/features/home/home.store"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { StoreSearchBox } from "@/components/layout/StoreSearchBox"
 import { ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"
 
@@ -13,8 +13,6 @@ export function StoreTopbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
-  const search = useHomeStore((s) => s.search)
-  const setSearch = useHomeStore((s) => s.setSearch)
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0))
   const siteTitle = useSiteTitle()
   const navigate = useNavigate()
@@ -37,14 +35,7 @@ export function StoreTopbar() {
 
         {/* Inline search — desktop only; on mobile it drops to its own full-width row below. */}
         <div className="d-none d-md-block flex-grow-1 mx-3" style={{ maxWidth: "480px" }}>
-          <input
-            id="store-search"
-            type="search"
-            className="form-control"
-            placeholder="Search products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <StoreSearchBox id="store-search" />
         </div>
 
         <ul className="navbar-nav flex-row align-items-center ml-auto">
@@ -111,14 +102,7 @@ export function StoreTopbar() {
 
         {/* Full-width search row — mobile only. */}
         <div className="d-md-none w-100 mt-2">
-          <input
-            id="store-search-mobile"
-            type="search"
-            className="form-control"
-            placeholder="Search products…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <StoreSearchBox id="store-search-mobile" />
         </div>
       </div>
     </nav>

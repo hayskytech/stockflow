@@ -9,7 +9,7 @@ Stock management webapp for a cloth business (dresses, sarees, kidware, menswear
 - **Database**: MySQL
 - **API Docs**: Swagger (swagger-jsdoc + swagger-ui-express)
 - **Frontend Docs**: Docsify
-- **Hosting**: cPanel Linux hosting (Node.js Selector) — no Docker, no CI/CD pipelines
+- **Hosting**: cPanel Linux hosting (Node.js Selector) — no Docker; deployed via a manually-triggered Jenkins pipeline (FTP + SSH + cPanel API) — see `Jenkinsfile` and `deployment_guide.md`
 
 ## Repo Structure
 

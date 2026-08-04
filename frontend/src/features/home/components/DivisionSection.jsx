@@ -3,16 +3,9 @@ import { useCategoryOptions } from "@/hooks/use-catalog-options"
 import { CategorySection } from "@/features/home/components/CategorySection"
 import { ROUTES } from "@/constants/routes"
 
-/** Cycled through by division index so each section reads as its own colorful "shelf" —
- *  purely a visual accent, not tied to any division data. */
-const DIVISION_GRADIENTS = [
-  "linear-gradient(135deg, #ff6a88, #ff9a5a)",
-  "linear-gradient(135deg, #4facfe, #00f2fe)",
-  "linear-gradient(135deg, #7f53ac, #647dee)",
-  "linear-gradient(135deg, #43e97b, #38f9d7)",
-  "linear-gradient(135deg, #f7971e, #ffd200)",
-  "linear-gradient(135deg, #f857a6, #ff5858)",
-]
+/** Cycled through by division index so each section reads as its own "shelf" via a subtle
+ *  accent border/link color — purely a visual accent, not tied to any division data. */
+const DIVISION_ACCENTS = ["#ff6a88", "#4facfe", "#7f53ac", "#43e97b", "#f7971e", "#f857a6"]
 
 /** Cap on how many of a division's categories get their own carousel row on the Home page —
  *  keeps the page from growing unbounded for divisions with many categories. The rest are
@@ -24,7 +17,7 @@ const CATEGORIES_PER_DIVISION = 4
  *  need to load every division's categories upfront. */
 export function DivisionSection({ division, index }) {
   const { data: categories = [] } = useCategoryOptions(division.id, true)
-  const gradient = DIVISION_GRADIENTS[index % DIVISION_GRADIENTS.length]
+  const accent = DIVISION_ACCENTS[index % DIVISION_ACCENTS.length]
   const visibleCategories = categories.slice(0, CATEGORIES_PER_DIVISION)
   const hiddenCount = categories.length - visibleCategories.length
 
@@ -32,7 +25,7 @@ export function DivisionSection({ division, index }) {
 
   return (
     <section id={`home-division-section-${division.id}`} className="home-division-section mb-5">
-      <div className="home-division-header" style={{ backgroundImage: gradient }}>
+      <div className="home-division-header" style={{ "--division-accent": accent }}>
         <h3 className="home-division-title mb-0">{division.name}</h3>
         <Link
           id={`home-division-view-all-${division.id}`}

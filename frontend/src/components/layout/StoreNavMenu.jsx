@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
-import { useHomeStore } from "@/features/home/home.store"
 import { ROUTES } from "@/constants/routes"
 
 /** True on devices where hover is the primary input (desktop/mouse) — on these, hover
@@ -68,17 +67,14 @@ function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
 }
 
 /** Secondary storefront nav row: Home + one menu item per division, with that division's
- *  categories listed as a dropdown of sub-menu items. Picking "Home" clears the search box;
- *  picking a division/category here navigates straight to its dedicated Division/Category
- *  page instead. */
+ *  categories listed as a dropdown of sub-menu items. Picking a division/category here
+ *  navigates straight to its dedicated Division/Category page instead. */
 export function StoreNavMenu() {
   const { data: divisions = [] } = useDivisionOptions(true)
   const [openDivisionId, setOpenDivisionId] = useState(null)
-  const setSearch = useHomeStore((s) => s.setSearch)
   const navigate = useNavigate()
 
   function goHome() {
-    setSearch("")
     navigate(ROUTES.STORE.HOME)
     setOpenDivisionId(null)
   }

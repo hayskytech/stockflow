@@ -134,6 +134,13 @@ export function ProductDetailPage() {
             {isSet ? <SetBadge piecesPerSet={product.piecesPerSet} /> : null}
           </div>
 
+          {!outOfStock ? (
+            <p id="product-detail-available-qty" className="text-muted small mb-3">
+              {product.quantityAvailable} {isSet ? "set" : "unit"}
+              {product.quantityAvailable === 1 ? "" : "s"} available
+            </p>
+          ) : null}
+
           {isSet ? (
             <p className="text-muted small mb-3">
               {formatMoney(effectivePrice(product.price, product.discountPercent))} per piece × {product.piecesPerSet} pieces

@@ -80,20 +80,27 @@
   background-color: rgba(52, 58, 64, 0.12);
 }
 
-.store-sidebar-header {
-  background: linear-gradient(135deg, #007bff, #17a2b8);
-  color: #fff;
-  border-radius: calc(0.25rem - 1px) calc(0.25rem - 1px) 0 0;
-  margin: -1px -1px 0;
-  padding: 1rem 1.25rem;
+.category-filter-bar-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
 }
 
-.store-sidebar-header .btn-link {
-  color: rgba(255, 255, 255, 0.9);
+.category-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.store-sidebar-header .btn-link:hover {
-  color: #fff;
+.category-filter-select {
+  width: auto;
+  min-width: 200px;
+}
+
+.category-filter-clear {
+  margin-left: auto;
 }
 
 .store-sidebar-section-title {
@@ -118,22 +125,25 @@
   color: #8a6200;
 }
 
-.store-price-band {
-  display: block;
-  padding: 0.4rem 0.75rem;
-  border-radius: 0.5rem;
+.store-price-band-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
   border: 1px solid #e9ecef;
-  margin-bottom: 0.4rem;
+  background: #fff;
+  font-size: 0.8rem;
+  color: #495057;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.store-price-band:hover {
+.store-price-band-pill:hover {
   background-color: rgba(0, 123, 255, 0.06);
   border-color: rgba(0, 123, 255, 0.3);
 }
 
-.store-price-band.active {
+.store-price-band-pill.active {
   background-color: rgba(0, 123, 255, 0.12);
   border-color: #007bff;
   color: #0056b3;
@@ -185,6 +195,90 @@
   }
 }
 
+.store-search-box {
+  width: 100%;
+}
+
+.store-search-dropdown {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  max-height: 380px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.store-search-dropdown-message {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.store-search-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.store-search-dropdown-item:hover {
+  background-color: rgba(0, 123, 255, 0.06);
+}
+
+.store-search-dropdown-item + .store-search-dropdown-item {
+  border-top: 1px solid #f1f3f5;
+}
+
+.store-search-dropdown-thumb {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.store-search-dropdown-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.store-search-dropdown-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.store-search-dropdown-name {
+  font-size: 0.85rem;
+  color: #212529;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.store-search-dropdown-price {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0056b3;
+}
+
 /* Home page — division sections & product carousels */
 
 .home-division-header {
@@ -194,30 +288,31 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-radius: 0.75rem;
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  background: #f8f9fa;
+  border-left: 4px solid var(--division-accent, #007bff);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   margin-bottom: 1.25rem;
 }
 
 .home-division-title {
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  color: #212529;
 }
 
 .home-division-view-all {
-  color: #fff;
+  color: var(--division-accent, #007bff);
   font-weight: 600;
   font-size: 0.85rem;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.04);
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .home-division-view-all:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--division-accent, #007bff);
   color: #fff;
   text-decoration: none;
 }
@@ -263,6 +358,26 @@
   flex: 0 0 auto;
   width: clamp(150px, 40vw, 210px);
   scroll-snap-align: start;
+}
+
+/* Tuned to fit exactly 4 cards (instead of ~5) across Bootstrap's container
+   max-widths at each breakpoint, so cards render bigger on desktop. */
+@media (min-width: 768px) {
+  .product-carousel-item {
+    width: 160px;
+  }
+}
+
+@media (min-width: 992px) {
+  .product-carousel-item {
+    width: 220px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .product-carousel-item {
+    width: 265px;
+  }
 }
 
 .product-carousel-viewmore {
