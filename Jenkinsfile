@@ -119,12 +119,17 @@ pipeline {
                     powershell '''
                         # Win32-OpenSSH refuses to load a private key that's readable by anyone but the
                         # current user — the Jenkins credential-binding temp file inherits the workspace's
-                        # default ACL (BUILTIN\\Users), so strip that before calling ssh.
+                        # default ACL (BUILTIN\\Users), so strip that before calling ssh. Grant to the
+                        # exact running identity (via whoami) rather than $env:USERNAME, which resolves
+                        # incorrectly when the Jenkins service runs as SYSTEM or another service account.
+                        $currentUser = (whoami).Trim()
                         icacls "$($env:SSH_KEY)" /inheritance:r | Out-Null
-                        icacls "$($env:SSH_KEY)" /grant:r "$($env:USERNAME):R" | Out-Null
+                        icacls "$($env:SSH_KEY)" /grant:r "$($currentUser):R" | Out-Null
 
+                        # BatchMode=yes: never fall back to an interactive password prompt — fail fast
+                        # instead of hanging forever with no TTY to answer it.
                         $remoteCmd = "source /home/$($env:CPANEL_USER)/nodevenv/$($env:BACKEND_REMOTE_DIR)/$($env:NODE_VERSION)/bin/activate && cd /home/$($env:CPANEL_USER)/$($env:BACKEND_REMOTE_DIR) && npm install --omit=dev && deactivate"
-                        ssh -o StrictHostKeyChecking=no -i "$($env:SSH_KEY)" -p $($env:CPANEL_SSH_PORT) "$($env:CPANEL_USER)@$($env:CPANEL_SSH_HOST)" $remoteCmd
+                        ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i "$($env:SSH_KEY)" -p $($env:CPANEL_SSH_PORT) "$($env:CPANEL_USER)@$($env:CPANEL_SSH_HOST)" $remoteCmd
                         if ($LASTEXITCODE -ne 0) { throw "ssh npm install failed with exit code $LASTEXITCODE" }
                     '''
                 }
