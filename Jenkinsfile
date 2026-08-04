@@ -117,6 +117,12 @@ pipeline {
                     // Setup Node.js App. A plain system `npm install` would use the wrong Node/ABI and
                     // can break native deps like `sharp` (see deployment_guide.md).
                     powershell '''
+                        # Win32-OpenSSH refuses to load a private key that's readable by anyone but the
+                        # current user — the Jenkins credential-binding temp file inherits the workspace's
+                        # default ACL (BUILTIN\\Users), so strip that before calling ssh.
+                        icacls "$($env:SSH_KEY)" /inheritance:r | Out-Null
+                        icacls "$($env:SSH_KEY)" /grant:r "$($env:USERNAME):R" | Out-Null
+
                         $remoteCmd = "source /home/$($env:CPANEL_USER)/nodevenv/$($env:BACKEND_REMOTE_DIR)/$($env:NODE_VERSION)/bin/activate && cd /home/$($env:CPANEL_USER)/$($env:BACKEND_REMOTE_DIR) && npm install --omit=dev && deactivate"
                         ssh -o StrictHostKeyChecking=no -i "$($env:SSH_KEY)" -p $($env:CPANEL_SSH_PORT) "$($env:CPANEL_USER)@$($env:CPANEL_SSH_HOST)" $remoteCmd
                         if ($LASTEXITCODE -ne 0) { throw "ssh npm install failed with exit code $LASTEXITCODE" }
