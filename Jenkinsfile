@@ -34,8 +34,10 @@ pipeline {
         CPANEL_USER     = 'southcenter'    // cPanel account username (needed for the nodevenv path)
         NODE_VERSION    = '20'             // must match the version picked in Setup Node.js App
 
-        CPANEL_API_HOST = 'wholesale.southcenter.in:2083'
-        CPANEL_APP_NAME = 'wholesale.southcenter.in/api' // confirm this is the exact value NodeJSSelector::restart_app expects for a nested app root — see deployment_guide.md
+        // Actual cPanel server hostname (confirmed via browser DevTools) — not the vanity domain,
+        // since that's what the CloudLinux Selector CGI endpoint actually lives on.
+        CPANEL_API_HOST = 's3607.bom1.stableserver.net:2083'
+        CPANEL_APP_NAME = 'wholesale.southcenter.in/api' // the app-root param the selector expects
     }
 
     stages {
@@ -142,12 +144,20 @@ pipeline {
             when { expression { params.NODE_RESTART } }
             steps {
                 withCredentials([string(credentialsId: 'cpanel-token', variable: 'CPANEL_API_TOKEN')]) {
+                    // This host uses CloudLinux's Node.js Selector, not cPanel's native UAPI — it's a
+                    // separate CGI endpoint (confirmed via the browser's Network tab while clicking
+                    // Restart in Setup Node.js App), authenticated the same way as UAPI: drop the
+                    // cpsessNNNNNNNNNN session segment and use an API token in the Authorization header
+                    // instead of the session cookie the browser sent.
                     powershell '''
                         $headers = @{ Authorization = "cpanel $($env:CPANEL_USER):$($env:CPANEL_API_TOKEN)" }
-                        $url = "https://$($env:CPANEL_API_HOST)/execute/NodeJSSelector/restart_app?app_name=$([uri]::EscapeDataString($env:CPANEL_APP_NAME))"
-                        $response = Invoke-RestMethod -Uri $url -Headers $headers
+                        $url = "https://$($env:CPANEL_API_HOST)/3rdparty/cloudlinux/cloudlinux-selector.cgi?cgiaction=sendRequest"
+                        $appRoot = [uri]::EscapeDataString($env:CPANEL_APP_NAME)
+                        $body = "command=cloudlinux-selector&method=restart&params[interpreter]=nodejs&params[app-root]=$appRoot"
+                        $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -ContentType 'application/x-www-form-urlencoded;charset=UTF-8' -Body $body
                         $response | ConvertTo-Json -Depth 5
-                        if ($response.status -ne 1) { throw "restart_app reported failure: $($response | ConvertTo-Json -Depth 5)" }
+                        # Response shape not yet verified against a real success case — check the printed
+                        # JSON on the first run and tighten this into a real pass/fail check afterward.
                     '''
                 }
             }
