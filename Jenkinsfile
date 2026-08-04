@@ -13,8 +13,6 @@ pipeline {
     parameters {
         booleanParam(name: 'DEPLOY_FRONTEND', defaultValue: true, description: 'Build & upload the frontend')
         booleanParam(name: 'DEPLOY_BACKEND', defaultValue: true, description: 'Upload backend source, npm install and restart the Node app')
-        booleanParam(name: 'NODE_INSTALL', defaultValue: false, description: 'npm install backend packages in CPANEL')
-        booleanParam(name: 'NODE_RESTART', defaultValue: false, description: 'Restart backend process in CPANEL')
         string(name: 'VITE_API_URL', defaultValue: 'https://wholesale.southcenter.in/api', description: 'Baked into the frontend build as VITE_API_URL')
     }
 
@@ -108,62 +106,6 @@ pipeline {
                     masterNodeName: '',
                     paramPublish: null
                 )
-            }
-        }
-       
-        stage('Install backend deps on server (SSH)') {
-            when { expression { params.NODE_INSTALL } }
-            steps {
-                // "SSH Username with private key" credential — bound as a temp key file, no ssh-agent
-                // process needed (the SSH Agent plugin is unreliable on plain Windows agents).
-                withCredentials([sshUserPrivateKey(credentialsId: 'cpanel-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                    // Activates cPanel's per-app nodevenv so npm matches the Node version picked in
-                    // Setup Node.js App. A plain system `npm install` would use the wrong Node/ABI and
-                    // can break native deps like `sharp` (see deployment_guide.md).
-                    powershell '''
-                        # Win32-OpenSSH refuses to load a private key that's readable by anyone but the
-                        # current user — the Jenkins credential-binding temp file inherits the workspace's
-                        # default ACL (BUILTIN\\Users), so strip that before calling ssh. Grant to the
-                        # exact running identity (via whoami) rather than $env:USERNAME, which resolves
-                        # incorrectly when the Jenkins service runs as SYSTEM or another service account.
-                        $currentUser = (whoami).Trim()
-                        icacls "$($env:SSH_KEY)" /inheritance:r | Out-Null
-                        icacls "$($env:SSH_KEY)" /grant:r "$($currentUser):R" | Out-Null
-
-                        # BatchMode=yes: never fall back to an interactive password prompt — fail fast
-                        # instead of hanging forever with no TTY to answer it.
-                        $remoteCmd = "source /home/$($env:CPANEL_USER)/nodevenv/$($env:BACKEND_REMOTE_DIR)/$($env:NODE_VERSION)/bin/activate && cd /home/$($env:CPANEL_USER)/$($env:BACKEND_REMOTE_DIR) && npm install --omit=dev && deactivate"
-                        ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i "$($env:SSH_KEY)" -p $($env:CPANEL_SSH_PORT) "$($env:CPANEL_USER)@$($env:CPANEL_SSH_HOST)" $remoteCmd
-                        if ($LASTEXITCODE -ne 0) { throw "ssh npm install failed with exit code $LASTEXITCODE" }
-                    '''
-                }
-            }
-        }
-
-        stage('Restart backend app (cPanel API)') {
-            when { expression { params.NODE_RESTART } }
-            steps {
-                withCredentials([string(credentialsId: 'cpanel-token', variable: 'CPANEL_API_TOKEN')]) {
-                    // This host uses CloudLinux's Node.js Selector, not cPanel's native UAPI — it's a
-                    // separate CGI endpoint (confirmed via the browser's Network tab while clicking
-                    // Restart in Setup Node.js App), authenticated the same way as UAPI: drop the
-                    // cpsessNNNNNNNNNN session segment and use an API token in the Authorization header
-                    // instead of the session cookie the browser sent.
-                    powershell '''
-                        $headers = @{
-                            Authorization = "cpanel $($env:CPANEL_USER):$($env:CPANEL_API_TOKEN)"
-                            Referer       = "https://$($env:CPANEL_API_HOST)/"
-                            Origin        = "https://$($env:CPANEL_API_HOST)"
-                        }
-                        $url = "https://$($env:CPANEL_API_HOST)/3rdparty/cloudlinux/cloudlinux-selector.cgi?cgiaction=sendRequest"
-                        $appRoot = [uri]::EscapeDataString($env:CPANEL_APP_NAME)
-                        $body = "command=cloudlinux-selector&method=restart&params[interpreter]=nodejs&params[app-root]=$appRoot"
-                        $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -ContentType 'application/x-www-form-urlencoded;charset=UTF-8' -Body $body
-                        $response | ConvertTo-Json -Depth 5
-                        # Response shape not yet verified against a real success case — check the printed
-                        # JSON on the first run and tighten this into a real pass/fail check afterward.
-                    '''
-                }
             }
         }
         
