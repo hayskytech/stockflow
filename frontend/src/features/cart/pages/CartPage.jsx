@@ -140,10 +140,10 @@ export function CartPage() {
                 <span>Subtotal</span>
                 <span>{formatMoney(subtotal)}</span>
               </div>
-              <hr />
-              <div className="d-flex justify-content-between font-weight-bold mb-3">
-                <span>Total</span>
-                <span>{formatMoney(subtotal)}</span>
+              <hr className="receipt-divider" />
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className="font-weight-bold">Total</span>
+                <span className="receipt-total">{formatMoney(subtotal)}</span>
               </div>
               <button
                 id="proceed-to-checkout-button"

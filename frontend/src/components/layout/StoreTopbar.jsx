@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
@@ -16,6 +17,7 @@ export function StoreTopbar() {
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0))
   const siteTitle = useSiteTitle()
   const navigate = useNavigate()
+  const prefersReducedMotion = useReducedMotion()
 
   async function handleLogout() {
     try {
@@ -27,7 +29,7 @@ export function StoreTopbar() {
   }
 
   return (
-    <nav className="navbar navbar-expand navbar-dark bg-primary">
+    <nav className="navbar navbar-expand navbar-dark store-topbar">
       <div className="container flex-wrap">
         <Link to={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
           {siteTitle}
@@ -42,14 +44,19 @@ export function StoreTopbar() {
           <li className="nav-item">
             <Link id="store-cart-link" to={ROUTES.STORE.CART} className="nav-link position-relative mr-2">
               <i className="fas fa-shopping-cart" />
-              {cartCount > 0 ? (
-                <span
-                  className="badge badge-danger"
-                  style={{ position: "absolute", top: 0, right: 0, fontSize: "0.65rem" }}
-                >
-                  {cartCount}
-                </span>
-              ) : null}
+              <AnimatePresence>
+                {cartCount > 0 ? (
+                  <motion.span
+                    key={cartCount}
+                    className="store-cart-badge"
+                    initial={prefersReducedMotion ? false : { scale: 1.5, opacity: 0.6 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                  >
+                    {cartCount}
+                  </motion.span>
+                ) : null}
+              </AnimatePresence>
             </Link>
           </li>
           <li

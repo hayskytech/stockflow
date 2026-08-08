@@ -136,7 +136,7 @@ export function MyOrderDetailPage() {
                       <th colSpan={3} className="text-right">
                         Total
                       </th>
-                      <th>{formatMoney(order.totalAmount)}</th>
+                      <th className="receipt-total">{formatMoney(order.totalAmount)}</th>
                     </tr>
                   </tfoot>
                 </table>

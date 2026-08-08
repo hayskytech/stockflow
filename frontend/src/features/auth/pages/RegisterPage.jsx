@@ -8,7 +8,6 @@ import { PasswordRequirements } from "@/features/auth/components/PasswordRequire
 import { PhoneField } from "@/components/ui/PhoneField"
 import { useAuthStore } from "@/store/auth.store"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
-import { APP_TAGLINE } from "@/constants/app"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
 
 export function RegisterPage() {
@@ -48,14 +47,14 @@ export function RegisterPage() {
   })
 
   return (
-    <div className="register-page">
+    <div className="register-page storefront">
       <div className="register-box">
         <div className="register-logo">
           <Link to={ROUTES.STORE.HOME}>
             <b>{siteTitle}</b>
           </Link>
         </div>
-        <p className="text-center text-muted">{APP_TAGLINE}</p>
+        <div className="zari-rule zari-rule--sm auth-box-rule" aria-hidden="true" />
 
         <div className="card">
           <div className="card-body register-card-body">

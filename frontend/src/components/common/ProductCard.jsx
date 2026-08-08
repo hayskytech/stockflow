@@ -18,21 +18,22 @@ export function ProductCard({ product }) {
 
   return (
     <Link to={ROUTES.STORE.PRODUCT_DETAIL(product.id)} className="text-decoration-none text-dark">
-      <div className="card h-100 shadow-sm" id={`product-card-${product.id}`}>
-        <div
-          className="d-flex align-items-center justify-content-center bg-white border-bottom"
-          style={{ aspectRatio: "4 / 5", overflow: "hidden" }}
-        >
+      <div className="card h-100 product-card" id={`product-card-${product.id}`}>
+        <div className="product-card-image-wrap" style={{ aspectRatio: "4 / 5" }}>
           {product.productPhotoUrl ? (
             <img
               src={resolveMediaUrl(product.productPhotoUrl)}
               alt={product.name}
-              className="w-100 h-100"
-              style={{ objectFit: "cover" }}
+              className="product-card-image"
             />
           ) : (
             <i className="fas fa-shirt fa-3x text-muted" />
           )}
+          {hasDiscount ? (
+            <span className="product-card-discount-ribbon">
+              {Math.round(Number(product.discountPercent))}% off
+            </span>
+          ) : null}
         </div>
 
         <div className="card-body d-flex flex-column p-3">
@@ -53,7 +54,7 @@ export function ProductCard({ product }) {
                   <s>{formatMoney(product.price)}</s>
                 </div>
               ) : null}
-              <div className="font-weight-bold text-dark">
+              <div className="product-card-price">
                 {formatMoney(effectivePrice(product.price, product.discountPercent))}
               </div>
             </div>

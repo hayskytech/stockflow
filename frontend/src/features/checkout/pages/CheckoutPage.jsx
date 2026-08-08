@@ -393,10 +393,10 @@ function CheckoutForm({ items, profile, warehouse, isLoadingWarehouse }) {
                   </div>
                 )
               })}
-              <hr />
-              <div className="d-flex justify-content-between font-weight-bold">
-                <span>Total</span>
-                <span>{formatMoney(subtotal)}</span>
+              <hr className="receipt-divider" />
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="font-weight-bold">Total</span>
+                <span className="receipt-total">{formatMoney(subtotal)}</span>
               </div>
             </div>
           </div>

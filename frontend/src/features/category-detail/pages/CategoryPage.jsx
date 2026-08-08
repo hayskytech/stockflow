@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
+import { motion, useReducedMotion } from "framer-motion"
 import { useCategoryDetail } from "@/features/category-detail/hooks/use-category-detail"
 import { useCategoryProducts } from "@/features/category-detail/hooks/use-category-products"
 import { useCategoryDetailStore } from "@/features/category-detail/category-detail.store"
@@ -14,6 +15,7 @@ const PER_PAGE = 20
 export function CategoryPage() {
   const { id } = useParams()
   const [page, setPage] = useState(1)
+  const prefersReducedMotion = useReducedMotion()
 
   const subCategoryFilter = useCategoryDetailStore((s) => s.subCategoryFilter)
   const minPrice = useCategoryDetailStore((s) => s.minPrice)
@@ -71,7 +73,8 @@ export function CategoryPage() {
       </Link>
 
       {breadcrumb ? <p className="mb-1">{breadcrumb}</p> : null}
-      <h2 className="mb-4">{category.name}</h2>
+      <h2 className="mb-2">{category.name}</h2>
+      <div className="zari-rule zari-rule--sm mb-4" style={{ maxWidth: "220px" }} aria-hidden="true" />
 
       <CategoryFilterBar categoryId={category.id} />
 
@@ -86,10 +89,16 @@ export function CategoryPage() {
       ) : (
         <>
           <div className="row">
-            {products.map((product) => (
-              <div key={product.id} className="col-6 col-md-3 mb-4">
+            {products.map((product, index) => (
+              <motion.div
+                key={product.id}
+                className="col-6 col-md-3 mb-4"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: Math.min(index, 8) * 0.04, ease: "easeOut" }}
+              >
                 <ProductCard product={product} />
-              </div>
+              </motion.div>
             ))}
           </div>
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />

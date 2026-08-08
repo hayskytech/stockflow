@@ -32,7 +32,7 @@ export function HeroSlider() {
   return (
     <div
       id="home-hero-slider"
-      className="position-relative mb-4 rounded overflow-hidden"
+      className="hero-slider position-relative mb-4 rounded overflow-hidden"
       style={{ aspectRatio: "8 / 3" }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -40,14 +40,15 @@ export function HeroSlider() {
       {slides.map((slide, index) => (
         <SlideImage key={slide.id} slide={slide} isActive={index === activeIndex} />
       ))}
+      <div className="hero-slide-scrim" aria-hidden="true" />
 
       {slides.length > 1 ? (
         <>
           <button
             type="button"
             id="home-hero-slider-prev"
-            className="btn btn-dark position-absolute d-flex align-items-center justify-content-center"
-            style={{ top: "50%", left: "1rem", transform: "translateY(-50%)", opacity: 0.6, width: 40, height: 40, borderRadius: "50%" }}
+            className="hero-slider-arrow position-absolute d-flex align-items-center justify-content-center border-0"
+            style={{ top: "50%", left: "1rem", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%" }}
             onClick={() => goTo(activeIndex - 1)}
             aria-label="Previous slide"
           >
@@ -56,26 +57,26 @@ export function HeroSlider() {
           <button
             type="button"
             id="home-hero-slider-next"
-            className="btn btn-dark position-absolute d-flex align-items-center justify-content-center"
-            style={{ top: "50%", right: "1rem", transform: "translateY(-50%)", opacity: 0.6, width: 40, height: 40, borderRadius: "50%" }}
+            className="hero-slider-arrow position-absolute d-flex align-items-center justify-content-center border-0"
+            style={{ top: "50%", right: "1rem", transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%" }}
             onClick={() => goTo(activeIndex + 1)}
             aria-label="Next slide"
           >
             <i className="fas fa-chevron-right" />
           </button>
 
-          <div className="position-absolute d-flex justify-content-center" style={{ bottom: "0.75rem", left: 0, right: 0, gap: "0.4rem" }}>
+          <div className="position-absolute d-flex justify-content-center" style={{ bottom: "0.9rem", left: 0, right: 0, gap: "0.5rem" }}>
             {slides.map((slide, index) => (
               <button
                 key={slide.id}
                 type="button"
                 aria-label={`Go to slide ${index + 1}`}
                 onClick={() => goTo(index)}
-                className="p-0 border-0 rounded-circle"
+                className={`hero-slider-dot p-0 border-0 rounded-circle ${index === activeIndex ? "active" : ""}`}
                 style={{
-                  width: 10,
-                  height: 10,
-                  background: index === activeIndex ? "#fff" : "rgba(255,255,255,0.5)",
+                  width: 9,
+                  height: 9,
+                  background: "rgba(255,255,255,0.6)",
                 }}
               />
             ))}
@@ -95,12 +96,18 @@ function SlideImage({ slide, isActive }) {
       style={{
         position: "absolute",
         inset: 0,
+        overflow: "hidden",
         opacity: isActive ? 1 : 0,
         transition: "opacity 0.6s ease",
         pointerEvents: isActive ? "auto" : "none",
       }}
     >
-      <img src={resolveMediaUrl(slide.mediaUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      <img
+        src={resolveMediaUrl(slide.mediaUrl)}
+        alt=""
+        className="hero-slide-img"
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+      />
     </Wrapper>
   )
 }

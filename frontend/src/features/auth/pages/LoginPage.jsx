@@ -6,7 +6,6 @@ import { loginSchema } from "@/features/auth/auth.schema"
 import { PasswordField } from "@/features/auth/components/PasswordField"
 import { useAuthStore } from "@/store/auth.store"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
-import { APP_TAGLINE } from "@/constants/app"
 import { ROUTES, landingPathForRole } from "@/constants/routes"
 
 export function LoginPage() {
@@ -33,14 +32,14 @@ export function LoginPage() {
   })
 
   return (
-    <div className="login-page">
+    <div className="login-page storefront">
       <div className="login-box">
         <div className="login-logo">
           <Link to={ROUTES.STORE.HOME}>
             <b>{siteTitle}</b>
           </Link>
         </div>
-        <p className="text-center text-muted">{APP_TAGLINE}</p>
+        <div className="zari-rule zari-rule--sm auth-box-rule" aria-hidden="true" />
 
         <div className="card">
           <div className="card-body login-card-body">

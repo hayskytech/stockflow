@@ -72,7 +72,7 @@ export function ProductDetailPage() {
         <i className="fas fa-arrow-left mr-1" /> Back to shopping
       </button>
 
-      <div className="row bg-white rounded shadow-sm p-3 p-md-4" id={`product-detail-${product.id}`}>
+      <div className="row product-detail-panel p-3 p-md-4" id={`product-detail-${product.id}`}>
         <div className="col-12 col-md-5">
           <div
             className="d-flex align-items-center justify-content-center bg-light rounded overflow-hidden"
@@ -118,7 +118,7 @@ export function ProductDetailPage() {
           {attributes ? <p className="text-muted">{attributes}</p> : null}
 
           <div className={`d-flex align-items-center flex-wrap ${isSet ? "mb-1" : "mb-3"}`} style={{ gap: "0.75rem" }}>
-            <span className="h4 mb-0 font-weight-bold">
+            <span className="product-detail-price">
               {formatMoney(
                 isSet
                   ? setEffectivePrice(product.price, product.discountPercent, product.piecesPerSet)

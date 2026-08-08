@@ -30,11 +30,12 @@ export function ChangePasswordPage() {
   })
 
   return (
-    <div className="login-page">
+    <div className="login-page storefront">
       <div className="login-box">
         <div className="login-logo">
           <b>{siteTitle}</b>
         </div>
+        <div className="zari-rule zari-rule--sm auth-box-rule" aria-hidden="true" />
 
         <div className="card">
           <div className="card-body login-card-body">

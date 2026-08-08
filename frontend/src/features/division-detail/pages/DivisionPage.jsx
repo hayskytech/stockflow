@@ -28,7 +28,8 @@ export function DivisionPage() {
         <i className="fas fa-arrow-left mr-1" /> Back to shopping
       </Link>
 
-      <h2 className="mb-4">{division.name}</h2>
+      <h2 className="mb-2">{division.name}</h2>
+      <div className="zari-rule zari-rule--sm mb-4" style={{ maxWidth: "220px" }} aria-hidden="true" />
 
       {categories.length === 0 ? (
         <EmptyState icon="fa-shirt" title="No categories yet" description="Check back soon for new arrivals." />
