@@ -8,6 +8,7 @@ import { BackorderBadge } from "@/components/ui/BackorderBadge"
 import { SetBadge } from "@/components/ui/SetBadge"
 import { useOrder, useUpdateOrderStatus, useUpdatePaymentStatus } from "@/features/orders/hooks/use-orders"
 import { formatDateTimeIST } from "@/lib/format"
+import { userDisplayName } from "@/lib/user"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { resolveMediaUrl } from "@/lib/media"
 import { ROUTES } from "@/constants/routes"
@@ -60,7 +61,10 @@ export function OrderDetailPage() {
     <PageWrapper>
       <PageHeader
         title={`Order ${order.orderNumber}`}
-        description={`Placed ${formatDateTimeIST(order.createdAt)} by ${order.requestedByName}`}
+        description={`Placed ${formatDateTimeIST(order.createdAt)} by ${userDisplayName({
+          name: order.requestedByName,
+          phone: order.requestedByPhone,
+        })}`}
       />
 
       {serverError ? <div className="alert alert-danger">{serverError}</div> : null}

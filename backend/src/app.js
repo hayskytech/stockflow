@@ -25,10 +25,25 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+const CORS_ALLOWED_ORIGINS = ENV.CORS_ALLOWED_ORIGINS.split(",").map((o) => o.trim());
+
+// Loopback + RFC1918 private ranges. A dev machine's LAN IP changes with the network, so it can
+// never be pinned in CORS_ALLOWED_ORIGINS — outside production any private origin is accepted so
+// the app can be opened from a phone or another machine on the same wifi.
+const PRIVATE_ORIGIN_PATTERN =
+  /^https?:\/\/(localhost|127\.\d+\.\d+\.\d+|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/;
+
+/** Decides whether one request Origin may read responses from this API. */
+function isOriginAllowed(origin) {
+  if (!origin) return true; // non-browser clients (curl, server-to-server) send no Origin header
+  if (CORS_ALLOWED_ORIGINS.includes(origin)) return true;
+  return ENV.NODE_ENV !== "production" && PRIVATE_ORIGIN_PATTERN.test(origin);
+}
+
 app.use(helmet());
 app.use(
   cors({
-    origin: ENV.CORS_ALLOWED_ORIGINS.split(",").map((o) => o.trim()),
+    origin: (origin, callback) => callback(null, isOriginAllowed(origin)),
     credentials: true,
     exposedHeaders: ["X-WP-Total", "X-WP-TotalPages"],
   }),

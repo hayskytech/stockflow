@@ -9,6 +9,7 @@ import { useCreateOrder } from "@/features/orders/hooks/use-orders"
 import { manualOrderSchema } from "@/features/orders/orders.schema"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { effectivePrice } from "@/lib/pricing"
+import { userDisplayName } from "@/lib/user"
 import { PhoneField } from "@/components/ui/PhoneField"
 import { PincodeField } from "@/components/ui/PincodeField"
 import { SearchSelect } from "@/components/ui/SearchSelect"
@@ -128,9 +129,13 @@ export function NewOrderPage() {
                         placeholder="Choose a customer…"
                         value={field.state.value}
                         onChange={(value) => field.handleChange(value)}
+                        // An OTP-created customer may have neither name nor email yet, so the
+                        // parenthetical falls back to the phone that identifies them.
                         options={activeUsers.map((user) => ({
                           value: user.id,
-                          label: `${user.name} (${user.email})${user.role !== "customer" ? ` — ${user.role}` : ""}`,
+                          label: `${userDisplayName(user)} (${user.email ?? user.phone ?? "no email"})${
+                            user.role !== "customer" ? ` — ${user.role}` : ""
+                          }`,
                         }))}
                       />
                       {field.state.meta.errors.length > 0 ? (

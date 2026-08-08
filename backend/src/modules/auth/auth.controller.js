@@ -1,7 +1,24 @@
 import { ENV } from '../../config/env.js';
 import { AppError } from '../../middleware/errorHandler.js';
-import { changePasswordSchema, loginSchema, registerSchema } from './auth.schema.js';
-import { changeUserPassword, getMe, loginUser, logoutUser, refreshTokens, registerCustomer } from './auth.service.js';
+import {
+  changePasswordSchema,
+  completeProfileSchema,
+  loginSchema,
+  otpLoginSchema,
+  registerSchema,
+  sendOtpSchema,
+} from './auth.schema.js';
+import {
+  changeUserPassword,
+  completeProfile as completeUserProfile,
+  getMe,
+  issueOtp,
+  loginUser,
+  loginWithOtp,
+  logoutUser,
+  refreshTokens,
+  registerCustomer,
+} from './auth.service.js';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
 
@@ -56,6 +73,47 @@ export async function login(req, res, next) {
   }
 }
 
+/**
+ * POST /api/auth/otp/send — asks MSG91 to text a code to the given phone.
+ * Always 204, whether or not a code was actually sent, so the response can never be used to
+ * discover which numbers have an account.
+ */
+export async function sendOtp(req, res, next) {
+  try {
+    const parsed = sendOtpSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(400, parsed.error.issues[0]?.message ?? 'Invalid input');
+    }
+
+    await issueOtp(parsed.data, req.ip ?? '');
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** POST /api/auth/otp/login — exchanges a phone + OTP for a session. */
+export async function otpLogin(req, res, next) {
+  try {
+    const parsed = otpLoginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(400, parsed.error.issues[0]?.message ?? 'Invalid input');
+    }
+
+    const ip = req.ip ?? '';
+    const userAgent = req.headers['user-agent'] ?? '';
+    const result = await loginWithOtp(parsed.data, ip, userAgent);
+
+    res.cookie(REFRESH_TOKEN_COOKIE, result.refreshToken, cookieOptions);
+    res.status(200).json({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** POST /api/auth/refresh */
 export async function refresh(req, res, next) {
   try {
@@ -98,6 +156,26 @@ export async function me(req, res, next) {
   try {
     if (!req.user) throw new AppError(401, 'Not authenticated');
     const user = await getMe(req.user.sub);
+    res.status(200).json(user);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/complete-profile — fills in the profile of an account OTP login created from a
+ * bare phone number. Returns the refreshed profile so the client can drop its incomplete copy.
+ */
+export async function completeProfile(req, res, next) {
+  try {
+    if (!req.user) throw new AppError(401, 'Not authenticated');
+
+    const parsed = completeProfileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new AppError(400, parsed.error.issues[0]?.message ?? 'Invalid input');
+    }
+
+    const user = await completeUserProfile(req.user.sub, parsed.data);
     res.status(200).json(user);
   } catch (err) {
     next(err);

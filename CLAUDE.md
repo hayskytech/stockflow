@@ -154,9 +154,15 @@ Two separate state tools with distinct responsibilities — do not mix them:
 
 JWT-based auth with access + refresh tokens.
 
-- **Register** (`POST /auth/register`) — public, rate-limited customer self-signup (name, email, password + confirm; same password policy as change-password). Role is hard-coded to `customer` server-side. On success the customer is auto-logged-in (issues the token pair + refresh cookie). Duplicate email returns a generic 409.
-- **Login** (`POST /auth/login`) — validates email/password against `users` table (bcrypt hash). Generic "Invalid email or password" error — never reveal whether the email exists.
-- **Account lockout** — after 5 failed attempts, lock the account for 15 minutes (`failed_login_attempts`, `locked_until` columns).
+- **Register** (`POST /auth/register`) — public, rate-limited customer self-signup (name, email, phone, `otp`, address fields, password; same password policy as change-password). **The OTP is mandatory** — the phone must be verified first via `POST /auth/otp/send` with `purpose: 'register'`, and registration consumes that code before any row is written, so an account is never created for a number the caller hasn't proven they hold. Role is hard-coded to `customer` server-side. On success the customer is auto-logged-in (issues the token pair + refresh cookie). Duplicate email/phone returns a generic 409.
+- **Login — password** (`POST /auth/login`) — takes `{ identifier, password }` where `identifier` is an **email** (how admin/staff sign in) or a **phone number** (customers, who may use either this or the OTP path). Both columns are unique so one lookup serves both. Generic "Invalid credentials" error — never reveal whether the account exists. A NULL `password_hash` (an OTP-created account that never set one) gets that same generic error, never a "this account has no password" hint.
+- **Login — OTP, and sign-up by the same door** (`POST /auth/otp/send` → `POST /auth/otp/login`) — passwordless phone sign-in via MSG91 (below). `otp/send` answers `204` and sends a code to **any** phone; there is no registered/unregistered branch anywhere in this flow. **A verified number with no account behind it creates one** (`createCustomerFromPhone`, role hard-coded to `customer`) and signs it in, rather than being turned away with "register first" — the caller has already proven they hold the number, and making them prove it a second time through a different form buys nothing. The account starts with *only* that phone: `name`, `email` and `password_hash` are all NULL, which is why all three columns are nullable.
+  - Because every number behaves identically, this flow leaks nothing about who is registered. That is now structural rather than a guard to maintain — do not reintroduce an "account exists?" check in `issueOtp`.
+  - A **deactivated** account is never resurrected by signing in (403, as before). Only an admin re-enables it, or the customer re-registers through the form, which is an explicit act of signing up again.
+- **Complete profile** (`POST /auth/complete-profile`, authenticated) — the profile an OTP-created account still owes: name, email, address fields, optional business name, and an **optional** password. Optional because such an account can always sign in with a code; demanding one would put a remembered secret back into the one flow whose point is not having any. Sets `profile_completed_at`, which every session payload surfaces as `profileComplete`. Also serves as the customer's own profile editor, and is the only way a passwordless account can later set a password (`change-password` needs a current one and 400s when there is none).
+  - **Skippable, enforced at checkout.** The customer lands on the form straight after an account-creating OTP login, and `StoreShell` keeps a standing banner while `profileComplete === false`, but browsing works without it. `CheckoutPage` is where it becomes mandatory — the first thing that genuinely needs a name and an address. Admin edits count too: filling in a name and email through `PUT /users/:id` marks the profile complete.
+  - Anything rendering a customer must therefore tolerate a NULL name/email — use `lib/user.js` `userDisplayName()`, which falls back to the phone number.
+- **Account lockout** — after 5 failed *password* attempts, lock the account for 15 minutes (`failed_login_attempts`, `locked_until` columns). OTP login has no local lockout: MSG91 owns the per-code attempt cap, and there is no local code to guess against.
 - **Tokens**:
   - Access token (JWT, short-lived e.g. 15m) — carries `sub` (user id) and `role`, used to authorize requests via `Authorization: Bearer <token>`.
   - Refresh token (random opaque string, long-lived e.g. 7d) — stored **hashed** (SHA-256) in a `refresh_tokens` table, set as an `httpOnly`, `sameSite=strict`, `secure` (prod) cookie. Never sent in JSON body.
@@ -165,7 +171,7 @@ JWT-based auth with access + refresh tokens.
 - **Me** (`GET /auth/me`) — returns the authenticated user's safe profile (excludes password hash, token data).
 - **Change password** (`POST /auth/change-password`) — voluntary, self-service only. There is no forced/temporary-password concept: a password set by self-registration or by an admin creating/resetting a user is permanent from the start; a user is never forced through this endpoint before continuing to use the app. Password policy: min 8 chars, upper, lower, number, special char.
 - **Middleware**: `authenticate` — verifies the Bearer access token, attaches decoded payload to `req.user`, rejects with 401 on missing/invalid/expired token.
-- **Rate limiting**: login/refresh/change-password endpoints behind a stricter limiter to slow brute-force attempts.
+- **Rate limiting**: login/refresh/change-password endpoints behind a stricter limiter to slow brute-force attempts. `POST /auth/otp/send` gets its own tighter `otpLimiter` (every call spends a real SMS) **plus** a per-phone quota in the service, which a rotating IP cannot bypass.
 
 ### Auth Implementation
 
@@ -173,6 +179,21 @@ JWT-based auth with access + refresh tokens.
 - Refresh tokens are plain random strings — generated with `generateRefreshToken()`, hashed with SHA-256 via `hashRefreshToken()` before DB storage
 - Never store raw refresh tokens in the DB — always store the hash
 - Protected routes use the `authenticate` middleware which attaches `req.user` (contains `sub` and `role`)
+
+### OTP (MSG91 widget, server-to-server)
+
+OTP delivery goes through the MSG91 **OTP Widget** REST API, driven entirely from the backend (`backend/src/utils/msg91.js`). There is no browser widget/SDK, no hCaptcha, and `tokenAuth` is never used — only the account `authkey`.
+
+- **The code is never generated, stored, hashed, or expired by this app.** MSG91 owns generation, delivery, expiry, and the per-code attempt cap. Never build a local code/attempt counter — there is nothing on our side to check against.
+- **`otp_requests` stores the binding, not the code**: MSG91's `reqId` paired with the phone it was issued for. The client only ever sends a phone number; `consumeOtp()` resolves the `reqId` from *our* row. **Never take a `reqId` from a request body** — that discards the whole security model, since a client could then verify a code for number A and claim number B.
+- `expires_at` on the row is a *defensive local ceiling* only (`OTP_TTL_MINUTES`), never the real expiry.
+- `purpose` (`login` | `register`) scopes each code — a login code can never be spent on a registration, or vice versa. Both purposes now send to any number (login creates the account on verify), so the field is purely about which endpoint may spend the code.
+- **Failures arrive at HTTP 200 with `type: "error"`, not as a 4xx** — always branch on `type`, never on response status.
+- **`MSG91_SEND_PATH` must match the widget's dashboard configuration** and nothing in the widget id reveals which it is: `sendOtp` needs Integration=`web` **and** Captcha Validation **OFF**; `sendOtpMobile` needs Integration=`Mobile`. A mismatch fails silently at HTTP 200 with `"Invalid Captcha Token."` or `"Mobile requests are not allowed for this widget."` Diagnose with `npm run msg91:check -- 919876543210` (**never with `curl`** — these endpoints answer 302 by design, which makes curl report a false failure).
+- The country code sent to MSG91 comes from the admin-configured `warehouse.phone_country_code` with the `+` stripped — never hardcode `91`.
+- Frontend OTP input accepts 4–8 digits rather than a fixed length: **code length is an MSG91 dashboard setting**, and pinning it here would silently reject every real code if it were changed.
+- **Both OTP forms are stepped, phone first.** Login is phone → code; registration is phone → code → profile. The code input is never in the DOM until a code has actually been sent (`useOtpSender` resolves `true` only after the send succeeds), and the profile fields are never asked for before the phone is verified — collecting a full profile up front would risk throwing all of it away at the last step. Shared pieces: `hooks/use-otp.js` `useOtpSender()` owns the send mutation plus the resend cooldown (it lives in the hook, not a step component, because the two steps are never mounted together and a component-owned cooldown would reset into a free resend), and `components/OtpCodeStep.jsx` is the code step for both pages.
+- The registration code is only judged when `POST /auth/register` spends it, so the code step can only check the code's *shape*; a rejected code comes back as `details.code === 'OTP_INVALID'`, which the form uses to reopen the code step. **Branch on that code, never on the message text** — the message is deliberately generic and interchangeable.
 
 ### Session Management
 
@@ -197,15 +218,20 @@ Admin and staff are the internal back-office (AdminLTE sidebar shell); customers
 
 ```sql
 -- users
-id               PK
-name
-email            UNIQUE
-password_hash
-role             ENUM('admin','staff','customer')
-is_active        -- FALSE also doubles as the customer soft-delete flag (see Coding Rules)
+id                    PK
+name                  -- NULL until an OTP-created customer completes their profile
+email                 UNIQUE, NULL -- same; MySQL allows many NULLs in a unique index
+password_hash         -- NULL on an OTP-only account that never set a password
+phone                 UNIQUE, NULL -- the customer login identifier; admin/staff have none
+role                  ENUM('admin','staff','customer')
+profile_completed_at  -- NULL = minted by OTP login and still missing its profile
+is_active             -- FALSE also doubles as the customer soft-delete flag (see Coding Rules)
 failed_login_attempts, locked_until
 created_at, updated_at
 ```
+
+The three nullable identity columns are load-bearing, not laziness: OTP sign-in creates an account
+from a verified phone number and nothing else. Do not add `NOT NULL` back to any of them.
 
 ### Permission matrix (high level)
 
@@ -226,7 +252,11 @@ created_at, updated_at
 
 1. Admin sets up the Warehouse record (`PUT /warehouse`) — name, address, contact details.
 2. Admin creates Users, choosing `role` (`admin` or `staff`) and setting a permanent password directly — there is no temporary-password/forced-change step.
-3. Customers self-register at `POST /auth/register` (public) and are auto-logged-in into the storefront — no admin involvement. Registering (or an admin re-adding a user) with the same email/phone as a previously deactivated (soft-deleted) customer reactivates that same account instead of creating a duplicate.
+3. Customers arrive one of two ways, both public and both ending in an auto-login to the storefront, with no admin involvement:
+   - **Phone + OTP** (the main door) — `POST /auth/otp/send` → `POST /auth/otp/login`. If the number is new, the account is created right there and the customer lands on the profile-completion form already signed in. There is no "you must register first" state.
+   - **The registration form** (`POST /auth/register`) — collects the whole profile up front, still OTP-gated, and arrives complete.
+
+   Registering (or an admin re-adding a user) with the same email/phone as a previously deactivated (soft-deleted) customer reactivates that same account instead of creating a duplicate. Thereafter a customer signs in with phone + OTP, or phone + password if they chose to set one; admin/staff sign in with email + password.
 
 ## Pagination & Filtering — WordPress REST API style
 
@@ -254,7 +284,7 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 - **Homepage Sliders** — admin-only management of the storefront hero slider (`backend/modules/heroSlides/` ↔ `frontend/features/heroSlides/`). Each slide references one image from the shared media library (`media_id`, denormalized `media_url`) plus an optional click-through `link_url`, an `is_active` toggle, and a manual `sort_order`. `GET /hero-slides/public` (unauthenticated, active only) feeds the storefront; `GET /hero-slides`, `POST /hero-slides`, `PUT /hero-slides/:id`, `PATCH /hero-slides/reorder`, `DELETE /hero-slides/:id` are admin-only, mirroring the catalog's drag-and-drop reorder pattern. Deleting a slide detaches its `media_usage` row but does not delete the underlying media item.
   - Product detail (`features/product-detail/`) shows up to 4 "Related Products" from the same category (client-side filter over `GET /products?category_id=`), rendered with the shared `components/common/ProductCard.jsx` (also used by `features/home`).
   - Clicking "Add to Cart" while logged out shows a `LoginRequiredModal` (`components/common/`) instead of adding the item — the cart itself is always guest-persisted client-side, but building it up is gated behind login.
-  - Checkout (`features/checkout/`) prefills the shipping form from the logged-in customer's saved profile (`GET /auth/me`) — still editable per order.
+  - Checkout (`features/checkout/`) prefills the shipping form from the logged-in customer's saved profile (`GET /auth/me`) — still editable per order. A customer whose `profileComplete` is false is redirected to `/store/complete-profile` first (with `state.from` so they come straight back); this is the only place an incomplete profile actually blocks anything.
 - **Dashboard** — summary widgets, no dedicated routes beyond `GET /reports/*`.
 - **Warehouse** — `GET /warehouse`, `PUT /warehouse` — single-record settings (name, address, contact); admin only for write.
 - **Notice Board** — admin-only single-record scrolling announcement text shown at the top of the storefront (`backend/modules/notice/` ↔ `frontend/features/notice/`), mirroring the Warehouse single-row settings pattern. `GET /notice/public` (unauthenticated, returns an empty message unless `is_active` is on) feeds a scrolling bar in `StoreShell`; `GET /notice` (any authenticated role) and `PUT /notice` (admin only) manage it from the admin `NoticePage`.

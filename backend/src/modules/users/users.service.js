@@ -7,6 +7,7 @@ import { AppError } from '../../middleware/errorHandler.js';
 const USER_COLUMNS = `
   id, name, email, role, is_active AS isActive,
   phone, business_name AS businessName, address, town, district, state, pincode,
+  profile_completed_at AS profileCompletedAt,
   last_login_at AS lastLoginAt, created_at AS createdAt, updated_at AS updatedAt
 `;
 
@@ -96,7 +97,7 @@ export async function createUser(input) {
       await executeQuery(
         `UPDATE users
          SET name = ?, email = ?, password_hash = ?, role = ?, is_active = 1,
-             failed_login_attempts = 0, locked_until = NULL,
+             failed_login_attempts = 0, locked_until = NULL, profile_completed_at = NOW(),
              phone = ?, business_name = ?, address = ?, town = ?, district = ?, state = ?, pincode = ?
          WHERE id = ?`,
         [input.name, input.email, passwordHash, input.role, ...profileValues, inactiveMatch.id],
@@ -106,9 +107,11 @@ export async function createUser(input) {
 
     const id = crypto.randomUUID();
     await executeQuery(
-      `INSERT INTO users (id, name, email, password_hash, role, is_active,
+      // Name, email and a password are all mandatory here, so an admin-created account is
+      // complete the moment it exists — unlike one minted by an OTP login.
+      `INSERT INTO users (id, name, email, password_hash, role, is_active, profile_completed_at,
                            phone, business_name, address, town, district, state, pincode)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
       [id, input.name, input.email, passwordHash, input.role, input.isActive ?? true, ...profileValues],
     );
     return getUserById(id);
@@ -142,6 +145,13 @@ export async function updateUser(id, input) {
   if (input.password !== undefined) {
     fields.push('password_hash = ?');
     params.push(await bcrypt.hash(input.password, 12));
+  }
+
+  // An admin supplying the name and email of an account that OTP login created from a bare phone
+  // number has completed that profile just as surely as the customer would have. Without this the
+  // storefront would go on asking them for details an admin already filled in.
+  if (input.name && input.email) {
+    fields.push('profile_completed_at = COALESCE(profile_completed_at, NOW())');
   }
 
   if (fields.length === 0) return getUserById(id);

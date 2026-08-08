@@ -28,7 +28,28 @@ test.describe("Login", () => {
 
     await loginPage.login(process.env.TEST_ADMIN_EMAIL, "definitely-the-wrong-password")
 
-    await expect(loginPage.serverError).toHaveText(/invalid email or password/i)
+    await expect(loginPage.serverError).toHaveText(/invalid credentials/i)
     await expect(page).toHaveURL(/\/login$/)
+  })
+
+  /**
+   * The OTP tab is deliberately not driven end-to-end here. Every phone number now gets a real
+   * code — an unknown number creates the account instead of being silently skipped — so clicking
+   * "Send Code" against anything but an MSG91 Demo Credential texts a real handset. What is
+   * asserted instead is the part that costs nothing: the step gate itself.
+   */
+  test("keeps the OTP code field out of reach until a code has been sent", async ({ page }) => {
+    const loginPage = new LoginPage(page)
+    await loginPage.goto()
+
+    await loginPage.otpModeTab.click()
+
+    await expect(loginPage.otpInput).toHaveCount(0)
+    await expect(loginPage.sendOtpButton).toBeDisabled()
+
+    await loginPage.phoneInput.fill("7000000001")
+
+    await expect(loginPage.sendOtpButton).toBeEnabled()
+    await expect(loginPage.otpInput).toHaveCount(0)
   })
 })

@@ -19,13 +19,19 @@
 -- TABLE: users
 -- Three roles: admin (full access), staff (operational, no user/warehouse mgmt),
 -- and customer (self-registered storefront shopper — browse only, no back-office).
+--
+-- name/email/password_hash are all nullable because OTP login creates the account
+-- for any phone number that verifies a code: such a row starts with nothing but a
+-- verified phone, and fills the rest in when the customer submits the profile form
+-- (profile_completed_at). Setting a password there is optional, so password_hash
+-- can stay NULL for the life of an OTP-only account.
 -- =============================================================================
 CREATE TABLE users (
   id                    CHAR(36)        NOT NULL                    COMMENT 'UUID v4 primary key',
-  name                  VARCHAR(100)    NOT NULL                    COMMENT 'Full display name',
-  email                 VARCHAR(150)    NOT NULL                    COMMENT 'Login email',
+  name                  VARCHAR(100)    NULL                        COMMENT 'Full display name — NULL until an OTP-created customer completes their profile',
+  email                 VARCHAR(150)    NULL                        COMMENT 'Login email — NULL until an OTP-created customer completes their profile',
 
-  password_hash         VARCHAR(255)    NOT NULL                    COMMENT 'bcrypt hash (cost 12)',
+  password_hash         VARCHAR(255)    NULL                        COMMENT 'bcrypt hash (cost 12) — NULL on an OTP-only account with no password set',
   role                  ENUM('admin','staff','customer') NOT NULL DEFAULT 'staff',
 
   phone                 VARCHAR(15)     NULL                        COMMENT 'Customer phone number (self-registration, mandatory + unique for customers)',
@@ -35,6 +41,7 @@ CREATE TABLE users (
   district              VARCHAR(100)    NULL,
   state                 VARCHAR(100)    NULL,
   pincode               VARCHAR(10)     NULL,
+  profile_completed_at  DATETIME        NULL                        COMMENT 'NULL = created by OTP login and still missing its profile; the storefront blocks checkout until this is set',
 
   is_active             BOOLEAN         NOT NULL DEFAULT TRUE       COMMENT 'FALSE = account disabled (also used as the customer soft-delete flag)',
   failed_login_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0        COMMENT 'Resets to 0 on successful login',
@@ -84,6 +91,35 @@ CREATE TABLE refresh_tokens (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Active refresh token sessions per user';
+
+
+-- =============================================================================
+-- TABLE: otp_requests
+-- One row per code MSG91 was asked to send. The code itself is NEVER stored — MSG91 generates,
+-- delivers, expires and rate-limits it, and is the only party that can verify it. What is stored
+-- is the binding between MSG91's `reqId` and the phone it was issued for: the client only ever
+-- sends a phone, and verification resolves the `reqId` from this table, so no request can verify
+-- a code for one number and claim another.
+-- =============================================================================
+CREATE TABLE otp_requests (
+  id              CHAR(36)      NOT NULL                            COMMENT 'UUID v4 primary key',
+  phone           VARCHAR(15)   NOT NULL                            COMMENT 'Local phone digits as typed, without country code',
+  provider_req_id VARCHAR(64)   NOT NULL                            COMMENT 'MSG91 widget reqId — never the code itself',
+  purpose         ENUM('login','register') NOT NULL                 COMMENT 'A login code can never be spent on a registration, or vice versa',
+  ip_address      VARCHAR(45)   NULL                                COMMENT 'IP that requested the code (IPv6 max = 45 chars)',
+  expires_at      DATETIME      NOT NULL                            COMMENT 'Defensive local ceiling — MSG91 owns the real expiry',
+  consumed_at     DATETIME      NULL                                COMMENT 'Set once the code has been successfully spent — NULL means still open',
+  created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  KEY idx_otp_requests_lookup     (phone, purpose, created_at),
+  KEY idx_otp_requests_expires_at (expires_at)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='MSG91 OTP request bindings — phone to provider reqId';
 
 
 -- =============================================================================

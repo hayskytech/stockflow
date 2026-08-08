@@ -6,6 +6,7 @@ export const ROUTES = {
   },
   STORE: {
     HOME: "/store",
+    COMPLETE_PROFILE: "/store/complete-profile",
     PRODUCT_DETAIL: (id) => `/store/products/${id}`,
     DIVISION_DETAIL: (id) => `/store/divisions/${id}`,
     CATEGORY_DETAIL: (id) => `/store/categories/${id}`,

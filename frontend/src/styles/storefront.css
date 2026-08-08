@@ -95,7 +95,11 @@
 /* ---------- Base component retints (shared with admin via plain Bootstrap
    classes — scoped here so only storefront usage picks these up) ---------- */
 
+/* `color` is restated on every filled state because `.storefront a` above retints
+   anchors maroon, and a <Link className="btn btn-primary"> would otherwise render
+   maroon text on the maroon fill. */
 .storefront .btn-primary {
+  color: #fff;
   background-color: var(--sc-maroon);
   border-color: var(--sc-maroon);
   font-weight: 600;
@@ -106,6 +110,7 @@
 
 .storefront .btn-primary:hover,
 .storefront .btn-primary:focus {
+  color: #fff;
   background-color: var(--sc-maroon-dark);
   border-color: var(--sc-maroon-dark);
   box-shadow: 0 8px 20px rgba(122, 20, 48, 0.28);
@@ -126,6 +131,7 @@
 }
 
 .storefront .btn-outline-primary:hover {
+  color: #fff;
   background-color: var(--sc-maroon);
   border-color: var(--sc-maroon);
 }

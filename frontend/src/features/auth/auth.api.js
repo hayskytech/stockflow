@@ -1,9 +1,27 @@
 import { apiClient } from "@/lib/axios"
 import { API_ENDPOINTS } from "@/constants/api"
 
-/** Authenticates with email + password, returns user profile and a short-lived access token */
+/**
+ * Authenticates with a password against an email (admin/staff) or a phone number (customers),
+ * returning the user profile and a short-lived access token.
+ */
 export async function loginApi(credentials) {
   const { data } = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, credentials)
+  return data
+}
+
+/**
+ * Asks the server to text a verification code to a phone number.
+ * Resolves the same way whether or not a code was actually sent — the response deliberately
+ * carries no hint about whether the number has an account.
+ */
+export async function sendOtpApi({ phone, purpose }) {
+  await apiClient.post(API_ENDPOINTS.AUTH.OTP_SEND, { phone, purpose })
+}
+
+/** Exchanges a phone number + the code just received for a session. */
+export async function otpLoginApi({ phone, otp }) {
+  const { data } = await apiClient.post(API_ENDPOINTS.AUTH.OTP_LOGIN, { phone, otp })
   return data
 }
 
@@ -25,6 +43,15 @@ export async function refreshApi() {
 /** Invalidates the server-side refresh token and clears the HttpOnly cookie */
 export async function logoutApi() {
   await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT)
+}
+
+/**
+ * Fills in the profile of an account that OTP login created from a bare phone number.
+ * Returns the refreshed profile, so the caller can replace its incomplete copy of the user.
+ */
+export async function completeProfileApi(input) {
+  const { data } = await apiClient.post(API_ENDPOINTS.AUTH.COMPLETE_PROFILE, input)
+  return data
 }
 
 /** Changes the authenticated user's password. Requires a valid access token. */

@@ -10,6 +10,7 @@ import { useUserDetail } from "@/features/users/hooks/use-user-detail"
 import { useUserOrders } from "@/features/users/hooks/use-user-orders"
 import { useUpdateUser } from "@/features/users/hooks/use-users"
 import { formatDateTimeIST } from "@/lib/format"
+import { userDisplayName } from "@/lib/user"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
@@ -99,8 +100,8 @@ export function UserViewPage() {
   return (
     <PageWrapper>
       <PageHeader
-        title={user.name}
-        description={user.email}
+        title={userDisplayName(user)}
+        description={user.email ?? "No email on file yet"}
         actions={
           <button type="button" className="btn btn-primary" onClick={() => setEditModalOpen(true)}>
             <i className="fas fa-pen mr-1" />
@@ -130,10 +131,17 @@ export function UserViewPage() {
           <div className="card-body">
             <dl className="row mb-0">
               <dt className="col-sm-3">Name</dt>
-              <dd className="col-sm-9">{user.name}</dd>
+              <dd className="col-sm-9">
+                {user.name ?? "—"}
+                {/* Not a data error: OTP sign-in creates the account from a verified phone alone,
+                    and the customer fills the rest in afterwards. */}
+                {user.profileCompletedAt ? null : (
+                  <span className="badge badge-warning ml-2">Profile incomplete</span>
+                )}
+              </dd>
 
               <dt className="col-sm-3">Email</dt>
-              <dd className="col-sm-9">{user.email}</dd>
+              <dd className="col-sm-9">{user.email ?? "—"}</dd>
 
               <dt className="col-sm-3">Role</dt>
               <dd className="col-sm-9">

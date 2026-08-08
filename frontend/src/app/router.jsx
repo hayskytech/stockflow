@@ -10,6 +10,7 @@ import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
 import { ProfilePage } from "@/features/auth/pages/ProfilePage"
+import { CompleteProfilePage } from "@/features/auth/pages/CompleteProfilePage"
 import { HomePage } from "@/features/home/pages/HomePage"
 import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
 import { DivisionPage } from "@/features/division-detail/pages/DivisionPage"
@@ -89,6 +90,16 @@ export const router = createHashRouter([
       {
         path: "categories/:id",
         element: <CategoryPage />,
+      },
+      {
+        // Where an OTP login lands when it just created the account — signed in, but with
+        // nothing on file beyond the phone number it verified.
+        path: "complete-profile",
+        element: (
+          <ProtectedRoute>
+            <CompleteProfilePage />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "cart",

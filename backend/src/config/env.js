@@ -30,6 +30,20 @@ export const ENV = {
 
   CORS_ALLOWED_ORIGINS: required('CORS_ALLOWED_ORIGINS'),
 
+  // MSG91 OTP widget, driven entirely server-side — see utils/msg91.js.
+  // MSG91_SEND_PATH must match the widget's dashboard configuration: `sendOtp` for a `web`
+  // widget with Captcha Validation OFF, `sendOtpMobile` for a `Mobile` widget. Nothing in the
+  // widget id reveals which it is — verify with `npm run msg91:check -- 919876543210`.
+  MSG91_AUTH_KEY: required('MSG91_AUTH_KEY'),
+  MSG91_WIDGET_ID: required('MSG91_WIDGET_ID'),
+  MSG91_SEND_PATH: optional('MSG91_SEND_PATH', 'sendOtp'),
+
+  // Defensive ceiling on how long a `reqId` stays usable. MSG91 owns the real expiry — this only
+  // stops an ancient row from being verified against long after the user moved on.
+  OTP_TTL_MINUTES: parseInt(optional('OTP_TTL_MINUTES', '10'), 10),
+  OTP_MAX_SENDS_PER_PHONE: parseInt(optional('OTP_MAX_SENDS_PER_PHONE', '5'), 10),
+  OTP_SEND_WINDOW_MINUTES: parseInt(optional('OTP_SEND_WINDOW_MINUTES', '15'), 10),
+
   RATE_LIMIT_WINDOW_MS: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
   RATE_LIMIT_MAX: parseInt(optional('RATE_LIMIT_MAX', '100'), 10),
 

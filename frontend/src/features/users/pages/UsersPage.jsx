@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/auth.store"
 import { useUsersStore } from "@/features/users/users.store"
 import { UserFormModal } from "@/features/users/components/UserFormModal"
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from "@/features/users/hooks/use-users"
+import { userDisplayName } from "@/lib/user"
 import { ROUTES } from "@/constants/routes"
 
 const ROLE_BADGES = {
@@ -91,9 +92,18 @@ export function UsersPage() {
     {
       key: "name",
       label: "Name",
-      render: (row) => <Link to={ROUTES.USERS.DETAIL(row.id)}>{row.name}</Link>,
+      // A customer created by OTP login has no name until they complete their profile — the badge
+      // says why the row looks half-empty rather than leaving an admin to guess.
+      render: (row) => (
+        <>
+          <Link to={ROUTES.USERS.DETAIL(row.id)}>{userDisplayName(row)}</Link>
+          {row.profileCompletedAt ? null : (
+            <span className="badge badge-warning ml-2">Profile incomplete</span>
+          )}
+        </>
+      ),
     },
-    { key: "email", label: "Email" },
+    { key: "email", label: "Email", render: (row) => row.email ?? "—" },
     {
       key: "role",
       label: "Role",

@@ -12,7 +12,10 @@ const ORDER_COLUMNS = `
   o.shipping_address_line1 AS shippingAddressLine1, o.shipping_address_line2 AS shippingAddressLine2,
   o.shipping_city AS shippingCity, o.shipping_state AS shippingState, o.shipping_pincode AS shippingPincode,
   o.notes, o.created_at AS createdAt, o.updated_at AS updatedAt,
-  o.requested_by AS requestedBy, u.name AS requestedByName, u.email AS requestedByEmail
+  o.requested_by AS requestedBy, u.name AS requestedByName, u.email AS requestedByEmail,
+  -- Name and email are both NULL for a customer OTP login created and an admin then ordered for,
+  -- so the phone travels along as the identifier that is always there.
+  u.phone AS requestedByPhone
 `;
 const ORDER_JOINS = `FROM orders o JOIN users u ON u.id = o.requested_by`;
 

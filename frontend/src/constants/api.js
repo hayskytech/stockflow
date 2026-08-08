@@ -1,12 +1,21 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api"
 
+/** Machine-readable `details.code` values the API attaches to errors that need branching on,
+ *  rather than just displaying — matching on the human message would break the moment it changes. */
+export const API_ERROR_CODES = {
+  OTP_INVALID: "OTP_INVALID",
+}
+
 export const API_ENDPOINTS = {
   AUTH: {
     REGISTER: "/auth/register",
     LOGIN: "/auth/login",
+    OTP_SEND: "/auth/otp/send",
+    OTP_LOGIN: "/auth/otp/login",
     REFRESH: "/auth/refresh",
     LOGOUT: "/auth/logout",
     ME: "/auth/me",
+    COMPLETE_PROFILE: "/auth/complete-profile",
     CHANGE_PASSWORD: "/auth/change-password",
     MY_SESSIONS: "/users/me/sessions",
     MY_SESSION_BY_ID: (sessionId) => `/users/me/sessions/${sessionId}`,

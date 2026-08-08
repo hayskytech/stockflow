@@ -34,6 +34,16 @@ export function CheckoutPage() {
     )
   }
 
+  // A customer who signed in with an OTP for a number we had never seen has an account and nothing
+  // else — no name, no address. Browsing is fine without those; shipping an order is not, so this
+  // is the point where finishing the profile stops being optional. `from` sends them straight back
+  // here once they have.
+  if (profile?.profileComplete === false) {
+    return (
+      <Navigate to={ROUTES.STORE.COMPLETE_PROFILE} state={{ from: ROUTES.STORE.CHECKOUT }} replace />
+    )
+  }
+
   return (
     <CheckoutForm items={items} profile={profile} warehouse={warehouse} isLoadingWarehouse={isLoadingWarehouse} />
   )

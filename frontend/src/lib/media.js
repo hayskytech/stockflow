@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "@/constants/api"
 
-const MEDIA_ORIGIN = new URL(API_BASE_URL).origin
+// API_BASE_URL may be root-relative (/api), which resolves against the page's own origin.
+const MEDIA_ORIGIN = new URL(API_BASE_URL, window.location.origin).origin
 
 /** Resolves a root-relative media URL returned by the API (e.g. "/media-files/..") against the API's origin. */
 export function resolveMediaUrl(url) {

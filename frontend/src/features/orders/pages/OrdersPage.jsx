@@ -10,6 +10,7 @@ import { BackorderBadge } from "@/components/ui/BackorderBadge"
 import { useOrdersStore } from "@/features/orders/orders.store"
 import { useOrders, useUpdateOrderStatus } from "@/features/orders/hooks/use-orders"
 import { formatDateTimeIST } from "@/lib/format"
+import { userDisplayName } from "@/lib/user"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { ROUTES } from "@/constants/routes"
 
@@ -66,8 +67,8 @@ export function OrdersPage() {
       hideable: true,
       render: (row) => (
         <>
-          <div>{row.requestedByName}</div>
-          <div className="text-muted small">{row.requestedByEmail}</div>
+          <div>{userDisplayName({ name: row.requestedByName, phone: row.requestedByPhone })}</div>
+          <div className="text-muted small">{row.requestedByEmail ?? row.requestedByPhone ?? "—"}</div>
         </>
       ),
     },
