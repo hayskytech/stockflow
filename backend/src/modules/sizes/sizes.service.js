@@ -5,6 +5,18 @@ import { AppError } from '../../middleware/errorHandler.js';
 
 const SIZE_COLUMNS = 'id, value, is_active AS isActive, sort_order AS sortOrder, created_at AS createdAt, updated_at AS updatedAt';
 
+/**
+ * Mirrors catalog.service.js's rethrowAsAppError: the SELECT-based pre-check below gives a
+ * fast, friendly error for the common non-racing case, but two concurrent creates/updates can
+ * both pass that check before either write commits. uq_sizes_value (DB-level UNIQUE on `value`)
+ * is what actually closes the race — this turns the resulting ER_DUP_ENTRY into the same clean
+ * 409 instead of an unhandled 500.
+ */
+function rethrowAsAppError(err) {
+  if (err.code === 'ER_DUP_ENTRY') throw new AppError(409, 'This size already exists');
+  throw err;
+}
+
 // Mirrors catalog.service.js's normalized-name dedup — "XL", "xl" and " XL " shouldn't
 // coexist as if they were different sizes.
 const NORMALIZED_VALUE_SQL = "LOWER(REPLACE(value, ' ', ''))";
@@ -56,12 +68,16 @@ export async function createSize(input) {
 
   const id = crypto.randomUUID();
   const sortOrder = await nextSortOrder();
-  await executeQuery(`INSERT INTO sizes (id, value, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
-    id,
-    input.value,
-    input.isActive ?? true,
-    sortOrder,
-  ]);
+  try {
+    await executeQuery(`INSERT INTO sizes (id, value, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
+      id,
+      input.value,
+      input.isActive ?? true,
+      sortOrder,
+    ]);
+  } catch (err) {
+    rethrowAsAppError(err);
+  }
   return getSizeById(id);
 }
 
@@ -97,7 +113,11 @@ export async function updateSize(id, input) {
   }
 
   params.push(id);
-  await executeQuery(`UPDATE sizes SET ${fields.join(', ')} WHERE id = ?`, params);
+  try {
+    await executeQuery(`UPDATE sizes SET ${fields.join(', ')} WHERE id = ?`, params);
+  } catch (err) {
+    rethrowAsAppError(err);
+  }
   return getSizeById(id);
 }
 

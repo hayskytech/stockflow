@@ -18,7 +18,7 @@ import { settingsRouter } from "./modules/settings/settings.router.js";
 import { sizesRouter } from "./modules/sizes/sizes.router.js";
 import { stockRouter } from "./modules/stock/stock.router.js";
 import { stockLedgerRouter } from "./modules/stockLedger/stockLedger.router.js";
-import { usersRouter } from "./modules/users/users.router.js";
+import { adminSessionsRouter, usersRouter } from "./modules/users/users.router.js";
 import { warehouseRouter } from "./modules/warehouse/warehouse.router.js";
 
 const app = express();
@@ -73,6 +73,7 @@ app.use("/api/media", mediaRouter);
 app.use("/api/hero-slides", heroSlidesRouter);
 app.use("/api/notice", noticeRouter);
 app.use("/api/users", usersRouter);
+app.use("/api/admin", adminSessionsRouter);
 app.use("/api/warehouse", warehouseRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/dispatches", dispatchesRouter);

@@ -10,10 +10,12 @@ export const generalLimiter = rateLimit({
   message: { message: 'Too many requests, please try again later' },
 });
 
-/** Applied only to auth routes — much stricter to slow down brute force attacks. */
+/** Applied only to auth routes — much stricter to slow down brute force attacks. Must stay below
+ *  generalLimiter's effective cap (RATE_LIMIT_MAX) or it never binds, since both limiters run
+ *  independently and count concurrently — whichever cap is lower is the one that ever triggers. */
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 150,
+  windowMs: ENV.RATE_LIMIT_WINDOW_MS,
+  max: ENV.RATE_LIMIT_AUTH_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many attempts, please try again later' },

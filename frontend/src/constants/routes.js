@@ -54,6 +54,7 @@ export const ROUTES = {
   USERS: {
     LIST: "/users",
     DETAIL: (id) => `/users/${id}`,
+    SESSIONS: "/users/sessions",
   },
   SETTINGS: "/settings",
   PROFILE: "/profile",

@@ -416,6 +416,7 @@ CREATE TABLE product_gallery_images (
   PRIMARY KEY (id),
   UNIQUE KEY uq_product_gallery_product_media (product_id, media_id),
   KEY idx_product_gallery_product             (product_id, sort_order),
+  KEY idx_product_gallery_images_media_id     (media_id),
 
   CONSTRAINT fk_product_gallery_product_id
     FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -476,9 +477,9 @@ CREATE TABLE site_branding (
   CONSTRAINT chk_site_branding_single_row CHECK (id = 1),
 
   CONSTRAINT fk_site_branding_logo_media_id
-    FOREIGN KEY (logo_media_id) REFERENCES media (id),
+    FOREIGN KEY (logo_media_id) REFERENCES media (id) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_site_branding_favicon_media_id
-    FOREIGN KEY (favicon_media_id) REFERENCES media (id)
+    FOREIGN KEY (favicon_media_id) REFERENCES media (id) ON DELETE RESTRICT ON UPDATE CASCADE
 
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
@@ -653,6 +654,7 @@ CREATE TABLE dispatches (
   UNIQUE KEY uq_dispatches_dispatch_number (dispatch_number),
   UNIQUE KEY uq_dispatches_order_id        (order_id),
   KEY idx_dispatches_created_at            (created_at),
+  KEY idx_dispatches_dispatched_by         (dispatched_by),
 
   CONSTRAINT fk_dispatches_order_id
     FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE RESTRICT ON UPDATE CASCADE,

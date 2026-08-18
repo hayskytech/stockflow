@@ -1,6 +1,7 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
 import {
+  adminSessionsQuerySchema,
   createUserSchema,
   idParamSchema,
   listUsersQuerySchema,
@@ -99,6 +100,40 @@ export async function revokeMySession(req, res, next) {
   try {
     const { sessionId } = parseOrThrow(sessionIdParamSchema, req.params);
     await usersService.revokeSessionForUser(req.user.sub, sessionId);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /api/admin/sessions[?user_id=] — admin only, all users' sessions (optionally scoped to one). */
+export async function listAllSessions(req, res, next) {
+  try {
+    const { userId } = parseOrThrow(adminSessionsQuerySchema, { userId: req.query.user_id || undefined });
+    const { rows, total } = await usersService.listAllSessions(req.listQuery, { userId });
+    setPaginationHeaders(res, total, req.listQuery.perPage);
+    res.status(200).json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** DELETE /api/admin/sessions/:sessionId — admin only, terminate any single session. */
+export async function revokeAnySession(req, res, next) {
+  try {
+    const { sessionId } = parseOrThrow(sessionIdParamSchema, req.params);
+    await usersService.revokeAnySession(sessionId);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** DELETE /api/admin/users/:id/sessions — admin only, "force logout everywhere" for one user. */
+export async function revokeAllSessionsForUser(req, res, next) {
+  try {
+    const { id } = parseOrThrow(idParamSchema, req.params);
+    await usersService.revokeAllSessionsForUser(id);
     res.status(204).send();
   } catch (err) {
     next(err);

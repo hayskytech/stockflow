@@ -145,10 +145,21 @@ function SiteBrandingForm() {
   const { data: branding, isLoading } = useSiteBranding()
   const updateSiteBranding = useUpdateSiteBranding()
 
-  const [logoUrl, setLogoUrl] = useState(branding?.logoUrl ?? null)
-  const [faviconUrl, setFaviconUrl] = useState(branding?.faviconUrl ?? null)
+  // Undefined = "nothing picked this session yet" — display falls back to the
+  // loaded branding value. Once the admin picks (or removes) an image via
+  // MediaPickerField, that pick wins until the component remounts, regardless
+  // of what the query later refetches. This must NOT be seeded from `branding`
+  // at mount time (`useState(branding?.logoUrl ?? null)`): `branding` is still
+  // undefined on first render while useSiteBranding() is loading, and a
+  // useState initializer only runs once, so the picker would stay stuck on
+  // "no image" forever even after the query resolves with a saved logo/favicon.
+  const [logoOverride, setLogoOverride] = useState(undefined)
+  const [faviconOverride, setFaviconOverride] = useState(undefined)
   const [serverError, setServerError] = useState("")
   const [savedMessage, setSavedMessage] = useState("")
+
+  const logoUrl = logoOverride !== undefined ? logoOverride : branding?.logoUrl ?? null
+  const faviconUrl = faviconOverride !== undefined ? faviconOverride : branding?.faviconUrl ?? null
 
   const form = useForm({
     defaultValues: {
@@ -198,7 +209,7 @@ function SiteBrandingForm() {
                   imageUrl={logoUrl}
                   onChange={(media) => {
                     field.handleChange(media?.id ?? "")
-                    setLogoUrl(media?.url ?? null)
+                    setLogoOverride(media?.url ?? null)
                   }}
                 />
                 {field.state.meta.errors.length > 0 ? (
@@ -217,7 +228,7 @@ function SiteBrandingForm() {
                   imageUrl={faviconUrl}
                   onChange={(media) => {
                     field.handleChange(media?.id ?? "")
-                    setFaviconUrl(media?.url ?? null)
+                    setFaviconOverride(media?.url ?? null)
                   }}
                 />
                 <small className="form-text text-muted d-block mb-3" style={{ marginTop: "-0.5rem" }}>

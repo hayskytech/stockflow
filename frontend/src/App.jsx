@@ -45,16 +45,23 @@ export function App() {
   }, [siteTitle])
 
   useEffect(() => {
-    if (!branding?.faviconUrl) return
-    // index.html ships no <link rel="icon"> of its own, so this always creates one on first
-    // paint rather than ever needing to remove/restore a static default.
-    let link = document.querySelector("link[rel='icon']")
-    if (!link) {
-      link = document.createElement("link")
-      link.rel = "icon"
-      document.head.appendChild(link)
+    // index.html ships no <link rel="icon"> of its own, so this creates one the first
+    // time a favicon is set. If an admin later clears the favicon in the same tab
+    // session, remove the injected tag again rather than leaving the stale icon in
+    // place until a full reload — there's no static default to fall back to.
+    const link = document.querySelector("link[rel='icon']")
+    if (!branding?.faviconUrl) {
+      link?.remove()
+      return
     }
-    link.href = resolveMediaUrl(branding.faviconUrl)
+    if (link) {
+      link.href = resolveMediaUrl(branding.faviconUrl)
+    } else {
+      const newLink = document.createElement("link")
+      newLink.rel = "icon"
+      newLink.href = resolveMediaUrl(branding.faviconUrl)
+      document.head.appendChild(newLink)
+    }
   }, [branding?.faviconUrl])
 
   return <RouterProvider router={router} />

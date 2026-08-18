@@ -54,3 +54,8 @@ export const listUsersQuerySchema = z.object({
 
 export const idParamSchema = z.object({ id: uuidField });
 export const sessionIdParamSchema = z.object({ sessionId: uuidField });
+
+/** GET /api/admin/sessions?user_id= — admin-only, optionally scoped to one user's sessions. */
+export const adminSessionsQuerySchema = z.object({
+  userId: uuidField.optional(),
+});

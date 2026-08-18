@@ -210,3 +210,68 @@ export async function revokeSessionForUser(userId, sessionId) {
   );
   if (result.affectedRows === 0) throw new AppError(404, 'Session not found');
 }
+
+// Admin-only columns — same safe set as SESSION_COLUMNS (never token_hash), plus the owning
+// user's identity joined in so an admin looking at a global list can tell whose session is whose.
+const ADMIN_SESSION_COLUMNS = `
+  rt.id, rt.user_id AS userId, u.name AS userName, u.email AS userEmail,
+  u.phone AS userPhone, u.role AS userRole,
+  rt.device_info AS deviceInfo, rt.ip_address AS ipAddress,
+  rt.created_at AS createdAt, rt.last_used_at AS lastUsedAt, rt.expires_at AS expiresAt
+`;
+
+// users.router.js whitelists these same keys for the admin sessions list's `orderby`.
+const ADMIN_SESSION_SORT_COLUMNS = {
+  created_at: 'rt.created_at',
+  last_used_at: 'rt.last_used_at',
+};
+
+/**
+ * Active sessions across every user (admin only), optionally scoped to one user via
+ * `filters.userId` — the UserView "Sessions" tab reuses this same query rather than a second one.
+ */
+export async function listAllSessions(listQuery, filters) {
+  const { perPage, offset, orderby, order } = listQuery;
+
+  const conditions = ['rt.revoked_at IS NULL', 'rt.expires_at > NOW()'];
+  const params = [];
+  if (filters.userId) {
+    conditions.push('rt.user_id = ?');
+    params.push(filters.userId);
+  }
+  const where = `WHERE ${conditions.join(' AND ')}`;
+  const orderColumn = ADMIN_SESSION_SORT_COLUMNS[orderby] ?? ADMIN_SESSION_SORT_COLUMNS.created_at;
+
+  const [rows, countRows] = await Promise.all([
+    executeQuery(
+      `SELECT ${ADMIN_SESSION_COLUMNS} FROM refresh_tokens rt
+       JOIN users u ON u.id = rt.user_id
+       ${where} ORDER BY ${orderColumn} ${order} LIMIT ? OFFSET ?`,
+      [...params, perPage, offset],
+    ),
+    executeQuery(`SELECT COUNT(*) AS total FROM refresh_tokens rt ${where}`, params),
+  ]);
+
+  return { rows, total: countRows[0].total };
+}
+
+/**
+ * Revokes any session by id — the admin path, so unlike revokeSessionForUser there's no
+ * `user_id` ownership check (an admin can terminate any user's session).
+ */
+export async function revokeAnySession(sessionId) {
+  const result = await executeQuery(
+    `UPDATE refresh_tokens SET revoked_at = NOW() WHERE id = ? AND revoked_at IS NULL`,
+    [sessionId],
+  );
+  if (result.affectedRows === 0) throw new AppError(404, 'Session not found');
+}
+
+/** "Force logout everywhere" — revokes every active session belonging to one user. */
+export async function revokeAllSessionsForUser(userId) {
+  await getUserById(userId); // 404s if the user doesn't exist
+  await executeQuery(
+    `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL`,
+    [userId],
+  );
+}

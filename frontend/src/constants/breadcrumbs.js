@@ -35,6 +35,7 @@ export const CRUMBS = {
   REPORTS: () => trail({ label: "Reports" }),
   USERS: () => trail({ label: "Users / Staff" }),
   USERS_DETAIL: () => trail({ label: "Users / Staff", to: ROUTES.USERS.LIST }, { label: "User Details" }),
+  USERS_SESSIONS: () => trail({ label: "Users / Staff", to: ROUTES.USERS.LIST }, { label: "Active Sessions" }),
   SETTINGS: () => trail({ label: "Settings" }),
   PROFILE: () => trail({ label: "My Profile" }),
 }

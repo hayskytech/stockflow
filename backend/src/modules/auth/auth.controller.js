@@ -16,17 +16,21 @@ import {
   loginUser,
   loginWithOtp,
   logoutUser,
+  parseDurationMs,
   refreshTokens,
   registerCustomer,
 } from './auth.service.js';
 
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
 
+// maxAge is derived from the same JWT_REFRESH_EXPIRES_IN env var auth.service.js uses to compute
+// refresh_tokens.expires_at, so the cookie's browser-side lifetime never drifts from the token's
+// server-side validity window if that env var is ever changed from its default.
 const cookieOptions = {
   httpOnly: true,
   secure: ENV.NODE_ENV === 'production',
   sameSite: 'strict',
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  maxAge: parseDurationMs(ENV.JWT_REFRESH_EXPIRES_IN),
 };
 
 /** POST /api/auth/register — public customer self-signup, auto-logs in on success. */

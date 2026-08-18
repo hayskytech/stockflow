@@ -11,7 +11,13 @@ function optional(key, defaultValue) {
 }
 
 export const ENV = {
-  NODE_ENV: optional('NODE_ENV', 'development'),
+  // No default: NODE_ENV governs three separate production-sensitive behaviors (the delete-all-data
+  // dev-only gate, the refresh-cookie `secure` flag, and CORS's private-origin allowance), so an
+  // operator forgetting to set it must crash the app at boot rather than silently reopen all three.
+  // Both documented environments already set it explicitly: `backend/.env.example` ships
+  // `NODE_ENV=development` for local `npm run dev`/`npm start` (loaded via `--env-file=.env`), and
+  // `deployment_guide.md` documents `NODE_ENV=production` as a required line in the server's `.env`.
+  NODE_ENV: required('NODE_ENV'),
   APP_PORT: parseInt(optional('APP_PORT', '4000'), 10),
   APP_NAME: optional('APP_NAME', 'StockFlow'),
   FRONTEND_URL: required('FRONTEND_URL'),
@@ -46,6 +52,10 @@ export const ENV = {
 
   RATE_LIMIT_WINDOW_MS: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
   RATE_LIMIT_MAX: parseInt(optional('RATE_LIMIT_MAX', '100'), 10),
+  // Must stay strictly lower than RATE_LIMIT_MAX so authLimiter (login/refresh/change-password)
+  // actually binds before generalLimiter — both limiters run independently and count concurrently,
+  // so whichever cap is lower is the one that ever triggers.
+  RATE_LIMIT_AUTH_MAX: parseInt(optional('RATE_LIMIT_AUTH_MAX', '20'), 10),
 
   MEDIA_UPLOAD_DIR: optional('MEDIA_UPLOAD_DIR', 'uploads/media'),
   MEDIA_PUBLIC_PATH: optional('MEDIA_PUBLIC_PATH', '/media-files'),

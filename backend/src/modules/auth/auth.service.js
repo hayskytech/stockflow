@@ -12,7 +12,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 /** Parses duration strings like "7d", "15m", "1h" into milliseconds for DB expiry calculation. */
-function parseDurationMs(duration) {
+export function parseDurationMs(duration) {
   const unit = duration.slice(-1);
   const value = parseInt(duration.slice(0, -1), 10);
   switch (unit) {

@@ -42,3 +42,23 @@ export async function listUserOrdersApi(userId, params) {
   const res = await apiClient.get(API_ENDPOINTS.ORDERS.LIST, { params: { ...params, customer_id: userId } })
   return toListResult(res)
 }
+
+/**
+ * Admin: active sessions across every user, most recently used first. Pass `{ user_id }` in
+ * params to scope the list to one user (used by the UserView "Sessions" tab) — omit it for the
+ * global all-sessions view.
+ */
+export async function listAllSessionsApi(params) {
+  const res = await apiClient.get(API_ENDPOINTS.USERS.ADMIN_SESSIONS, { params })
+  return toListResult(res)
+}
+
+/** Admin: revokes any single session by id, regardless of who owns it. */
+export async function revokeAnySessionApi(sessionId) {
+  await apiClient.delete(API_ENDPOINTS.USERS.ADMIN_SESSION_BY_ID(sessionId))
+}
+
+/** Admin: "force logout everywhere" — revokes every active session belonging to one user. */
+export async function revokeAllSessionsForUserApi(userId) {
+  await apiClient.delete(API_ENDPOINTS.USERS.ADMIN_USER_SESSIONS(userId))
+}

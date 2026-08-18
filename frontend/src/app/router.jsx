@@ -41,6 +41,7 @@ import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
 import { UserViewPage } from "@/features/users/pages/UserViewPage"
+import { AdminSessionsPage } from "@/features/users/pages/AdminSessionsPage"
 import { SettingsPage } from "@/features/settings/pages/SettingsPage"
 import { HeroSlidesPage } from "@/features/heroSlides/pages/HeroSlidesPage"
 import { NoticePage } from "@/features/notice/pages/NoticePage"
@@ -281,6 +282,17 @@ export const router = createHashRouter([
         path: ROUTES.USERS.LIST,
         element: <UsersPage />,
         handle: { crumb: CRUMBS.USERS },
+      },
+      {
+        // Static segment, so react-router ranks it above the "/users/:id" param route below
+        // regardless of declaration order — but it's declared first anyway for readability.
+        path: ROUTES.USERS.SESSIONS,
+        element: (
+          <ProtectedRoute allow={[ROLES.ADMIN]}>
+            <AdminSessionsPage />
+          </ProtectedRoute>
+        ),
+        handle: { crumb: CRUMBS.USERS_SESSIONS },
       },
       {
         path: "/users/:id",

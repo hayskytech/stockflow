@@ -23,6 +23,9 @@ export const API_ENDPOINTS = {
   USERS: {
     LIST: "/users",
     BY_ID: (id) => `/users/${id}`,
+    ADMIN_SESSIONS: "/admin/sessions",
+    ADMIN_SESSION_BY_ID: (sessionId) => `/admin/sessions/${sessionId}`,
+    ADMIN_USER_SESSIONS: (id) => `/admin/users/${id}/sessions`,
   },
   WAREHOUSE: "/warehouse",
   WAREHOUSE_PUBLIC: "/warehouse/public",

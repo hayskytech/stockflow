@@ -11,6 +11,7 @@ import { UserFormModal } from "@/features/users/components/UserFormModal"
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from "@/features/users/hooks/use-users"
 import { userDisplayName } from "@/lib/user"
 import { ROUTES } from "@/constants/routes"
+import { ROLES } from "@/constants/app"
 
 const ROLE_BADGES = {
   admin: "badge-danger",
@@ -27,6 +28,7 @@ const ROLE_FILTERS = [
 
 export function UsersPage() {
   const currentUserId = useAuthStore((s) => s.user?.id)
+  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
 
   const search = useUsersStore((s) => s.search)
   const setSearch = useUsersStore((s) => s.setSearch)
@@ -146,10 +148,18 @@ export function UsersPage() {
         count={data?.total}
         description="Manage admin, staff, and customer accounts"
         actions={
-          <button type="button" className="btn btn-primary" onClick={openCreate}>
-            <i className="fas fa-plus mr-1" />
-            Add User
-          </button>
+          <>
+            {isAdmin ? (
+              <Link id="users-view-sessions-link" to={ROUTES.USERS.SESSIONS} className="btn btn-outline-secondary mr-2">
+                <i className="fas fa-desktop mr-1" />
+                Active Sessions
+              </Link>
+            ) : null}
+            <button type="button" className="btn btn-primary" onClick={openCreate}>
+              <i className="fas fa-plus mr-1" />
+              Add User
+            </button>
+          </>
         }
       />
 

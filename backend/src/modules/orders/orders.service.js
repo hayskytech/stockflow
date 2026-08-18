@@ -292,6 +292,16 @@ export async function updateOrderStatus(id, status, requester) {
     // consistent order (sortedItems) so two concurrent acceptances sharing products
     // can't deadlock each other.
     await withTransaction(async (execute) => {
+      // Re-check under lock so two concurrent accept requests (double-click, two staff tabs,
+      // a client retry) can't both pass the pre-transaction "is this pending?" check and then
+      // both reserve stock for the same order. Locked (and unlocked, below) in that order —
+      // order row first, then product rows — to match dispatches.service.js's lock ordering
+      // (order row, then product rows via UPDATE) and avoid a cross-path deadlock.
+      const [lockedOrder] = await execute(`SELECT status FROM orders WHERE id = ? FOR UPDATE`, [id]);
+      if (lockedOrder.status !== 'pending') {
+        throw new AppError(409, `Order is ${lockedOrder.status} and cannot be changed to accepted`);
+      }
+
       const failures = [];
       const lockedItems = [];
 
@@ -323,7 +333,16 @@ export async function updateOrderStatus(id, status, requester) {
         );
       }
 
-      await execute(`UPDATE orders SET status = 'accepted' WHERE id = ?`, [id]);
+      // Defense in depth: the row lock above should already rule out a concurrent transition,
+      // but guard the UPDATE itself too and check the affected-row count in case an isolation
+      // level quirk let the lock through — if 0 rows changed, someone else already moved this
+      // order out of 'pending' between the lock and here.
+      const updateResult = await execute(`UPDATE orders SET status = 'accepted' WHERE id = ? AND status = 'pending'`, [
+        id,
+      ]);
+      if (updateResult.affectedRows === 0) {
+        throw new AppError(409, `Order is no longer pending and cannot be changed to accepted`);
+      }
     });
 
     return getOrderById(id, requester);

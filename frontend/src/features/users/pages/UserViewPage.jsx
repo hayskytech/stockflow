@@ -3,16 +3,20 @@ import { Link, useParams } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
+import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
 import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
 import { UserFormModal } from "@/features/users/components/UserFormModal"
 import { useUserDetail } from "@/features/users/hooks/use-user-detail"
 import { useUserOrders } from "@/features/users/hooks/use-user-orders"
 import { useUpdateUser } from "@/features/users/hooks/use-users"
+import { useAdminSessions, useForceLogoutUser, useRevokeAnySession } from "@/features/users/hooks/use-admin-sessions"
 import { formatDateTimeIST } from "@/lib/format"
 import { userDisplayName } from "@/lib/user"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { useAuthStore } from "@/store/auth.store"
 import { ROUTES } from "@/constants/routes"
+import { ROLES } from "@/constants/app"
 
 const ROLE_BADGES = {
   admin: "badge-danger",
@@ -20,27 +24,43 @@ const ROLE_BADGES = {
   customer: "badge-secondary",
 }
 
-const TABS = [
+const BASE_TABS = [
   { key: "details", label: "Details", icon: "fa-id-card" },
   { key: "orders", label: "Orders", icon: "fa-cart-shopping" },
   { key: "payments", label: "Payments", icon: "fa-money-bill" },
 ]
 
+// Sessions tab is admin-only — mirrors the backend's requireRole('admin') on the /admin/*
+// session endpoints (see permission matrix: "View/terminate sessions — others" is Admin only).
+const SESSIONS_TAB = { key: "sessions", label: "Sessions", icon: "fa-desktop" }
+
 export function UserViewPage() {
   const { id } = useParams()
   const formatMoney = useFormatMoney()
+  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
 
   const [tab, setTab] = useState("details")
   const [page, setPage] = useState(1)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [formError, setFormError] = useState("")
+  const [revokingSession, setRevokingSession] = useState(null)
+  const [forceLogoutConfirmOpen, setForceLogoutConfirmOpen] = useState(false)
+  const [sessionsError, setSessionsError] = useState("")
 
   const { data: user, isLoading, isError } = useUserDetail(id)
   const { data: ordersData, isLoading: isLoadingOrders } = useUserOrders(
     id,
     { page, per_page: 10 },
   )
+  const { data: sessionsData, isLoading: isLoadingSessions, isError: isSessionsError } = useAdminSessions(
+    { user_id: id },
+    { enabled: isAdmin && tab === "sessions" },
+  )
   const updateUser = useUpdateUser()
+  const revokeSession = useRevokeAnySession()
+  const forceLogout = useForceLogoutUser()
+
+  const tabs = isAdmin ? [...BASE_TABS, SESSIONS_TAB] : BASE_TABS
 
   async function handleEditSubmit(input) {
     setFormError("")
@@ -49,6 +69,28 @@ export function UserViewPage() {
       setEditModalOpen(false)
     } catch (err) {
       setFormError(err.response?.data?.message ?? "Could not save user")
+    }
+  }
+
+  async function handleRevokeSession() {
+    setSessionsError("")
+    try {
+      await revokeSession.mutateAsync(revokingSession.id)
+      setRevokingSession(null)
+    } catch (err) {
+      setSessionsError(err.response?.data?.message ?? "Could not revoke session")
+      setRevokingSession(null)
+    }
+  }
+
+  async function handleForceLogout() {
+    setSessionsError("")
+    try {
+      await forceLogout.mutateAsync(id)
+      setForceLogoutConfirmOpen(false)
+    } catch (err) {
+      setSessionsError(err.response?.data?.message ?? "Could not sign this user out everywhere")
+      setForceLogoutConfirmOpen(false)
     }
   }
 
@@ -111,7 +153,7 @@ export function UserViewPage() {
       />
 
       <ul className="nav nav-tabs mb-3">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <li className="nav-item" key={t.key}>
             <button
               type="button"
@@ -221,6 +263,70 @@ export function UserViewPage() {
         </div>
       ) : null}
 
+      {tab === "sessions" && isAdmin ? (
+        <div className="card">
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <h3 className="card-title mb-0">Active Sessions</h3>
+            <button
+              type="button"
+              id="user-view-force-logout-btn"
+              className="btn btn-sm btn-outline-danger"
+              disabled={!sessionsData?.items?.length}
+              onClick={() => setForceLogoutConfirmOpen(true)}
+            >
+              <i className="fas fa-right-from-bracket mr-1" />
+              Force Logout Everywhere
+            </button>
+          </div>
+          <div className="card-body">
+            {sessionsError ? <div className="alert alert-danger">{sessionsError}</div> : null}
+
+            {isLoadingSessions ? (
+              <div className="text-center py-4">
+                <div className="spinner-border text-primary" role="status" />
+              </div>
+            ) : isSessionsError ? (
+              <div className="alert alert-danger">Could not load sessions. Please try again.</div>
+            ) : (sessionsData?.items ?? []).length === 0 ? (
+              <p className="text-muted mb-0">No active sessions.</p>
+            ) : (
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Device</th>
+                      <th>IP Address</th>
+                      <th>Last Used</th>
+                      <th>Signed In</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessionsData.items.map((session) => (
+                      <tr key={session.id}>
+                        <td>{session.deviceInfo ?? "Unknown device"}</td>
+                        <td>{session.ipAddress ?? "—"}</td>
+                        <td>{session.lastUsedAt ? formatDateTimeIST(session.lastUsedAt) : "—"}</td>
+                        <td>{formatDateTimeIST(session.createdAt)}</td>
+                        <td className="text-right">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => setRevokingSession(session)}
+                          >
+                            Revoke
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
       <UserFormModal
         open={editModalOpen}
         user={user}
@@ -228,6 +334,22 @@ export function UserViewPage() {
         onSubmit={handleEditSubmit}
         isSubmitting={updateUser.isPending}
         serverError={formError}
+      />
+
+      <ConfirmDialog
+        open={Boolean(revokingSession)}
+        title="Revoke session?"
+        message="This will sign that device out the next time it tries to refresh its session."
+        onConfirm={handleRevokeSession}
+        onCancel={() => setRevokingSession(null)}
+      />
+
+      <ConfirmDialog
+        open={forceLogoutConfirmOpen}
+        title="Force logout everywhere?"
+        message={`This will revoke every active session for ${userDisplayName(user)}, signing them out of all devices.`}
+        onConfirm={handleForceLogout}
+        onCancel={() => setForceLogoutConfirmOpen(false)}
       />
     </PageWrapper>
   )
