@@ -167,6 +167,23 @@ CREATE TABLE notice (
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Single-row admin-editable storefront notice board';
 
+CREATE TABLE social_links (
+  id              TINYINT UNSIGNED NOT NULL DEFAULT 1                 COMMENT 'Always 1 - single row',
+  facebook_url    VARCHAR(255)  NULL,
+  instagram_url   VARCHAR(255)  NULL,
+  youtube_url     VARCHAR(255)  NULL,
+  whatsapp_url    VARCHAR(255)  NULL                                  COMMENT 'WhatsApp channel link, not a phone number',
+  created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  CONSTRAINT chk_social_links_single_row CHECK (id = 1)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Single-row admin-editable storefront social media links';
+
 
 -- =============================================================================
 -- TABLE: divisions
@@ -438,6 +455,35 @@ CREATE TABLE hero_slides (
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
   COMMENT='Homepage hero slider slides';
+
+
+-- =============================================================================
+-- TABLE: site_branding
+-- Single-row admin-editable logo + favicon, admin-managed via the shared media library.
+-- =============================================================================
+CREATE TABLE site_branding (
+  id                TINYINT UNSIGNED NOT NULL DEFAULT 1                 COMMENT 'Always 1 - single row',
+  logo_media_id     CHAR(36)      NULL                                  COMMENT 'FK into the shared media library',
+  logo_url          VARCHAR(500)  NULL                                  COMMENT 'Denormalized URL of logo_media_id, cached for fast reads',
+  favicon_media_id  CHAR(36)      NULL                                  COMMENT 'FK into the shared media library',
+  favicon_url       VARCHAR(500)  NULL                                  COMMENT 'Denormalized URL of favicon_media_id, cached for fast reads',
+  created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  KEY idx_site_branding_logo_media_id     (logo_media_id),
+  KEY idx_site_branding_favicon_media_id  (favicon_media_id),
+  CONSTRAINT chk_site_branding_single_row CHECK (id = 1),
+
+  CONSTRAINT fk_site_branding_logo_media_id
+    FOREIGN KEY (logo_media_id) REFERENCES media (id),
+  CONSTRAINT fk_site_branding_favicon_media_id
+    FOREIGN KEY (favicon_media_id) REFERENCES media (id)
+
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci
+  COMMENT='Single-row admin-editable storefront logo + favicon';
 
 
 -- =============================================================================

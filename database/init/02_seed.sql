@@ -29,6 +29,16 @@ INSERT INTO warehouse (
 INSERT INTO notice (id, message, is_active) VALUES (1, NULL, FALSE);
 
 -- =============================================================================
+-- Social links (single row, all empty by default)
+-- =============================================================================
+INSERT INTO social_links (id, facebook_url, instagram_url, youtube_url, whatsapp_url) VALUES (1, NULL, NULL, NULL, NULL);
+
+-- =============================================================================
+-- Site branding (single row, no logo/favicon by default)
+-- =============================================================================
+INSERT INTO site_branding (id, logo_media_id, logo_url, favicon_media_id, favicon_url) VALUES (1, NULL, NULL, NULL, NULL);
+
+-- =============================================================================
 -- Sizes (starter list — admin can add more, e.g. numeric sizes, from the Sizes page)
 -- =============================================================================
 INSERT INTO sizes (id, value, sort_order) VALUES

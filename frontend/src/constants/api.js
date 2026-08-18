@@ -97,5 +97,9 @@ export const API_ENDPOINTS = {
   },
   SETTINGS: {
     DELETE_ALL_DATA: "/settings/delete-all-data",
+    SOCIAL_LINKS: "/settings/social",
+    SOCIAL_LINKS_PUBLIC: "/settings/social/public",
+    BRANDING: "/settings/branding",
+    BRANDING_PUBLIC: "/settings/branding/public",
   },
 }

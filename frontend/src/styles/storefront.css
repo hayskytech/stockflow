@@ -361,6 +361,12 @@
   color: #fbf3e4;
 }
 
+.storefront .store-topbar-logo {
+  max-height: 2.5rem;
+  max-width: 12rem;
+  object-fit: contain;
+}
+
 .storefront .store-search-box {
   width: 100%;
 }
@@ -975,6 +981,26 @@
 .storefront .store-footer a:hover {
   color: var(--sc-gold-soft);
   text-decoration: none;
+}
+
+.storefront .store-footer-social {
+  margin-top: 1rem;
+}
+
+.storefront .store-footer-social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid rgba(243, 230, 216, 0.3);
+  color: rgba(243, 230, 216, 0.85);
+}
+
+.storefront .store-footer-social a:hover {
+  border-color: var(--sc-gold-soft);
+  color: var(--sc-gold-soft);
 }
 
 .storefront .store-footer-bottom {

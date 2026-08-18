@@ -60,7 +60,7 @@ backend/src/
     orders/      ...
     dispatches/  ...   # outward dispatch of accepted orders, releases reserved quantity
     reports/     ...
-    settings/    ...   # system administration (dev-only delete-all-data reset)
+    settings/    ...   # social media links (storefront footer) + system administration (dev-only delete-all-data reset)
   utils/jwt.js, logger.js
 ```
 
@@ -297,6 +297,10 @@ Service-layer pattern: each list service builds `WHERE`/`ORDER BY`/`LIMIT ... OF
 - **Dispatches** — `GET /dispatches`, `GET /dispatches/:id`, `POST /dispatches` (orderId + optional courier/AWB/note — a one-step confirmation, no scanning) — admin/staff. Creates a `dispatches` row, releases the order's reserved quantity per product, writes a `stock_ledger` row per product, and flips the order to `dispatched` in the same transaction.
 - **Reports** — `GET /reports/stock-summary` (includes low-stock: `quantity_available <= reorder_level`), `GET /reports/order-history` (`days`), `GET /reports/stock-movement` (`days` — daily physical in/out from `stock_ledger`, counting only `import`/`adjustment`/`dispatch` rows) — aggregate queries.
 - **Users / Staff** — `GET /users` (`role`, `search`), CRUD — admin only. Create/edit accept the same profile fields as customer self-registration (phone, business name, address, town, district, state, pincode) in addition to name/email/role/password, though they're only meaningful for `role='customer'`. Deleting a `customer` soft-deletes (see Coding Rules); deleting `admin`/`staff` hard-deletes. `UserViewPage` (frontend `features/users/pages/UserViewPage.jsx`) shows one user's Details/Orders/Payments in tabs, backed by `GET /orders?customer_id=` (admin/staff only). Plus session endpoints above.
+- **Settings** — `backend/modules/settings/` ↔ `frontend/features/settings/`, the admin `SettingsPage`. Three unrelated concerns share the module rather than the folder-per-concern pattern used elsewhere, since none is large enough to warrant its own module:
+  - **Social media links** — single-record settings (`social_links` table, `id=1`), mirroring the Warehouse/Notice Board single-row pattern: Facebook/Instagram/YouTube/WhatsApp Channel URLs. `GET /settings/social/public` (unauthenticated) feeds the storefront `Footer` (icons shown only for links that are set); `GET /settings/social` (any authenticated role) and `PUT /settings/social` (admin only) manage it from `SettingsPage`.
+  - **Site branding** — single-record settings (`site_branding` table, `id=1`): logo + favicon, each a `media_id` + denormalized `media_url` pair admin-managed via the shared media library (same pattern as Homepage Sliders), picked with the shared `MediaPickerField`. Usage is tracked via `media_usage` under entity types `site_logo`/`site_favicon` against a fixed placeholder entity id (this is a single settings row, not a real per-entity list). `GET /settings/branding/public` (unauthenticated) feeds the storefront header logo (`StoreTopbar`, falls back to the site title text when unset) and the browser-tab favicon (set app-wide in `App.jsx` via a `<link rel="icon">` written at runtime — `index.html` ships none of its own). `GET /settings/branding` and `PUT /settings/branding` (admin only) manage it from `SettingsPage`. Because `site_branding` holds a hard (non-cascading) FK into `media`, `deleteAllData` clears its logo/favicon columns before wiping the `media` table.
+  - **Delete All Data** — `POST /settings/delete-all-data`, dev-only destructive reset (blocked outside development, admin only) — wipes every product, order, stock unit, stock ledger entry, the catalog tree, media uploads and all non-seed users.
 
 All write routes (`POST`/`PUT`/`PATCH`/`DELETE`) go through `authenticate` + `requireRole(...)`; list/read routes go through `authenticate` + `pagination`.
 

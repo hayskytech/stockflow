@@ -3,6 +3,7 @@ import { Link, Outlet } from "react-router-dom"
 import { StoreTopbar } from "@/components/layout/StoreTopbar"
 import { StoreNavMenu } from "@/components/layout/StoreNavMenu"
 import { Footer } from "@/components/layout/Footer"
+import { ScrollToTop } from "@/components/common/ScrollToTop"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
 import { ROUTES } from "@/constants/routes"
@@ -24,6 +25,7 @@ export function StoreShell() {
 
   return (
     <div className="storefront min-vh-100 d-flex flex-column">
+      <ScrollToTop />
       <div className="sticky-top">
         <StoreTopbar />
         <StoreNavMenu />

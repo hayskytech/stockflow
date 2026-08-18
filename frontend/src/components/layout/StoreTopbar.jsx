@@ -5,6 +5,8 @@ import { logoutApi } from "@/features/auth/auth.api"
 import { useAuthStore } from "@/store/auth.store"
 import { useCartStore } from "@/store/cart.store"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { useSiteBrandingPublic } from "@/hooks/use-site-branding-public"
+import { resolveMediaUrl } from "@/lib/media"
 import { StoreSearchBox } from "@/components/layout/StoreSearchBox"
 import { ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"
@@ -16,6 +18,7 @@ export function StoreTopbar() {
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0))
   const siteTitle = useSiteTitle()
+  const { data: branding } = useSiteBrandingPublic()
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
 
@@ -31,8 +34,12 @@ export function StoreTopbar() {
   return (
     <nav className="navbar navbar-expand navbar-dark store-topbar">
       <div className="container flex-wrap">
-        <Link to={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2">
-          {siteTitle}
+        <Link to={ROUTES.STORE.HOME} className="navbar-brand font-weight-bold mr-2 d-flex align-items-center">
+          {branding?.logoUrl ? (
+            <img src={resolveMediaUrl(branding.logoUrl)} alt={siteTitle} className="store-topbar-logo" />
+          ) : (
+            siteTitle
+          )}
         </Link>
 
         {/* Inline search — desktop only; on mobile it drops to its own full-width row below. */}
