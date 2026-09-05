@@ -8,7 +8,11 @@ Status / progress (branch `multi-tenant-saas`):
   against the real DB (fresh install, upgrade path, and fresh≡upgraded all pass)
 - ✅ **Phase 3** — token carries `{sub,role,isSuperAdmin,memberships}`; resolveBusiness / requireBusinessRole / requireSuperAdmin middleware; /auth/me business list; multi-tab refresh grace window (migration 07)
 - ✅ **Phase 4** — businesses CRUD (super admin) + per-business member management (business admin); last-admin guards
-- ⬜ **Phase 5** — convert tenant modules to business scope  ← next
+- 🔄 **Phase 5** — convert tenant modules to business scope
+  - ✅ 5A: catalog, sizes, media, stock-ledger, warehouse→business-settings, users, notice (`d857acf`)
+  - 🔄 5B: stock, products  ← in progress
+  - ⬜ 5C: orders, dispatches, reports
+  - ⬜ 5D: hero-slides, settings (social/branding/delete-all-data)
 - ⬜ **Phase 6** — frontend tenancy
 - ⬜ **Phase 7** — super-admin frontend
 - ⬜ **Phase 8** — tests, docs, polish
