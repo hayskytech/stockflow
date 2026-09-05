@@ -188,59 +188,32 @@ CREATE TABLE social_links (
 
 
 -- =============================================================================
--- TABLE: divisions
--- Top-level product lines (Kids Wear, Mens Wear, Ladies Wear...). Admin-managed.
+-- TABLE: categories
+-- Top-level of the product tree — there are no divisions above it. Admin-managed.
 -- =============================================================================
-CREATE TABLE divisions (
+CREATE TABLE categories (
   id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
   name          VARCHAR(100)  NOT NULL,
-  is_active     BOOLEAN       NOT NULL DEFAULT TRUE                 COMMENT 'FALSE hides it from new-product/order pickers',
+  is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
   sort_order    INT           NOT NULL DEFAULT 0                    COMMENT 'Manual drag-and-drop display order',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (id),
-  UNIQUE KEY uq_divisions_name    (name),
-  KEY idx_divisions_is_active     (is_active),
-  KEY idx_divisions_sort_order    (sort_order)
-
-) ENGINE=InnoDB
-  DEFAULT CHARSET=utf8mb4
-  COLLATE=utf8mb4_unicode_ci
-  COMMENT='Top-level product divisions';
-
-
--- =============================================================================
--- TABLE: categories
--- Each category belongs to exactly one division. Admin-managed.
--- =============================================================================
-CREATE TABLE categories (
-  id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
-  division_id   CHAR(36)      NOT NULL,
-  name          VARCHAR(100)  NOT NULL,
-  is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
-  sort_order    INT           NOT NULL DEFAULT 0                    COMMENT 'Manual drag-and-drop display order within its division',
-  created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  PRIMARY KEY (id),
-  UNIQUE KEY uq_categories_division_name (division_id, name),
-  KEY idx_categories_division_id  (division_id),
+  UNIQUE KEY uq_categories_name   (name),
   KEY idx_categories_is_active    (is_active),
-  KEY idx_categories_sort_order   (sort_order),
-
-  CONSTRAINT fk_categories_division_id
-    FOREIGN KEY (division_id) REFERENCES divisions (id) ON DELETE RESTRICT ON UPDATE CASCADE
+  KEY idx_categories_sort_order   (sort_order)
 
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci
-  COMMENT='Product categories, each under one division';
+  COMMENT='Top-level product categories';
 
 
 -- =============================================================================
 -- TABLE: sub_categories
--- Each sub-category belongs to exactly one category. Admin-managed.
+-- Each sub-category belongs to exactly one category — this is the deepest the
+-- product tree goes (category -> sub_category, no further nesting).
 -- =============================================================================
 CREATE TABLE sub_categories (
   id            CHAR(36)      NOT NULL                              COMMENT 'UUID v4 primary key',
