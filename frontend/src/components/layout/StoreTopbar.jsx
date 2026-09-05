@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { logoutApi } from "@/features/auth/auth.api"
@@ -14,6 +14,7 @@ import { ROUTES } from "@/constants/routes"
 /** Ecommerce top navigation for the customer storefront — brand, search, cart, account menu. */
 export function StoreTopbar() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const cartCount = useCartStore((s) => s.items.reduce((sum, item) => sum + item.quantity, 0))
@@ -21,6 +22,18 @@ export function StoreTopbar() {
   const { data: branding } = useSiteBrandingPublic()
   const navigate = useNavigate()
   const prefersReducedMotion = useReducedMotion()
+
+  // Clicking anywhere outside the dropdown closes it (mirrors Bootstrap's own behavior).
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    function handleOutsideClick(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick)
+    return () => document.removeEventListener("mousedown", handleOutsideClick)
+  }, [menuOpen])
 
   async function handleLogout() {
     try {
@@ -66,11 +79,7 @@ export function StoreTopbar() {
               </AnimatePresence>
             </Link>
           </li>
-          <li
-            className={`nav-item dropdown ${menuOpen ? "show" : ""}`}
-            onMouseEnter={() => setMenuOpen(true)}
-            onMouseLeave={() => setMenuOpen(false)}
-          >
+          <li ref={menuRef} className={`nav-item dropdown ${menuOpen ? "show" : ""}`}>
             <button
               type="button"
               className="nav-link btn btn-link text-white"

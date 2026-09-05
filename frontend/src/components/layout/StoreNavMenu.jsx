@@ -1,25 +1,14 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
 import { ROUTES } from "@/constants/routes"
 
-/** True on devices where hover is the primary input (desktop/mouse) — on these, hover
- *  alone should control the dropdown, since a click-to-toggle on top of hover-to-open
- *  means a click right after the hover-open instantly closes it again. */
-function hasHoverSupport() {
-  return typeof window !== "undefined" && window.matchMedia?.("(hover: hover)").matches
-}
-
 /** One division's dropdown trigger + its categories as sub-menu items. Fetches its own
- *  categories so the parent menu doesn't need to load every division's categories upfront. */
+ *  categories so the parent menu doesn't need to load every division's categories upfront.
+ *  The dropdown opens only on click (see StoreNavMenu for the click-outside-to-close logic). */
 function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
   const { data: categories = [] } = useCategoryOptions(division.id, true)
   const navigate = useNavigate()
-
-  function goToDivision() {
-    navigate(ROUTES.STORE.DIVISION_DETAIL(division.id))
-    onClose()
-  }
 
   function goToCategory(category) {
     navigate(ROUTES.STORE.CATEGORY_DETAIL(category.id))
@@ -27,19 +16,15 @@ function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
   }
 
   function handleTriggerClick() {
-    if (!hasHoverSupport() && !isOpen) {
+    if (isOpen) {
+      onClose()
+    } else {
       onOpen(division.id)
-      return
     }
-    goToDivision()
   }
 
   return (
-    <li
-      className={`nav-item dropdown ${isOpen ? "show" : ""}`}
-      onMouseEnter={() => onOpen(division.id)}
-      onMouseLeave={onClose}
-    >
+    <li className={`nav-item dropdown ${isOpen ? "show" : ""}`}>
       <button
         type="button"
         id={`store-nav-division-${division.id}`}
@@ -50,6 +35,18 @@ function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
         <i className="fas fa-caret-down ml-1" />
       </button>
       <div className={`dropdown-menu ${isOpen ? "show" : ""}`}>
+        <button
+          type="button"
+          id={`store-nav-division-view-all-${division.id}`}
+          className="dropdown-item"
+          onClick={() => {
+            navigate(ROUTES.STORE.DIVISION_DETAIL(division.id))
+            onClose()
+          }}
+        >
+          View all {division.name}
+        </button>
+        <div className="dropdown-divider" />
         {categories.map((category) => (
           <button
             key={category.id}
@@ -72,6 +69,7 @@ function StoreNavDivisionItem({ division, isOpen, onOpen, onClose }) {
 export function StoreNavMenu() {
   const { data: divisions = [] } = useDivisionOptions(true)
   const [openDivisionId, setOpenDivisionId] = useState(null)
+  const navRef = useRef(null)
   const navigate = useNavigate()
 
   function goHome() {
@@ -79,10 +77,23 @@ export function StoreNavMenu() {
     setOpenDivisionId(null)
   }
 
+  // Clicking anywhere outside the menu closes whichever division dropdown is open
+  // (mirrors Bootstrap's own behavior, and StoreTopbar's account menu).
+  useEffect(() => {
+    if (openDivisionId === null) return undefined
+    function handleOutsideClick(event) {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setOpenDivisionId(null)
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick)
+    return () => document.removeEventListener("mousedown", handleOutsideClick)
+  }, [openDivisionId])
+
   return (
     <nav id="store-nav-menu" className="navbar navbar-expand navbar-light bg-white border-bottom py-0">
-      <div className="container">
-        <ul className="navbar-nav flex-row flex-wrap">
+      <div className={`container ${openDivisionId !== null ? "store-nav-menu-open" : ""}`} ref={navRef}>
+        <ul className="navbar-nav flex-row">
           <li className="nav-item">
             <button type="button" id="store-nav-home" className="nav-link btn btn-link" onClick={goHome}>
               Home
