@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link } from "@/lib/nav"
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -45,7 +45,7 @@ export function AdminSessionsPage() {
       label: "User",
       render: (row) => (
         <>
-          <Link to={ROUTES.USERS.DETAIL(row.userId)}>
+          <Link to={ROUTES.ADMIN.USER_DETAIL(row.userId)}>
             {userDisplayName({ name: row.userName, phone: row.userPhone })}
           </Link>
           <span className={`badge ${ROLE_BADGES[row.userRole] ?? "badge-secondary"} ml-2`}>{row.userRole}</span>

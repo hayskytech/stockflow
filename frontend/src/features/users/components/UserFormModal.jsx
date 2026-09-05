@@ -32,6 +32,7 @@ export function UserFormModal({ open, user, onClose, onSubmit, isSubmitting, ser
       role: normalizeRole(user?.role),
       password: "",
       isActive: user ? Boolean(user.isActive) : true,
+      isSuperAdmin: user ? Boolean(user.isSuperAdmin) : false,
       phone: user?.phone ?? "",
       businessName: user?.businessName ?? "",
       address: user?.address ?? "",
@@ -275,6 +276,26 @@ export function UserFormModal({ open, user, onClose, onSubmit, isSubmitting, ser
               <label className="form-check-label" htmlFor="user-active">
                 Active
               </label>
+            </div>
+          )}
+        </form.Field>
+
+        <form.Field name="isSuperAdmin">
+          {(field) => (
+            <div className="form-group form-check">
+              <input
+                id="user-super-admin"
+                type="checkbox"
+                className="form-check-input"
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="user-super-admin">
+                Platform super admin
+              </label>
+              <small className="form-text text-muted">
+                Full control of every business, the business directory, and this user list.
+              </small>
             </div>
           )}
         </form.Field>

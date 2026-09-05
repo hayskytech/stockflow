@@ -63,6 +63,8 @@ export const ROUTES = {
   ADMIN: {
     BUSINESSES: "/admin/businesses",
     USERS: "/admin/users",
+    USER_DETAIL: (id) => `/admin/users/${id}`,
+    SESSIONS: "/admin/sessions",
   },
 }
 
@@ -90,6 +92,11 @@ export function businessPath(businessId, subpath = "") {
  */
 export function landingPath(me) {
   const businesses = me?.businesses ?? []
+  // A pure platform super admin (no business memberships) has nothing on the picker —
+  // send them straight to the platform admin area.
+  if (me?.isSuperAdmin && businesses.length === 0) {
+    return ROUTES.ADMIN.BUSINESSES
+  }
   if (!me?.isSuperAdmin && businesses.length === 1) {
     return businessPath(businesses[0].id, ROUTES.DASHBOARD)
   }

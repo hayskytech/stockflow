@@ -30,6 +30,9 @@ export const createUserSchema = z.object({
   role: roleField,
   password: passwordPolicy,
   isActive: z.boolean().optional(),
+  // Platform super-admin flag (orthogonal to `role`). Backend blocks a super admin from
+  // revoking their own flag and answers 400 — the form surfaces that inline.
+  isSuperAdmin: z.boolean().optional(),
   ...profileFields,
 })
 
@@ -40,5 +43,6 @@ export const editUserSchema = z.object({
   role: roleField,
   password: passwordPolicy.or(z.literal("")).optional(),
   isActive: z.boolean().optional(),
+  isSuperAdmin: z.boolean().optional(),
   ...profileFields,
 })

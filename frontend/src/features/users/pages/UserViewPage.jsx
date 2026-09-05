@@ -1,23 +1,14 @@
 import { useState } from "react"
 import { useParams } from "react-router-dom"
-import { Link } from "@/lib/nav"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
-import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
-import { OrderStatusBadge } from "@/components/ui/OrderStatusBadge"
-import { PaymentStatusBadge } from "@/components/ui/PaymentStatusBadge"
 import { UserFormModal } from "@/features/users/components/UserFormModal"
 import { useUserDetail } from "@/features/users/hooks/use-user-detail"
-import { useUserOrders } from "@/features/users/hooks/use-user-orders"
 import { useUpdateUser } from "@/features/users/hooks/use-users"
 import { useAdminSessions, useForceLogoutUser, useRevokeAnySession } from "@/features/users/hooks/use-admin-sessions"
 import { formatDateTimeIST } from "@/lib/format"
 import { userDisplayName } from "@/lib/user"
-import { useFormatMoney } from "@/hooks/use-business-settings"
-import { useAuthStore } from "@/store/auth.store"
-import { ROUTES } from "@/constants/routes"
-import { ROLES } from "@/constants/app"
 
 const ROLE_BADGES = {
   admin: "badge-danger",
@@ -25,23 +16,23 @@ const ROLE_BADGES = {
   customer: "badge-secondary",
 }
 
-const BASE_TABS = [
+const TABS = [
   { key: "details", label: "Details", icon: "fa-id-card" },
-  { key: "orders", label: "Orders", icon: "fa-cart-shopping" },
-  { key: "payments", label: "Payments", icon: "fa-money-bill" },
+  { key: "sessions", label: "Sessions", icon: "fa-desktop" },
 ]
 
-// Sessions tab is admin-only — mirrors the backend's requireRole('admin') on the /admin/*
-// session endpoints (see permission matrix: "View/terminate sessions — others" is Admin only).
-const SESSIONS_TAB = { key: "sessions", label: "Sessions", icon: "fa-desktop" }
-
+/**
+ * Global user directory detail page (platform super-admin, `/admin/users/:id`).
+ *
+ * The old "Orders"/"Payments" tabs were backed by `GET /orders?customer_id=`, which is now
+ * business-scoped. Customer orders are on hold with the storefront (see multitenant_plan.md
+ * Phase 1), so those tabs are gone — Details + Sessions remain. `/admin/sessions` is still a
+ * valid super-admin endpoint.
+ */
 export function UserViewPage() {
   const { id } = useParams()
-  const formatMoney = useFormatMoney()
-  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
 
   const [tab, setTab] = useState("details")
-  const [page, setPage] = useState(1)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [formError, setFormError] = useState("")
   const [revokingSession, setRevokingSession] = useState(null)
@@ -49,19 +40,13 @@ export function UserViewPage() {
   const [sessionsError, setSessionsError] = useState("")
 
   const { data: user, isLoading, isError } = useUserDetail(id)
-  const { data: ordersData, isLoading: isLoadingOrders } = useUserOrders(
-    id,
-    { page, per_page: 10 },
-  )
   const { data: sessionsData, isLoading: isLoadingSessions, isError: isSessionsError } = useAdminSessions(
     { user_id: id },
-    { enabled: isAdmin && tab === "sessions" },
+    { enabled: tab === "sessions" },
   )
   const updateUser = useUpdateUser()
   const revokeSession = useRevokeAnySession()
   const forceLogout = useForceLogoutUser()
-
-  const tabs = isAdmin ? [...BASE_TABS, SESSIONS_TAB] : BASE_TABS
 
   async function handleEditSubmit(input) {
     setFormError("")
@@ -113,33 +98,6 @@ export function UserViewPage() {
     )
   }
 
-  const orderColumns = [
-    {
-      key: "orderNumber",
-      label: "Order #",
-      render: (row) => <Link to={ROUTES.ORDERS.DETAIL(row.id)}>{row.orderNumber}</Link>,
-    },
-    { key: "createdAt", label: "Placed", render: (row) => formatDateTimeIST(row.createdAt) },
-    { key: "totalAmount", label: "Amount", render: (row) => formatMoney(row.totalAmount) },
-    { key: "status", label: "Status", render: (row) => <OrderStatusBadge status={row.status} /> },
-  ]
-
-  const paymentColumns = [
-    {
-      key: "orderNumber",
-      label: "Order #",
-      render: (row) => <Link to={ROUTES.ORDERS.DETAIL(row.id)}>{row.orderNumber}</Link>,
-    },
-    { key: "paymentMethod", label: "Method" },
-    { key: "transactionId", label: "Transaction ID", render: (row) => row.transactionId ?? "—" },
-    { key: "totalAmount", label: "Amount", render: (row) => formatMoney(row.totalAmount) },
-    {
-      key: "paymentStatus",
-      label: "Payment Status",
-      render: (row) => <PaymentStatusBadge status={row.paymentStatus} />,
-    },
-  ]
-
   return (
     <PageWrapper>
       <PageHeader
@@ -154,7 +112,7 @@ export function UserViewPage() {
       />
 
       <ul className="nav nav-tabs mb-3">
-        {tabs.map((t) => (
+        {TABS.map((t) => (
           <li className="nav-item" key={t.key}>
             <button
               type="button"
@@ -176,8 +134,6 @@ export function UserViewPage() {
               <dt className="col-sm-3">Name</dt>
               <dd className="col-sm-9">
                 {user.name ?? "—"}
-                {/* Not a data error: OTP sign-in creates the account from a verified phone alone,
-                    and the customer fills the rest in afterwards. */}
                 {user.profileCompletedAt ? null : (
                   <span className="badge badge-warning ml-2">Profile incomplete</span>
                 )}
@@ -189,6 +145,7 @@ export function UserViewPage() {
               <dt className="col-sm-3">Role</dt>
               <dd className="col-sm-9">
                 <span className={`badge ${ROLE_BADGES[user.role] ?? "badge-secondary"}`}>{user.role}</span>
+                {user.isSuperAdmin ? <span className="badge badge-dark ml-2">Super admin</span> : null}
               </dd>
 
               <dt className="col-sm-3">Status</dt>
@@ -224,47 +181,16 @@ export function UserViewPage() {
               <dt className="col-sm-3">Joined</dt>
               <dd className="col-sm-9">{formatDateTimeIST(user.createdAt)}</dd>
             </dl>
+
+            <p className="text-muted small mb-0 mt-3">
+              <i className="fas fa-circle-info mr-1" />
+              Customer orders and payments return with the storefront.
+            </p>
           </div>
         </div>
       ) : null}
 
-      {tab === "orders" ? (
-        <div className="card">
-          <div className="card-body">
-            <DataTable
-              columns={orderColumns}
-              rows={ordersData?.items ?? []}
-              isLoading={isLoadingOrders}
-              emptyIcon="fa-cart-shopping"
-              emptyTitle="No orders yet"
-              emptyDescription="Orders placed by this user will show up here."
-              page={page}
-              totalPages={ordersData?.totalPages ?? 1}
-              onPageChange={setPage}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {tab === "payments" ? (
-        <div className="card">
-          <div className="card-body">
-            <DataTable
-              columns={paymentColumns}
-              rows={ordersData?.items ?? []}
-              isLoading={isLoadingOrders}
-              emptyIcon="fa-money-bill"
-              emptyTitle="No payments yet"
-              emptyDescription="Payments for this user's orders will show up here."
-              page={page}
-              totalPages={ordersData?.totalPages ?? 1}
-              onPageChange={setPage}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {tab === "sessions" && isAdmin ? (
+      {tab === "sessions" ? (
         <div className="card">
           <div className="card-header d-flex justify-content-between align-items-center">
             <h3 className="card-title mb-0">Active Sessions</h3>

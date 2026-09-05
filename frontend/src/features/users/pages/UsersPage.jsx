@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Link } from "@/lib/nav"
+import { Link } from "react-router-dom"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -11,7 +11,6 @@ import { UserFormModal } from "@/features/users/components/UserFormModal"
 import { useCreateUser, useDeleteUser, useUpdateUser, useUsers } from "@/features/users/hooks/use-users"
 import { userDisplayName } from "@/lib/user"
 import { ROUTES } from "@/constants/routes"
-import { ROLES } from "@/constants/app"
 
 const ROLE_BADGES = {
   admin: "badge-danger",
@@ -28,7 +27,6 @@ const ROLE_FILTERS = [
 
 export function UsersPage() {
   const currentUserId = useAuthStore((s) => s.user?.id)
-  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
 
   const search = useUsersStore((s) => s.search)
   const setSearch = useUsersStore((s) => s.setSearch)
@@ -98,7 +96,7 @@ export function UsersPage() {
       // says why the row looks half-empty rather than leaving an admin to guess.
       render: (row) => (
         <>
-          <Link to={ROUTES.USERS.DETAIL(row.id)}>{userDisplayName(row)}</Link>
+          <Link to={ROUTES.ADMIN.USER_DETAIL(row.id)}>{userDisplayName(row)}</Link>
           {row.profileCompletedAt ? null : (
             <span className="badge badge-warning ml-2">Profile incomplete</span>
           )}
@@ -149,12 +147,10 @@ export function UsersPage() {
         description="Manage admin, staff, and customer accounts"
         actions={
           <>
-            {isAdmin ? (
-              <Link id="users-view-sessions-link" to={ROUTES.USERS.SESSIONS} className="btn btn-outline-secondary mr-2">
-                <i className="fas fa-desktop mr-1" />
-                Active Sessions
-              </Link>
-            ) : null}
+            <Link id="users-view-sessions-link" to={ROUTES.ADMIN.SESSIONS} className="btn btn-outline-secondary mr-2">
+              <i className="fas fa-desktop mr-1" />
+              Active Sessions
+            </Link>
             <button type="button" className="btn btn-primary" onClick={openCreate}>
               <i className="fas fa-plus mr-1" />
               Add User

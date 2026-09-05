@@ -1,12 +1,18 @@
 // Storefront routes (/store/*, /register) are unmounted — storefront on hold, see multitenant_plan.md Phase 1.
 // Back-office routes are nested under /b/:businessId (multi-tenant — see multitenant_plan.md Phase 6).
-import { createHashRouter } from "react-router-dom"
+import { createHashRouter, Navigate } from "react-router-dom"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
 import { NotFoundPage } from "@/components/common/error-pages"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
 import { BusinessAdminRoute } from "@/app/BusinessAdminRoute"
+import { SuperAdminRoute } from "@/app/SuperAdminRoute"
 import { BusinessGate } from "@/app/BusinessGate"
 import { RootRedirect } from "@/app/RootRedirect"
+import { SuperAdminShell } from "@/components/layout/SuperAdminShell"
+import { BusinessesPage } from "@/features/businesses/pages/BusinessesPage"
+import { UsersPage } from "@/features/users/pages/UsersPage"
+import { UserViewPage } from "@/features/users/pages/UserViewPage"
+import { AdminSessionsPage } from "@/features/users/pages/AdminSessionsPage"
 import { ROUTES } from "@/constants/routes"
 import { CRUMBS } from "@/constants/breadcrumbs"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
@@ -138,6 +144,25 @@ export const router = createHashRouter([
         ),
         handle: { crumb: CRUMBS.SETTINGS },
       },
+    ],
+  },
+  {
+    // Platform (super-admin) area — no business context, so plain react-router nav + its own shell.
+    path: "/admin",
+    element: (
+      <ProtectedRoute>
+        <SuperAdminRoute>
+          <SuperAdminShell />
+        </SuperAdminRoute>
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorPage />,
+    children: [
+      { index: true, element: <Navigate to="businesses" replace /> },
+      { path: "businesses", element: <BusinessesPage /> },
+      { path: "users", element: <UsersPage /> },
+      { path: "users/:id", element: <UserViewPage /> },
+      { path: "sessions", element: <AdminSessionsPage /> },
     ],
   },
   {
