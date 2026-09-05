@@ -9,16 +9,15 @@ Status / progress (branch `multi-tenant-saas`):
 - ✅ **Phase 3** — token carries `{sub,role,isSuperAdmin,memberships}`; resolveBusiness / requireBusinessRole / requireSuperAdmin middleware; /auth/me business list; multi-tab refresh grace window (migration 07)
 - ⬜ **Phase 4** — businesses & membership module  ← next
 
+- ⬜ **Phase 5** — convert tenant modules to business scope
+- ⬜ **Phase 6** — frontend tenancy
+- ⬜ **Phase 7** — super-admin frontend
+- ⬜ **Phase 8** — tests, docs, polish
+
 **DB engine note:** the dev DB and the cPanel host both run **MariaDB 10.4**, not MySQL 8.0 as the
 old schema header claimed. Migrations use portable syntax (`DROP CONSTRAINT`, not `DROP CHECK`).
 `memberships.permissions JSON` is stored as `LONGTEXT` with a JSON-valid CHECK on MariaDB — fine for
 our use. Headers now say `MariaDB 10.4+ / MySQL 8.0.19+`.
-- ⬜ Phase 3 — backend auth & tenancy middleware
-- ⬜ Phase 4 — businesses & membership module
-- ⬜ Phase 5 — convert tenant modules to business scope
-- ⬜ Phase 6 — frontend tenancy
-- ⬜ Phase 7 — super-admin frontend
-- ⬜ Phase 8 — tests, docs, polish
 
 ---
 
