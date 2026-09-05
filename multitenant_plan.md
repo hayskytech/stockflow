@@ -10,8 +10,8 @@ Status / progress (branch `multi-tenant-saas`):
 - ✅ **Phase 4** — businesses CRUD (super admin) + per-business member management (business admin); last-admin guards
 - 🔄 **Phase 5** — convert tenant modules to business scope
   - ✅ 5A: catalog, sizes, media, stock-ledger, warehouse→business-settings, users, notice (`d857acf`)
-  - 🔄 5B: stock, products  ← in progress
-  - ⬜ 5C: orders, dispatches, reports
+  - ✅ 5B: stock, products (`86209ba`)
+  - 🔄 5C: orders, dispatches, reports  ← in progress
   - ⬜ 5D: hero-slides, settings (social/branding/delete-all-data)
 - ⬜ **Phase 6** — frontend tenancy
 - ⬜ **Phase 7** — super-admin frontend
