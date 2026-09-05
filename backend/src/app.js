@@ -13,13 +13,13 @@ import { businessSettingsRouter } from "./modules/business-settings/business-set
 import { businessMembersRouter, businessesRouter } from "./modules/businesses/businesses.router.js";
 import { catalogRouter } from "./modules/catalog/catalog.router.js";
 import { dispatchesRouter } from "./modules/dispatches/dispatches.router.js";
-import { heroSlidesRouter } from "./modules/heroSlides/heroSlides.router.js";
+import { heroSlidesPublicRouter, heroSlidesRouter } from "./modules/heroSlides/heroSlides.router.js";
 import { mediaRouter } from "./modules/media/media.router.js";
 import { noticePublicRouter, noticeRouter } from "./modules/notice/notice.router.js";
 import { ordersRouter } from "./modules/orders/orders.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
 import { reportsRouter } from "./modules/reports/reports.router.js";
-import { settingsRouter } from "./modules/settings/settings.router.js";
+import { settingsPublicRouter, settingsRouter } from "./modules/settings/settings.router.js";
 import { sizesRouter } from "./modules/sizes/sizes.router.js";
 import { stockRouter } from "./modules/stock/stock.router.js";
 import { stockLedgerRouter } from "./modules/stockLedger/stockLedger.router.js";
@@ -83,17 +83,18 @@ app.use("/api/b/:businessId/media", authenticate, resolveBusiness, mediaRouter);
 app.use("/api/b/:businessId/stock-ledger", authenticate, resolveBusiness, stockLedgerRouter);
 app.use("/api/b/:businessId/business-settings", authenticate, resolveBusiness, businessSettingsRouter);
 app.use("/api/b/:businessId/notice", authenticate, resolveBusiness, noticeRouter);
-app.use("/api/notice", noticePublicRouter); // just /public
 app.use("/api/b/:businessId/products", authenticate, resolveBusiness, productsRouter);
 app.use("/api/b/:businessId/stock", authenticate, resolveBusiness, stockRouter);
 app.use("/api/b/:businessId/orders", authenticate, resolveBusiness, ordersRouter);
 app.use("/api/b/:businessId/dispatches", authenticate, resolveBusiness, dispatchesRouter);
 app.use("/api/b/:businessId/reports", authenticate, resolveBusiness, reportsRouter);
+app.use("/api/b/:businessId/hero-slides", authenticate, resolveBusiness, heroSlidesRouter);
+app.use("/api/b/:businessId/settings", authenticate, resolveBusiness, settingsRouter);
+app.use("/api/notice", noticePublicRouter); // just /public
+app.use("/api/hero-slides", heroSlidesPublicRouter); // just /public
+app.use("/api/settings", settingsPublicRouter); // just /social/public, /branding/public
 app.use("/api/users", usersRouter);
 app.use("/api/admin", adminSessionsRouter);
-// still flat (Batch D — leave as-is, they don't need to work yet):
-app.use("/api/hero-slides", heroSlidesRouter);
-app.use("/api/settings", settingsRouter);
 
 app.use(errorHandler);
 

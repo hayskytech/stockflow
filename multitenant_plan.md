@@ -8,14 +8,15 @@ Status / progress (branch `multi-tenant-saas`):
   against the real DB (fresh install, upgrade path, and fresh≡upgraded all pass)
 - ✅ **Phase 3** — token carries `{sub,role,isSuperAdmin,memberships}`; resolveBusiness / requireBusinessRole / requireSuperAdmin middleware; /auth/me business list; multi-tab refresh grace window (migration 07)
 - ✅ **Phase 4** — businesses CRUD (super admin) + per-business member management (business admin); last-admin guards
-- 🔄 **Phase 5** — convert tenant modules to business scope
-  - ✅ 5A: catalog, sizes, media, stock-ledger, warehouse→business-settings, users, notice (`d857acf`)
-  - ✅ 5B: stock, products (`86209ba`)
-  - ✅ 5C: orders, dispatches, reports (`f3504b2`)
-  - 🔄 5D: hero-slides, settings (social/branding/delete-all-data)  ← in progress
-- ⬜ **Phase 6** — frontend tenancy
+- ✅ **Phase 5** — all 15 tenant modules under `/api/b/:businessId/...`, every query business-scoped;
+  `delete-all-data` resets one business now, not the DB (5A `d857acf` · 5B `86209ba` · 5C `f3504b2` · 5D this commit)
+- ⬜ **Phase 6** — frontend tenancy  ← next
 - ⬜ **Phase 7** — super-admin frontend
 - ⬜ **Phase 8** — tests, docs, polish
+
+**Phase 8 follow-ups noted:** media files on disk are content-hash sharded and may be shared
+across businesses — `delete-all-data`'s `fs.unlink` should ref-check `storage_path` across
+businesses first (dev-only path, low priority). Backend has no working ESLint config.
 
 **DB engine note:** the dev DB and the cPanel host both run **MariaDB 10.4**, not MySQL 8.0 as the
 old schema header claimed. Migrations use portable syntax (`DROP CONSTRAINT`, not `DROP CHECK`).

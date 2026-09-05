@@ -1,6 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/auth.js';
-import { requireRole } from '../../middleware/requireRole.js';
+import { requireBusinessRole } from '../../middleware/requireBusinessRole.js';
 import { storefrontEnabled } from '../../middleware/storefrontEnabled.js';
 import {
   deleteAllData,
@@ -12,20 +11,23 @@ import {
   updateSocialLinks,
 } from './settings.controller.js';
 
-export const settingsRouter = Router();
+// Tenant router — mounted in app.js at /api/b/:businessId/settings behind `authenticate,
+// resolveBusiness`. Reads are open to any member; writes are admin-only.
+export const settingsRouter = Router({ mergeParams: true });
 
-// Public — no auth: the storefront footer needs the social links for every visitor.
-// Gated by storefrontEnabled (multi-tenant migration Phase 1).
-settingsRouter.get('/social/public', storefrontEnabled, getPublicSocialLinks);
-settingsRouter.get('/social', authenticate, getSocialLinks);
-settingsRouter.put('/social', authenticate, requireRole('admin'), updateSocialLinks);
+settingsRouter.get('/social', getSocialLinks);
+settingsRouter.put('/social', requireBusinessRole('admin'), updateSocialLinks);
 
-// Public — no auth: the storefront header (logo) and browser tab (favicon) need this for every visitor.
-// Gated by storefrontEnabled (multi-tenant migration Phase 1).
-settingsRouter.get('/branding/public', storefrontEnabled, getPublicSiteBranding);
-settingsRouter.get('/branding', authenticate, getSiteBranding);
-settingsRouter.put('/branding', authenticate, requireRole('admin'), updateSiteBranding);
+settingsRouter.get('/branding', getSiteBranding);
+settingsRouter.put('/branding', requireBusinessRole('admin'), updateSiteBranding);
 
-// Destructive dev-only reset — admin only; the controller additionally rejects
-// the request outright unless NODE_ENV is 'development'.
-settingsRouter.post('/delete-all-data', authenticate, requireRole('admin'), deleteAllData);
+// Destructive dev-only reset of this business's data — admin only; the controller additionally
+// rejects the request outright unless NODE_ENV is 'development'.
+settingsRouter.post('/delete-all-data', requireBusinessRole('admin'), deleteAllData);
+
+// Public router — mounted flat at /api/settings, only exposes /social/public and /branding/public.
+// Still gated by storefrontEnabled (returns 404), so its handlers never actually run while the
+// storefront is off.
+export const settingsPublicRouter = Router();
+settingsPublicRouter.get('/social/public', storefrontEnabled, getPublicSocialLinks);
+settingsPublicRouter.get('/branding/public', storefrontEnabled, getPublicSiteBranding);

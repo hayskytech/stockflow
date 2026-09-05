@@ -9,24 +9,24 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** POST /api/settings/delete-all-data — dev-only destructive reset (blocked outside development). */
+/** POST /api/b/:businessId/settings/delete-all-data — dev-only reset of THIS business (blocked outside development). */
 export async function deleteAllData(req, res, next) {
   try {
     if (ENV.NODE_ENV !== 'development') {
       throw new AppError(403, 'Deleting all data is only available in development mode');
     }
     parseOrThrow(deleteAllDataSchema, req.body);
-    const deleted = await settingsService.deleteAllData();
+    const deleted = await settingsService.deleteAllData(req.business.id);
     res.status(200).json({ deleted });
   } catch (err) {
     next(err);
   }
 }
 
-/** GET /api/settings/social */
+/** GET /api/b/:businessId/settings/social */
 export async function getSocialLinks(req, res, next) {
   try {
-    const socialLinks = await settingsService.getSocialLinks();
+    const socialLinks = await settingsService.getSocialLinks(req.business.id);
     res.status(200).json(socialLinks);
   } catch (err) {
     next(err);
@@ -36,6 +36,7 @@ export async function getSocialLinks(req, res, next) {
 /** GET /api/settings/social/public — unauthenticated, feeds the storefront footer */
 export async function getPublicSocialLinks(req, res, next) {
   try {
+    // TODO(storefront): needs business context when re-enabled
     const socialLinks = await settingsService.getPublicSocialLinks();
     res.status(200).json(socialLinks);
   } catch (err) {
@@ -43,21 +44,21 @@ export async function getPublicSocialLinks(req, res, next) {
   }
 }
 
-/** PUT /api/settings/social */
+/** PUT /api/b/:businessId/settings/social */
 export async function updateSocialLinks(req, res, next) {
   try {
     const input = parseOrThrow(updateSocialLinksSchema, req.body);
-    const socialLinks = await settingsService.updateSocialLinks(input);
+    const socialLinks = await settingsService.updateSocialLinks(req.business.id, input);
     res.status(200).json(socialLinks);
   } catch (err) {
     next(err);
   }
 }
 
-/** GET /api/settings/branding */
+/** GET /api/b/:businessId/settings/branding */
 export async function getSiteBranding(req, res, next) {
   try {
-    const branding = await settingsService.getSiteBranding();
+    const branding = await settingsService.getSiteBranding(req.business.id);
     res.status(200).json(branding);
   } catch (err) {
     next(err);
@@ -67,6 +68,7 @@ export async function getSiteBranding(req, res, next) {
 /** GET /api/settings/branding/public — unauthenticated, feeds the storefront header (logo) and browser tab (favicon) */
 export async function getPublicSiteBranding(req, res, next) {
   try {
+    // TODO(storefront): needs business context when re-enabled
     const branding = await settingsService.getPublicSiteBranding();
     res.status(200).json(branding);
   } catch (err) {
@@ -74,11 +76,11 @@ export async function getPublicSiteBranding(req, res, next) {
   }
 }
 
-/** PUT /api/settings/branding */
+/** PUT /api/b/:businessId/settings/branding */
 export async function updateSiteBranding(req, res, next) {
   try {
     const input = parseOrThrow(updateSiteBrandingSchema, req.body);
-    const branding = await settingsService.updateSiteBranding(input);
+    const branding = await settingsService.updateSiteBranding(req.business.id, input);
     res.status(200).json(branding);
   } catch (err) {
     next(err);

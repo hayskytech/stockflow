@@ -14,10 +14,10 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/hero-slides */
+/** GET /api/b/:businessId/hero-slides */
 export async function listHeroSlides(req, res, next) {
   try {
-    const { rows, total } = await heroSlidesService.listHeroSlides(req.listQuery);
+    const { rows, total } = await heroSlidesService.listHeroSlides(req.business.id, req.listQuery);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -28,6 +28,7 @@ export async function listHeroSlides(req, res, next) {
 /** GET /api/hero-slides/public — unauthenticated, active slides only, in display order */
 export async function listPublicHeroSlides(req, res, next) {
   try {
+    // TODO(storefront): needs business context when re-enabled
     const rows = await heroSlidesService.listActiveHeroSlides();
     res.status(200).json(rows);
   } catch (err) {
@@ -35,45 +36,45 @@ export async function listPublicHeroSlides(req, res, next) {
   }
 }
 
-/** POST /api/hero-slides */
+/** POST /api/b/:businessId/hero-slides */
 export async function createHeroSlide(req, res, next) {
   try {
     const input = parseOrThrow(createHeroSlideSchema, req.body);
-    const slide = await heroSlidesService.createHeroSlide(input);
+    const slide = await heroSlidesService.createHeroSlide(req.business.id, input);
     res.status(201).json(slide);
   } catch (err) {
     next(err);
   }
 }
 
-/** PUT /api/hero-slides/:id */
+/** PUT /api/b/:businessId/hero-slides/:id */
 export async function updateHeroSlide(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const input = parseOrThrow(updateHeroSlideSchema, req.body);
-    const slide = await heroSlidesService.updateHeroSlide(id, input);
+    const slide = await heroSlidesService.updateHeroSlide(req.business.id, id, input);
     res.status(200).json(slide);
   } catch (err) {
     next(err);
   }
 }
 
-/** DELETE /api/hero-slides/:id */
+/** DELETE /api/b/:businessId/hero-slides/:id */
 export async function deleteHeroSlide(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    await heroSlidesService.deleteHeroSlide(id);
+    await heroSlidesService.deleteHeroSlide(req.business.id, id);
     res.status(204).send();
   } catch (err) {
     next(err);
   }
 }
 
-/** PATCH /api/hero-slides/reorder */
+/** PATCH /api/b/:businessId/hero-slides/reorder */
 export async function reorderHeroSlides(req, res, next) {
   try {
     const { orderedIds } = parseOrThrow(reorderHeroSlidesSchema, req.body);
-    await heroSlidesService.reorderHeroSlides(orderedIds);
+    await heroSlidesService.reorderHeroSlides(req.business.id, orderedIds);
     res.status(204).send();
   } catch (err) {
     next(err);
