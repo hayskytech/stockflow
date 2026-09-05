@@ -2,7 +2,7 @@ import { useCategoryCarouselProducts } from "@/features/home/hooks/use-category-
 import { ProductCarousel } from "@/features/home/components/ProductCarousel"
 import { ROUTES } from "@/constants/routes"
 
-/** One category's carousel row inside a Division section on the Home page. Fetches its own
+/** One category's carousel row on the Home page. Fetches its own
  *  products so the page doesn't need to load every category's products upfront, and hides
  *  itself entirely once loaded if the category turns out to have no active products. */
 export function CategorySection({ category }) {

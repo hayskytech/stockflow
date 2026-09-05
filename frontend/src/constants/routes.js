@@ -8,7 +8,6 @@ export const ROUTES = {
     HOME: "/store",
     COMPLETE_PROFILE: "/store/complete-profile",
     PRODUCT_DETAIL: (id) => `/store/products/${id}`,
-    DIVISION_DETAIL: (id) => `/store/divisions/${id}`,
     CATEGORY_DETAIL: (id) => `/store/categories/${id}`,
     CART: "/store/cart",
     CHECKOUT: "/store/checkout",
@@ -18,8 +17,6 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
   WAREHOUSE: "/warehouse",
   CATALOG: {
-    DIVISIONS: "/catalog/divisions",
-    DIVISION_DETAIL: (id) => `/catalog/divisions/${id}`,
     CATEGORIES: "/catalog/categories",
     CATEGORY_DETAIL: (id) => `/catalog/categories/${id}`,
   },

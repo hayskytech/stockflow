@@ -2,6 +2,7 @@ import { createHashRouter, Navigate } from "react-router-dom"
 import { AppShell } from "@/components/layout/AppShell"
 import { StoreShell } from "@/components/layout/StoreShell"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
+import { NotFoundPage } from "@/components/common/error-pages"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
 import { ROUTES } from "@/constants/routes"
 import { ROLES } from "@/constants/app"
@@ -13,15 +14,12 @@ import { ProfilePage } from "@/features/auth/pages/ProfilePage"
 import { CompleteProfilePage } from "@/features/auth/pages/CompleteProfilePage"
 import { HomePage } from "@/features/home/pages/HomePage"
 import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
-import { DivisionPage } from "@/features/division-detail/pages/DivisionPage"
 import { CategoryPage } from "@/features/category-detail/pages/CategoryPage"
 import { ProductDetailPage as AdminProductDetailPage } from "@/features/products/pages/ProductDetailPage"
 import { CartPage } from "@/features/cart/pages/CartPage"
 import { CheckoutPage } from "@/features/checkout/pages/CheckoutPage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
 import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
-import { DivisionsPage } from "@/features/catalog/pages/DivisionsPage"
-import { DivisionDetailPage } from "@/features/catalog/pages/DivisionDetailPage"
 import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
 import { CategoryDetailPage } from "@/features/catalog/pages/CategoryDetailPage"
 import { ProductsPage } from "@/features/products/pages/ProductsPage"
@@ -46,13 +44,8 @@ import { SettingsPage } from "@/features/settings/pages/SettingsPage"
 import { HeroSlidesPage } from "@/features/heroSlides/pages/HeroSlidesPage"
 import { NoticePage } from "@/features/notice/pages/NoticePage"
 import { SizesPage } from "@/features/sizes/pages/SizesPage"
-import { UppyUploader } from "@/components/common/UppyUploader"
 
 export const router = createHashRouter([
-  {
-    path: "/__debug-upload",
-    element: <UppyUploader onUploaded={() => {}} allowMultiple={false} />,
-  },
   {
     path: ROUTES.AUTH.LOGIN,
     element: <LoginPage />,
@@ -83,10 +76,6 @@ export const router = createHashRouter([
       {
         path: "products/:id",
         element: <ProductDetailPage />,
-      },
-      {
-        path: "divisions/:id",
-        element: <DivisionPage />,
       },
       {
         path: "categories/:id",
@@ -159,16 +148,6 @@ export const router = createHashRouter([
         path: ROUTES.WAREHOUSE,
         element: <WarehousePage />,
         handle: { crumb: CRUMBS.WAREHOUSE },
-      },
-      {
-        path: ROUTES.CATALOG.DIVISIONS,
-        element: <DivisionsPage />,
-        handle: { crumb: CRUMBS.DIVISIONS },
-      },
-      {
-        path: "/catalog/divisions/:id",
-        element: <DivisionDetailPage />,
-        handle: { crumb: CRUMBS.DIVISION_DETAIL },
       },
       {
         path: ROUTES.CATALOG.CATEGORIES,
@@ -314,5 +293,10 @@ export const router = createHashRouter([
         handle: { crumb: CRUMBS.PROFILE },
       },
     ],
+  },
+  {
+    // Any hash URL that matched none of the above — renders a 404 outside the shell layouts.
+    path: "*",
+    element: <NotFoundPage />,
   },
 ])

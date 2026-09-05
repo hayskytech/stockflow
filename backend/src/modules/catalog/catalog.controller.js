@@ -1,19 +1,14 @@
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
 import {
-  bulkImportDivisionsSchema,
   createCategorySchema,
-  createDivisionSchema,
   createSubCategorySchema,
   idParamSchema,
   listCategoriesQuerySchema,
-  listDivisionsQuerySchema,
   listSubCategoriesQuerySchema,
   reorderCategoriesSchema,
-  reorderDivisionsSchema,
   reorderSubCategoriesSchema,
   updateCategorySchema,
-  updateDivisionSchema,
   updateSubCategorySchema,
 } from './catalog.schema.js';
 import * as catalogService from './catalog.service.js';
@@ -25,89 +20,6 @@ function parseOrThrow(schema, data) {
 }
 
 // ---------------------------------------------------------------------------
-// Divisions
-// ---------------------------------------------------------------------------
-
-/** GET /api/divisions */
-export async function listDivisions(req, res, next) {
-  try {
-    const filters = parseOrThrow(listDivisionsQuerySchema, { isActive: req.query.is_active });
-    const { rows, total } = await catalogService.listDivisions(req.listQuery, filters);
-    setPaginationHeaders(res, total, req.listQuery.perPage);
-    res.status(200).json(rows);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** GET /api/divisions/:id */
-export async function getDivision(req, res, next) {
-  try {
-    const { id } = parseOrThrow(idParamSchema, req.params);
-    const division = await catalogService.getDivisionById(id);
-    res.status(200).json(division);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** POST /api/divisions */
-export async function createDivision(req, res, next) {
-  try {
-    const input = parseOrThrow(createDivisionSchema, req.body);
-    const division = await catalogService.createDivision(input);
-    res.status(201).json(division);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** PUT /api/divisions/:id */
-export async function updateDivision(req, res, next) {
-  try {
-    const { id } = parseOrThrow(idParamSchema, req.params);
-    const input = parseOrThrow(updateDivisionSchema, req.body);
-    const division = await catalogService.updateDivision(id, input);
-    res.status(200).json(division);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** DELETE /api/divisions/:id */
-export async function deleteDivision(req, res, next) {
-  try {
-    const { id } = parseOrThrow(idParamSchema, req.params);
-    await catalogService.deleteDivision(id);
-    res.status(204).send();
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** POST /api/divisions/bulk-import */
-export async function bulkImportDivisions(req, res, next) {
-  try {
-    const { names } = parseOrThrow(bulkImportDivisionsSchema, req.body);
-    const result = await catalogService.bulkImportDivisions(names);
-    res.status(201).json(result);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/** PATCH /api/divisions/reorder */
-export async function reorderDivisions(req, res, next) {
-  try {
-    const { orderedIds } = parseOrThrow(reorderDivisionsSchema, req.body);
-    await catalogService.reorderDivisions(orderedIds);
-    res.status(204).send();
-  } catch (err) {
-    next(err);
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Categories
 // ---------------------------------------------------------------------------
 
@@ -115,7 +27,6 @@ export async function reorderDivisions(req, res, next) {
 export async function listCategories(req, res, next) {
   try {
     const filters = parseOrThrow(listCategoriesQuerySchema, {
-      divisionId: req.query.division_id,
       isActive: req.query.is_active,
     });
     const { rows, total } = await catalogService.listCategories(req.listQuery, filters);
@@ -174,8 +85,8 @@ export async function deleteCategory(req, res, next) {
 /** PATCH /api/categories/reorder */
 export async function reorderCategories(req, res, next) {
   try {
-    const { divisionId, orderedIds } = parseOrThrow(reorderCategoriesSchema, req.body);
-    await catalogService.reorderCategories(divisionId, orderedIds);
+    const { orderedIds } = parseOrThrow(reorderCategoriesSchema, req.body);
+    await catalogService.reorderCategories(orderedIds);
     res.status(204).send();
   } catch (err) {
     next(err);

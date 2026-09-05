@@ -50,10 +50,9 @@ export function useDeleteProduct() {
   })
 }
 
-// Import can auto-create categories (and the GENERAL division) — invalidated by the
-// catalog feature's key strings since features never import each other's modules.
+// Import can auto-create categories — invalidated by the catalog feature's key
+// string since features never import each other's modules.
 const CATEGORIES_QUERY_KEY = "categories"
-const DIVISIONS_QUERY_KEY = "divisions"
 
 export function useImportProducts() {
   const queryClient = useQueryClient()
@@ -62,7 +61,6 @@ export function useImportProducts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [PRODUCTS_QUERY_KEY] })
       queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] })
-      queryClient.invalidateQueries({ queryKey: [DIVISIONS_QUERY_KEY] })
     },
   })
 }

@@ -46,7 +46,7 @@ export function ProductDetailPage() {
   const hasDiscount = Number(product.discountPercent) > 0
   const isSet = Number(product.piecesPerSet) > 1
   const attributes = [product.color, product.size].filter(Boolean).join(" · ")
-  const breadcrumb = [product.divisionName, product.categoryName].filter(Boolean).join(" · ")
+  const breadcrumb = product.categoryName ?? ""
   const outOfStock = product.quantityAvailable <= 0
 
   const galleryUrls = (product.galleryImages ?? []).map((img) => img.url)

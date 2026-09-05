@@ -29,13 +29,8 @@ export function CategoryDetailPage() {
 
   const { data: category, isLoading: isCategoryLoading, isError: isCategoryError } = useCategory(id)
 
-  // Same division as this category, so a sub-category can be moved to a sibling category.
-  const { data: categoriesData } = useCategories({
-    page: 1,
-    per_page: 100,
-    division_id: category?.divisionId,
-    order: "asc",
-  })
+  // All categories, so a sub-category can be moved to a sibling category.
+  const { data: categoriesData } = useCategories({ page: 1, per_page: 100, order: "asc" })
   const categories = categoriesData?.items ?? []
 
   const {
@@ -158,7 +153,7 @@ export function CategoryDetailPage() {
       <PageHeader
         title={category.name}
         count={subCategoriesData?.total}
-        description={`Sub-categories under the "${category.divisionName}" division.`}
+        description={`Sub-categories under "${category.name}".`}
         actions={
           isAdmin ? (
             <button type="button" className="btn btn-primary" onClick={openAddSubCategoryModal}>

@@ -1,5 +1,5 @@
 export const APP_NAME = "StockFlow"
-export const APP_TAGLINE = "From Warehouse to Store — Seamlessly"
+export const APP_TAGLINE = "Multi-business stock management"
 
 export const ROLES = {
   ADMIN: "admin",

@@ -9,7 +9,7 @@ export const sizesRouter = Router();
 const sizesPagination = pagination({ sortable: ['value', 'sort_order', 'created_at', 'updated_at'], defaultSort: 'sort_order' });
 
 // Not customer-facing (only the product/stock forms use this), so reads require a session too —
-// unlike catalog's divisions/categories, which the public storefront filter sidebar needs.
+// unlike catalog's categories, which the public storefront filter sidebar needs.
 // `/reorder` is declared before `/:id` so it's never captured by that param route.
 sizesRouter.get('/', authenticate, requireRole('admin', 'staff'), sizesPagination, listSizes);
 sizesRouter.post('/', authenticate, requireRole('admin'), createSize);

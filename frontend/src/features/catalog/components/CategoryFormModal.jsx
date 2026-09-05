@@ -2,19 +2,9 @@ import { useForm } from "@tanstack/react-form"
 import { Modal } from "@/components/ui/Modal"
 import { categorySchema } from "@/features/catalog/catalog.schema"
 
-export function CategoryFormModal({
-  open,
-  category,
-  divisions,
-  defaultDivisionId,
-  onClose,
-  onSubmit,
-  isSubmitting,
-  serverError,
-}) {
+export function CategoryFormModal({ open, category, onClose, onSubmit, isSubmitting, serverError }) {
   const form = useForm({
     defaultValues: {
-      divisionId: category?.divisionId ?? defaultDivisionId ?? "",
       name: category?.name ?? "",
       isActive: category ? Boolean(category.isActive) : true,
     },
@@ -46,31 +36,6 @@ export function CategoryFormModal({
           form.handleSubmit()
         }}
       >
-        <form.Field name="divisionId">
-          {(field) => (
-            <div className="form-group">
-              <label htmlFor="category-division">Division</label>
-              <select
-                id="category-division"
-                className="form-control"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-              >
-                <option value="">Select a division…</option>
-                {divisions.map((division) => (
-                  <option key={division.id} value={division.id}>
-                    {division.name}
-                  </option>
-                ))}
-              </select>
-              {field.state.meta.errors.length > 0 ? (
-                <div className="invalid-feedback d-block">{field.state.meta.errors[0]?.message}</div>
-              ) : null}
-            </div>
-          )}
-        </form.Field>
-
         <form.Field name="name">
           {(field) => (
             <div className="form-group">

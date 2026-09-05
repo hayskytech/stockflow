@@ -13,7 +13,6 @@ function parseOrThrow(schema, data) {
 export async function listProducts(req, res, next) {
   try {
     const filters = parseOrThrow(listProductsQuerySchema, {
-      divisionId: req.query.division_id,
       categoryId: req.query.category_id,
       subCategoryId: req.query.sub_category_id,
       isActive: req.query.is_active,

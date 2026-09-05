@@ -27,30 +27,12 @@ export async function getStockSummary() {
      LIMIT 10`,
   );
 
-  const byDivisionRows = await executeQuery(
-    `SELECT d.name AS divisionName, COUNT(p.id) AS productCount,
-            COALESCE(SUM(p.quantity_available), 0) AS totalQuantityAvailable
-     FROM products p
-     JOIN categories c ON c.id = p.category_id
-     JOIN divisions d ON d.id = c.division_id
-     WHERE p.is_active = 1
-     GROUP BY d.id, d.name
-     ORDER BY d.name`,
-  );
-  // mysql2 returns SUM()/aggregate-of-CASE results as strings (BIGINT-safe) — cast for correct
-  // numeric use in the frontend (chart scales, arithmetic), matching totalOrderValue below.
-  const byDivision = byDivisionRows.map((row) => ({
-    ...row,
-    totalQuantityAvailable: Number(row.totalQuantityAvailable),
-  }));
-
   return {
     totalProducts: Number(totals.totalProducts),
     activeProducts: Number(totals.activeProducts),
     totalQuantityAvailable: Number(totals.totalQuantityAvailable),
     lowStockCount: Number(totals.lowStockCount),
     lowStockItems,
-    byDivision,
   };
 }
 

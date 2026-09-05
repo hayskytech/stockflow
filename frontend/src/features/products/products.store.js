@@ -5,9 +5,6 @@ export const useProductsStore = create((set) => ({
   search: "",
   setSearch: (search) => set({ search }),
 
-  divisionFilter: "",
-  setDivisionFilter: (divisionId) => set({ divisionFilter: divisionId, categoryFilter: "", subCategoryFilter: "" }),
-
   categoryFilter: "",
   setCategoryFilter: (categoryId) => set({ categoryFilter: categoryId, subCategoryFilter: "" }),
 

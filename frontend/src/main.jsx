@@ -9,11 +9,6 @@ import "./index.css"
 const rootElement = document.getElementById("root")
 if (!rootElement) throw new Error("Root element #root not found in index.html")
 
-// One-time cleanup: barcode scan sessions from before the barcode concept was removed —
-// dead keys otherwise left sitting in operators' browsers indefinitely.
-localStorage.removeItem("stockflow-scan-session")
-localStorage.removeItem("stockflow-dispatch-scan-session")
-
 createRoot(rootElement).render(
   <StrictMode>
     <Providers>

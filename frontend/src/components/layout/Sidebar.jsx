@@ -7,7 +7,6 @@ import { ROLES } from "@/constants/app"
 // Warehouse settings live in the topbar user dropdown (see Topbar.jsx), not here.
 const NAV_ITEMS = [
   { to: ROUTES.DASHBOARD, icon: "fa-gauge", label: "Dashboard" },
-  { to: ROUTES.CATALOG.DIVISIONS, icon: "fa-sitemap", label: "Divisions" },
   { to: ROUTES.CATALOG.CATEGORIES, icon: "fa-tags", label: "Categories" },
   { to: ROUTES.SIZES, icon: "fa-ruler", label: "Sizes" },
   { to: ROUTES.PRODUCTS.LIST, icon: "fa-shirt", label: "Products" },

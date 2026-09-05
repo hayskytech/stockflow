@@ -10,7 +10,7 @@ import { formatMoney } from "@/lib/format"
 import { setEffectivePrice } from "@/lib/pricing"
 import { MediaPickerField } from "@/components/common/MediaPickerField"
 import { MediaGalleryPickerField } from "@/components/common/MediaGalleryPickerField"
-import { useCategoryOptions, useDivisionOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
+import { useCategoryOptions, useSubCategoryOptions } from "@/hooks/use-catalog-options"
 import { useSizeOptions } from "@/hooks/use-size-options"
 import { productSchema } from "@/features/products/products.schema"
 import { useCreateProduct, useDeleteProduct, useProduct, useUpdateProduct } from "@/features/products/hooks/use-products"
@@ -114,16 +114,13 @@ export function ProductFormPage() {
 
 function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
   const [serverError, setServerError] = useState("")
-  const [divisionError, setDivisionError] = useState("")
-  const [selectedDivisionId, setSelectedDivisionId] = useState(product?.divisionId ?? "")
   const [selectedCategoryId, setSelectedCategoryId] = useState(product?.categoryId ?? "")
   const [photoUrl, setPhotoUrl] = useState(product?.productPhotoUrl ?? null)
   const [galleryImages, setGalleryImages] = useState(
     (product?.galleryImages ?? []).map((img) => ({ mediaId: img.mediaId, url: img.url }))
   )
 
-  const { data: divisions = [] } = useDivisionOptions()
-  const { data: categories = [] } = useCategoryOptions(selectedDivisionId)
+  const { data: categories = [] } = useCategoryOptions()
   const { data: subCategories = [] } = useSubCategoryOptions(selectedCategoryId)
   const { data: sizes = [] } = useSizeOptions()
 
@@ -159,8 +156,6 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
   function handleReset() {
     form.reset()
     setServerError("")
-    setDivisionError("")
-    setSelectedDivisionId(product?.divisionId ?? "")
     setSelectedCategoryId(product?.categoryId ?? "")
     setPhotoUrl(product?.productPhotoUrl ?? null)
     setGalleryImages((product?.galleryImages ?? []).map((img) => ({ mediaId: img.mediaId, url: img.url })))
@@ -171,10 +166,6 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       id="product-form"
       onSubmit={(e) => {
         e.preventDefault()
-        if (!selectedDivisionId) {
-          setDivisionError("Division is required")
-          return
-        }
         form.handleSubmit()
       }}
     >
@@ -236,33 +227,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
       <h6 className="text-uppercase text-muted small font-weight-bold mb-3 mt-4 pt-3 border-top">Classification</h6>
 
       <div className="row">
-        <div className="col-md-4">
-          <div className="form-group">
-            <label htmlFor="product-division">Division</label>
-            <select
-              id="product-division"
-              className="form-control"
-              value={selectedDivisionId}
-              onChange={(e) => {
-                setSelectedDivisionId(e.target.value)
-                setDivisionError("")
-                setSelectedCategoryId("")
-                form.setFieldValue("categoryId", "")
-                form.setFieldValue("subCategoryId", "")
-              }}
-            >
-              <option value="">Select a division…</option>
-              {divisions.map((division) => (
-                <option key={division.id} value={division.id}>
-                  {division.name}
-                </option>
-              ))}
-            </select>
-            {divisionError ? <div className="invalid-feedback d-block">{divisionError}</div> : null}
-          </div>
-        </div>
-
-        <div className="col-md-4">
+        <div className="col-md-6">
           <form.Field name="categoryId">
             {(field) => (
               <div className="form-group">
@@ -277,7 +242,6 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
                     form.setFieldValue("subCategoryId", "")
                   }}
                   onBlur={field.handleBlur}
-                  disabled={!selectedDivisionId}
                 >
                   <option value="">Select a category…</option>
                   {categories.map((category) => (
@@ -294,7 +258,7 @@ function ProductForm({ product, onSubmit, onCancel, isSubmitting }) {
           </form.Field>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-md-6">
           <form.Field name="subCategoryId">
             {(field) => (
               <div className="form-group">

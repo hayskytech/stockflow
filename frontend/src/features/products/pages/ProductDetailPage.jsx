@@ -146,9 +146,6 @@ export function ProductDetailPage() {
               </div>
 
               <dl className="row mb-0">
-                <dt className="col-sm-4">Division</dt>
-                <dd className="col-sm-8">{product.divisionName}</dd>
-
                 <dt className="col-sm-4">Category</dt>
                 <dd className="col-sm-8">{product.categoryName}</dd>
 

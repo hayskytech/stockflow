@@ -17,7 +17,7 @@ const SEED_USER_IDS = [
 /**
  * Dev-only wipe of all transactional data: stock, stock ledger, dispatches, orders
  * (+items via cascade), products (+gallery rows via cascade), the catalog tree
- * (sub-categories, categories, divisions), media (+usage rows via cascade, plus the
+ * (sub-categories, categories), media (+usage rows via cascade, plus the
  * files on disk) and every non-seed user (their sessions cascade). Only warehouse
  * settings, social links and the seed users are kept — site_branding's logo/favicon
  * are cleared first since site_branding has a hard (non-cascading) FK into media and
@@ -43,7 +43,6 @@ export async function deleteAllData() {
       products: (await execute(`DELETE FROM products`)).affectedRows,
       subCategories: (await execute(`DELETE FROM sub_categories`)).affectedRows,
       categories: (await execute(`DELETE FROM categories`)).affectedRows,
-      divisions: (await execute(`DELETE FROM divisions`)).affectedRows,
       media: (await execute(`DELETE FROM media`)).affectedRows,
       users: (
         await execute(

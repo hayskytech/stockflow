@@ -1,10 +1,10 @@
 import { useRouteError } from "react-router-dom"
-import { NotFoundPage } from "@/components/common/error-pages"
+import { ForbiddenPage, NotFoundPage, ServerErrorPage } from "@/components/common/error-pages"
 
 export function RouteErrorPage() {
   const error = useRouteError()
 
-  if (error?.status === 404) return <NotFoundPage />
-
+  if (error?.status === 403) return <ForbiddenPage />
+  if (error?.status >= 500) return <ServerErrorPage />
   return <NotFoundPage />
 }

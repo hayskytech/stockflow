@@ -1,5 +1,5 @@
 /* =====================================================================
-   South Center — storefront design system
+   StockFlow — storefront design system
    Every rule here is scoped under .storefront (the root class StoreShell
    applies) or a storefront-only selector, so nothing here can bleed into
    the AdminLTE back office, which shares the same Bootstrap classes.

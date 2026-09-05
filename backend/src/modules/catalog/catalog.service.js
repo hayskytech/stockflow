@@ -3,11 +3,9 @@ import { executeQuery } from '../../db/query.js';
 import { withTransaction } from '../../db/transaction.js';
 import { AppError } from '../../middleware/errorHandler.js';
 
-const DIVISION_COLUMNS =
-  'id, name, is_active AS isActive, sort_order AS sortOrder, created_at AS createdAt, updated_at AS updatedAt';
 const CATEGORY_COLUMNS =
-  'c.id, c.division_id AS divisionId, d.name AS divisionName, c.name, c.is_active AS isActive, c.sort_order AS sortOrder, c.created_at AS createdAt, c.updated_at AS updatedAt';
-const CATEGORY_FROM = 'categories c JOIN divisions d ON d.id = c.division_id';
+  'c.id, c.name, c.is_active AS isActive, c.sort_order AS sortOrder, c.created_at AS createdAt, c.updated_at AS updatedAt';
+const CATEGORY_FROM = 'categories c';
 const SUB_CATEGORY_COLUMNS =
   'id, category_id AS categoryId, name, is_active AS isActive, sort_order AS sortOrder, created_at AS createdAt, updated_at AS updatedAt';
 
@@ -45,42 +43,6 @@ async function assertNameNotTaken(table, name, message, { scopeColumn, scopeValu
   if (dup) throw new AppError(409, message);
 }
 
-// ---------------------------------------------------------------------------
-// Divisions
-// ---------------------------------------------------------------------------
-
-export async function listDivisions(listQuery, filters = {}) {
-  const { perPage, offset, search, orderby, order } = listQuery;
-
-  const conditions = [];
-  const params = [];
-  if (search) {
-    conditions.push('name LIKE ?');
-    params.push(`%${search}%`);
-  }
-  if (filters.isActive !== undefined) {
-    conditions.push('is_active = ?');
-    params.push(filters.isActive);
-  }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-
-  const [rows, countRows] = await Promise.all([
-    executeQuery(
-      `SELECT ${DIVISION_COLUMNS} FROM divisions ${where} ORDER BY ${orderby} ${order} LIMIT ? OFFSET ?`,
-      [...params, perPage, offset],
-    ),
-    executeQuery(`SELECT COUNT(*) AS total FROM divisions ${where}`, params),
-  ]);
-
-  return { rows, total: countRows[0].total };
-}
-
-export async function getDivisionById(id) {
-  const [row] = await executeQuery(`SELECT ${DIVISION_COLUMNS} FROM divisions WHERE id = ?`, [id]);
-  if (!row) throw new AppError(404, 'Division not found');
-  return row;
-}
-
 /** New rows join at the end of manual drag-and-drop order, not the front (sort_order 0). */
 async function nextSortOrder(table, scopeColumn, scopeValue) {
   const where = scopeColumn ? `WHERE ${scopeColumn} = ?` : '';
@@ -89,138 +51,8 @@ async function nextSortOrder(table, scopeColumn, scopeValue) {
   return row.next;
 }
 
-export async function createDivision(input) {
-  await assertNameNotTaken('divisions', input.name, 'A division with this name already exists');
-
-  const id = crypto.randomUUID();
-  const sortOrder = await nextSortOrder('divisions');
-  try {
-    await executeQuery(`INSERT INTO divisions (id, name, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
-      id,
-      input.name,
-      input.isActive ?? true,
-      sortOrder,
-    ]);
-  } catch (err) {
-    rethrowAsAppError(err, { onDuplicate: 'A division with this name already exists' });
-  }
-  return getDivisionById(id);
-}
-
-/**
- * Bulk-adds divisions from raw textarea lines. Never rejects the whole batch for bad rows —
- * blank lines, names over the column's 100-char limit, names already in the DB, and names
- * repeated within the same submission are all sorted into `skipped` with a reason instead.
- */
-export async function bulkImportDivisions(rawNames) {
-  const existing = await executeQuery(`SELECT name FROM divisions`);
-  const existingNormalized = new Set(existing.map((row) => normalizeName(row.name)));
-
-  const seenNormalized = new Set();
-  const toCreate = [];
-  const skipped = [];
-
-  for (const raw of rawNames) {
-    const name = raw.trim();
-    if (!name) continue;
-    if (name.length > 100) {
-      skipped.push({ name, reason: 'Name is too long' });
-      continue;
-    }
-    const norm = normalizeName(name);
-    if (existingNormalized.has(norm)) {
-      skipped.push({ name, reason: 'Already exists' });
-      continue;
-    }
-    if (seenNormalized.has(norm)) {
-      skipped.push({ name, reason: 'Duplicated in the list' });
-      continue;
-    }
-    seenNormalized.add(norm);
-    toCreate.push(name);
-  }
-
-  if (toCreate.length === 0) return { created: [], skipped };
-
-  let sortOrder = await nextSortOrder('divisions');
-  const createdIds = [];
-  await withTransaction(async (execute) => {
-    for (const name of toCreate) {
-      const id = crypto.randomUUID();
-      await execute(`INSERT INTO divisions (id, name, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
-        id,
-        name,
-        true,
-        sortOrder,
-      ]);
-      createdIds.push(id);
-      sortOrder += 1;
-    }
-  });
-
-  const created = await executeQuery(
-    `SELECT ${DIVISION_COLUMNS} FROM divisions WHERE id IN (${createdIds.map(() => '?').join(', ')}) ORDER BY sort_order ASC`,
-    createdIds,
-  );
-
-  return { created, skipped };
-}
-
-/** Persists a full manual reorder — every existing division id must be present exactly once. */
-export async function reorderDivisions(orderedIds) {
-  const existing = await executeQuery(`SELECT id FROM divisions`);
-  const existingIds = new Set(existing.map((row) => row.id));
-  if (orderedIds.length !== existingIds.size || orderedIds.some((id) => !existingIds.has(id))) {
-    throw new AppError(400, 'orderedIds must contain every division exactly once');
-  }
-
-  await withTransaction(async (execute) => {
-    await Promise.all(
-      orderedIds.map((id, index) => execute(`UPDATE divisions SET sort_order = ? WHERE id = ?`, [index, id])),
-    );
-  });
-}
-
-export async function updateDivision(id, input) {
-  await getDivisionById(id);
-
-  if (input.name !== undefined) {
-    await assertNameNotTaken('divisions', input.name, 'A division with this name already exists', { excludeId: id });
-  }
-
-  const fields = [];
-  const params = [];
-  if (input.name !== undefined) {
-    fields.push('name = ?');
-    params.push(input.name);
-  }
-  if (input.isActive !== undefined) {
-    fields.push('is_active = ?');
-    params.push(input.isActive);
-  }
-
-  params.push(id);
-  try {
-    await executeQuery(`UPDATE divisions SET ${fields.join(', ')} WHERE id = ?`, params);
-  } catch (err) {
-    rethrowAsAppError(err, { onDuplicate: 'A division with this name already exists' });
-  }
-  return getDivisionById(id);
-}
-
-export async function deleteDivision(id) {
-  await getDivisionById(id);
-  try {
-    await executeQuery(`DELETE FROM divisions WHERE id = ?`, [id]);
-  } catch (err) {
-    rethrowAsAppError(err, {
-      onRestricted: 'Cannot delete a division that still has categories under it. Deactivate it instead.',
-    });
-  }
-}
-
 // ---------------------------------------------------------------------------
-// Categories
+// Categories — top-level of the product tree (there are no divisions above them).
 // ---------------------------------------------------------------------------
 
 export async function listCategories(listQuery, filters) {
@@ -231,10 +63,6 @@ export async function listCategories(listQuery, filters) {
   if (search) {
     conditions.push('c.name LIKE ?');
     params.push(`%${search}%`);
-  }
-  if (filters.divisionId) {
-    conditions.push('c.division_id = ?');
-    params.push(filters.divisionId);
   }
   if (filters.isActive !== undefined) {
     conditions.push('c.is_active = ?');
@@ -260,63 +88,47 @@ export async function getCategoryById(id) {
 }
 
 export async function createCategory(input) {
-  await getDivisionById(input.divisionId); // 404s if the division doesn't exist
-  await assertNameNotTaken('categories', input.name, 'A category with this name already exists under this division', {
-    scopeColumn: 'division_id',
-    scopeValue: input.divisionId,
-  });
+  await assertNameNotTaken('categories', input.name, 'A category with this name already exists');
 
   const id = crypto.randomUUID();
-  const sortOrder = await nextSortOrder('categories', 'division_id', input.divisionId);
+  const sortOrder = await nextSortOrder('categories');
   try {
-    await executeQuery(`INSERT INTO categories (id, division_id, name, is_active, sort_order) VALUES (?, ?, ?, ?, ?)`, [
+    await executeQuery(`INSERT INTO categories (id, name, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
       id,
-      input.divisionId,
       input.name,
       input.isActive ?? true,
       sortOrder,
     ]);
   } catch (err) {
-    rethrowAsAppError(err, { onDuplicate: 'A category with this name already exists under this division' });
+    rethrowAsAppError(err, { onDuplicate: 'A category with this name already exists' });
   }
   return getCategoryById(id);
 }
 
-/** Persists a full manual reorder — every category in the division must be present exactly once. */
-export async function reorderCategories(divisionId, orderedIds) {
-  const existing = await executeQuery(`SELECT id FROM categories WHERE division_id = ?`, [divisionId]);
+/** Persists a full manual reorder — every existing category id must be present exactly once. */
+export async function reorderCategories(orderedIds) {
+  const existing = await executeQuery(`SELECT id FROM categories`);
   const existingIds = new Set(existing.map((row) => row.id));
   if (orderedIds.length !== existingIds.size || orderedIds.some((id) => !existingIds.has(id))) {
-    throw new AppError(400, 'orderedIds must contain every category in this division exactly once');
+    throw new AppError(400, 'orderedIds must contain every category exactly once');
   }
 
   await withTransaction(async (execute) => {
-    await Promise.all(
-      orderedIds.map((id, index) => execute(`UPDATE categories SET sort_order = ? WHERE id = ?`, [index, id])),
-    );
+    for (const [index, id] of orderedIds.entries()) {
+      await execute(`UPDATE categories SET sort_order = ? WHERE id = ?`, [index, id]);
+    }
   });
 }
 
 export async function updateCategory(id, input) {
-  const existing = await getCategoryById(id);
-  if (input.divisionId !== undefined) {
-    await getDivisionById(input.divisionId); // 404s if the target division doesn't exist
-  }
+  await getCategoryById(id);
 
   if (input.name !== undefined) {
-    await assertNameNotTaken('categories', input.name, 'A category with this name already exists under this division', {
-      scopeColumn: 'division_id',
-      scopeValue: input.divisionId ?? existing.divisionId,
-      excludeId: id,
-    });
+    await assertNameNotTaken('categories', input.name, 'A category with this name already exists', { excludeId: id });
   }
 
   const fields = [];
   const params = [];
-  if (input.divisionId !== undefined) {
-    fields.push('division_id = ?');
-    params.push(input.divisionId);
-  }
   if (input.name !== undefined) {
     fields.push('name = ?');
     params.push(input.name);
@@ -330,7 +142,7 @@ export async function updateCategory(id, input) {
   try {
     await executeQuery(`UPDATE categories SET ${fields.join(', ')} WHERE id = ?`, params);
   } catch (err) {
-    rethrowAsAppError(err, { onDuplicate: 'A category with this name already exists under this division' });
+    rethrowAsAppError(err, { onDuplicate: 'A category with this name already exists' });
   }
   return getCategoryById(id);
 }
@@ -420,9 +232,9 @@ export async function reorderSubCategories(categoryId, orderedIds) {
   }
 
   await withTransaction(async (execute) => {
-    await Promise.all(
-      orderedIds.map((id, index) => execute(`UPDATE sub_categories SET sort_order = ? WHERE id = ?`, [index, id])),
-    );
+    for (const [index, id] of orderedIds.entries()) {
+      await execute(`UPDATE sub_categories SET sort_order = ? WHERE id = ?`, [index, id]);
+    }
   });
 }
 

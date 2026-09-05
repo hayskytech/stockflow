@@ -1,11 +1,11 @@
 import { EmptyState } from "@/components/common/EmptyState"
-import { useDivisionOptions } from "@/hooks/use-catalog-options"
+import { useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useNoticePublic } from "@/hooks/use-notice-public"
 import { HeroSlider } from "@/features/home/components/HeroSlider"
-import { DivisionSection } from "@/features/home/components/DivisionSection"
+import { CategorySection } from "@/features/home/components/CategorySection"
 
 export function HomePage() {
-  const { data: divisions = [], isLoading, isError } = useDivisionOptions(true)
+  const { data: categories = [], isLoading, isError } = useCategoryOptions(true)
   const { data: notice } = useNoticePublic()
 
   return (
@@ -27,12 +27,10 @@ export function HomePage() {
         </div>
       ) : isError ? (
         <div className="alert alert-danger">Could not load the catalog. Please try again.</div>
-      ) : divisions.length === 0 ? (
+      ) : categories.length === 0 ? (
         <EmptyState icon="fa-shirt" title="No products yet" description="Check back soon for new arrivals." />
       ) : (
-        divisions.map((division, index) => (
-          <DivisionSection key={division.id} division={division} index={index} />
-        ))
+        categories.map((category) => <CategorySection key={category.id} category={category} />)
       )}
     </div>
   )

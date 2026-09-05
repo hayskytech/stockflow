@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { useAuthStore } from "@/store/auth.store"
-import { useDivisionOptions, useCategoryOptions } from "@/hooks/use-catalog-options"
+import { useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useProductsStore } from "@/features/products/products.store"
 import { useProducts } from "@/features/products/hooks/use-products"
 import { ProductImportModal } from "@/features/products/components/ProductImportModal"
@@ -25,21 +25,17 @@ export function ProductsPage() {
 
   const search = useProductsStore((s) => s.search)
   const setSearch = useProductsStore((s) => s.setSearch)
-  const divisionFilter = useProductsStore((s) => s.divisionFilter)
-  const setDivisionFilter = useProductsStore((s) => s.setDivisionFilter)
   const categoryFilter = useProductsStore((s) => s.categoryFilter)
   const setCategoryFilter = useProductsStore((s) => s.setCategoryFilter)
 
   const [page, setPage] = useState(1)
 
-  const { data: divisions = [] } = useDivisionOptions()
-  const { data: categories = [] } = useCategoryOptions(divisionFilter)
+  const { data: categories = [] } = useCategoryOptions()
 
   const { data, isLoading, isError } = useProducts({
     page,
     per_page: 50,
     search,
-    division_id: divisionFilter || undefined,
     category_id: categoryFilter || undefined,
   })
 
@@ -156,7 +152,7 @@ export function ProductsPage() {
       <div className="card">
         <div className="card-body">
           <div className="row mb-3">
-            <div className="col-md-4">
+            <div className="col-md-6">
               <input
                 type="search"
                 className="form-control"
@@ -168,24 +164,7 @@ export function ProductsPage() {
                 }}
               />
             </div>
-            <div className="col-md-4">
-              <select
-                className="form-control"
-                value={divisionFilter}
-                onChange={(e) => {
-                  setDivisionFilter(e.target.value)
-                  setPage(1)
-                }}
-              >
-                <option value="">All divisions</option>
-                {divisions.map((division) => (
-                  <option key={division.id} value={division.id}>
-                    {division.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-md-4">
+            <div className="col-md-6">
               <select
                 className="form-control"
                 value={categoryFilter}
@@ -193,7 +172,6 @@ export function ProductsPage() {
                   setCategoryFilter(e.target.value)
                   setPage(1)
                 }}
-                disabled={!divisionFilter}
               >
                 <option value="">All categories</option>
                 {categories.map((category) => (

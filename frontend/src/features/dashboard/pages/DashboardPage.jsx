@@ -9,7 +9,6 @@ import {
 } from "@/features/dashboard/hooks/use-dashboard"
 import { OrdersByStatusChart } from "@/features/dashboard/components/OrdersByStatusChart"
 import { OrdersTrendChart } from "@/features/dashboard/components/OrdersTrendChart"
-import { StockByDivisionChart } from "@/features/dashboard/components/StockByDivisionChart"
 import { LowStockTable } from "@/features/dashboard/components/LowStockTable"
 import { useFormatMoney } from "@/hooks/use-warehouse-details"
 import { useAuthStore } from "@/store/auth.store"
@@ -211,10 +210,7 @@ export function DashboardPage() {
           </div>
 
           <div className="row">
-            <div className="col-md-4">
-              <StockByDivisionChart byDivision={stockSummary.byDivision} />
-            </div>
-            <div className="col-md-8">
+            <div className="col-12">
               <LowStockTable items={stockSummary.lowStockItems} />
             </div>
           </div>

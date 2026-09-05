@@ -57,8 +57,8 @@ export function ProductImportModal({ open, onClose }) {
                 {result.createdCategories?.length > 0 ? (
                   <div className="alert alert-info mb-0" id="product-import-created-categories">
                     Created {result.createdCategories.length} new{" "}
-                    {result.createdCategories.length === 1 ? "category" : "categories"} under the GENERAL
-                    division: {result.createdCategories.join(", ")}
+                    {result.createdCategories.length === 1 ? "category" : "categories"}:{" "}
+                    {result.createdCategories.join(", ")}
                   </div>
                 ) : null}
               </>
@@ -73,7 +73,7 @@ export function ProductImportModal({ open, onClose }) {
                 <p className="text-muted">
                   Upload the product catalog excel/CSV (columns: SubGroupName, Product Code, Product Name).
                   SubGroupName becomes the product&apos;s category — categories that don&apos;t exist yet are
-                  created automatically under the GENERAL division.
+                  created automatically.
                 </p>
                 <button
                   type="button"

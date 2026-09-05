@@ -60,19 +60,12 @@ export function CategoryPage() {
     return <div className="alert alert-danger">Could not load this category. It may no longer be available.</div>
   }
 
-  const breadcrumb = category.divisionName ? (
-    <Link to={ROUTES.STORE.DIVISION_DETAIL(category.divisionId)} className="text-muted small">
-      {category.divisionName}
-    </Link>
-  ) : null
-
   return (
     <div id={`category-page-${category.id}`}>
       <Link to={ROUTES.STORE.HOME} className="text-muted small mb-3 d-inline-block">
         <i className="fas fa-arrow-left mr-1" /> Back to shopping
       </Link>
 
-      {breadcrumb ? <p className="mb-1">{breadcrumb}</p> : null}
       <h2 className="mb-2">{category.name}</h2>
       <div className="zari-rule zari-rule--sm mb-4" style={{ maxWidth: "220px" }} aria-hidden="true" />
 

@@ -73,7 +73,7 @@ export function OrderDetailPage() {
         <div className="alert alert-warning" id="order-backorder-banner">
           <i className="fas fa-clock mr-2" />
           <strong>Back-order — awaiting restock.</strong> At least one item didn&apos;t have enough stock when this
-          order was placed. Accepting will re-check stock and succeed once it's available.
+          order was placed. Accepting will re-check stock and succeed once it&apos;s available.
         </div>
       ) : null}
 

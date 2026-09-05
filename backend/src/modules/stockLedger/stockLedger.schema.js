@@ -7,7 +7,7 @@ const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Dates must be YYYY-MM
 export const listStockLedgerQuerySchema = z.object({
   productId: uuidField.optional(),
   changeType: z.enum(['in', 'out']).optional(),
-  referenceType: z.enum(['order', 'adjustment', 'import']).optional(),
+  referenceType: z.enum(['order', 'adjustment', 'import', 'dispatch']).optional(),
   dateFrom: dateField.optional(),
   dateTo: dateField.optional(),
 });

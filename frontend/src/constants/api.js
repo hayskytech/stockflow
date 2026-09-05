@@ -31,12 +31,6 @@ export const API_ENDPOINTS = {
   WAREHOUSE_PUBLIC: "/warehouse/public",
   NOTICE: "/notice",
   NOTICE_PUBLIC: "/notice/public",
-  DIVISIONS: {
-    LIST: "/divisions",
-    BY_ID: (id) => `/divisions/${id}`,
-    BULK_IMPORT: "/divisions/bulk-import",
-    REORDER: "/divisions/reorder",
-  },
   CATEGORIES: {
     LIST: "/categories",
     BY_ID: (id) => `/categories/${id}`,

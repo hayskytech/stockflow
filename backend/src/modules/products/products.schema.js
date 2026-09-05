@@ -57,10 +57,9 @@ export const updateProductSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });
 
-/** GET /api/products?category_id=&sub_category_id=&division_id=&is_active=&min_price=&max_price= */
+/** GET /api/products?category_id=&sub_category_id=&is_active=&min_price=&max_price= */
 export const listProductsQuerySchema = z
   .object({
-    divisionId: uuidField.optional(),
     categoryId: uuidField.optional(),
     subCategoryId: uuidField.optional(),
     isActive: z

@@ -20,7 +20,7 @@ export const ENV = {
   NODE_ENV: required('NODE_ENV'),
   APP_PORT: parseInt(optional('APP_PORT', '4000'), 10),
   APP_NAME: optional('APP_NAME', 'StockFlow'),
-  FRONTEND_URL: required('FRONTEND_URL'),
+  FRONTEND_URL: optional('FRONTEND_URL', ''),
 
   DB_HOST: required('DB_HOST'),
   DB_PORT: parseInt(optional('DB_PORT', '3306'), 10),

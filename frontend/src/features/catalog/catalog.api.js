@@ -9,41 +9,6 @@ function toListResult({ data, headers }) {
   }
 }
 
-// --- Divisions ---------------------------------------------------------
-
-export async function listDivisionsApi(params) {
-  const res = await apiClient.get(API_ENDPOINTS.DIVISIONS.LIST, { params })
-  return toListResult(res)
-}
-
-export async function getDivisionApi(id) {
-  const { data } = await apiClient.get(API_ENDPOINTS.DIVISIONS.BY_ID(id))
-  return data
-}
-
-export async function createDivisionApi(input) {
-  const { data } = await apiClient.post(API_ENDPOINTS.DIVISIONS.LIST, input)
-  return data
-}
-
-export async function bulkImportDivisionsApi(names) {
-  const { data } = await apiClient.post(API_ENDPOINTS.DIVISIONS.BULK_IMPORT, { names })
-  return data
-}
-
-export async function updateDivisionApi(id, input) {
-  const { data } = await apiClient.put(API_ENDPOINTS.DIVISIONS.BY_ID(id), input)
-  return data
-}
-
-export async function deleteDivisionApi(id) {
-  await apiClient.delete(API_ENDPOINTS.DIVISIONS.BY_ID(id))
-}
-
-export async function reorderDivisionsApi(orderedIds) {
-  await apiClient.patch(API_ENDPOINTS.DIVISIONS.REORDER, { orderedIds })
-}
-
 // --- Categories ----------------------------------------------------------
 
 export async function listCategoriesApi(params) {
@@ -70,8 +35,8 @@ export async function deleteCategoryApi(id) {
   await apiClient.delete(API_ENDPOINTS.CATEGORIES.BY_ID(id))
 }
 
-export async function reorderCategoriesApi(divisionId, orderedIds) {
-  await apiClient.patch(API_ENDPOINTS.CATEGORIES.REORDER, { divisionId, orderedIds })
+export async function reorderCategoriesApi(orderedIds) {
+  await apiClient.patch(API_ENDPOINTS.CATEGORIES.REORDER, { orderedIds })
 }
 
 // --- Sub-categories --------------------------------------------------------

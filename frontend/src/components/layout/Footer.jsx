@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { useDivisionOptions } from "@/hooks/use-catalog-options"
 import { useSiteTitle } from "@/hooks/use-warehouse-details"
 import { useSocialLinksPublic } from "@/hooks/use-social-links-public"
 import { ROUTES } from "@/constants/routes"
@@ -11,12 +10,11 @@ const SOCIAL_ICONS = [
   { key: "whatsappUrl", icon: "fab fa-whatsapp", label: "WhatsApp Channel" },
 ]
 
-/** Storefront footer — brand blurb, division quick-links, account shortcuts, and social links.
- *  Pulls only from public data (site title, active divisions, social links) so it renders the
+/** Storefront footer — brand blurb, account shortcuts, and social links.
+ *  Pulls only from public data (site title, social links) so it renders the
  *  same for guests and logged-in customers alike. */
 export function Footer() {
   const siteTitle = useSiteTitle()
-  const { data: divisions = [] } = useDivisionOptions(true)
   const { data: socialLinks } = useSocialLinksPublic()
   const activeSocialLinks = SOCIAL_ICONS.filter(({ key }) => socialLinks?.[key])
   const year = new Date().getFullYear()
@@ -47,11 +45,6 @@ export function Footer() {
               <li>
                 <Link to={ROUTES.STORE.HOME}>Home</Link>
               </li>
-              {divisions.map((division) => (
-                <li key={division.id}>
-                  <Link to={ROUTES.STORE.DIVISION_DETAIL(division.id)}>{division.name}</Link>
-                </li>
-              ))}
             </ul>
           </div>
           <div className="col-6 col-md-4">

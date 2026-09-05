@@ -56,7 +56,7 @@ export function useDeleteCategory() {
 export function useReorderCategories() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ divisionId, orderedIds }) => reorderCategoriesApi(divisionId, orderedIds),
+    mutationFn: (orderedIds) => reorderCategoriesApi(orderedIds),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [CATEGORIES_QUERY_KEY] }),
   })
 }

@@ -95,13 +95,12 @@ const PRODUCT_COLUMNS = `
   p.reorder_level AS reorderLevel, p.product_photo_url AS productPhotoUrl,
   p.product_photo_media_id AS productPhotoMediaId, p.is_active AS isActive,
   p.created_at AS createdAt, p.updated_at AS updatedAt,
-  c.name AS categoryName, c.division_id AS divisionId, d.name AS divisionName, sc.name AS subCategoryName
+  c.name AS categoryName, sc.name AS subCategoryName
 `;
 
 const PRODUCT_JOINS = `
   FROM products p
   JOIN categories c ON c.id = p.category_id
-  JOIN divisions d ON d.id = c.division_id
   LEFT JOIN sub_categories sc ON sc.id = p.sub_category_id
 `;
 
@@ -144,10 +143,6 @@ export async function listProducts(listQuery, filters) {
   if (search) {
     conditions.push('(p.name LIKE ? OR p.product_code LIKE ?)');
     params.push(`%${search}%`, `%${search}%`);
-  }
-  if (filters.divisionId) {
-    conditions.push('c.division_id = ?');
-    params.push(filters.divisionId);
   }
   if (filters.categoryId) {
     conditions.push('p.category_id = ?');
@@ -347,10 +342,6 @@ export async function deleteProduct(id) {
   }
 }
 
-// Division that receives categories auto-created during a product import — created on
-// demand if it doesn't exist. Admin can move the categories to real divisions afterwards.
-const DEFAULT_IMPORT_DIVISION = 'GENERAL';
-
 const IMPORT_COLUMNS = ['SubGroupName', 'Product Code', 'Product Name'];
 
 /** Blank .xlsx with the header row importProducts() expects — downloaded from the import dialog. */
@@ -362,7 +353,7 @@ export async function getProductImportTemplate() {
  * Bulk-creates products from an uploaded .xlsx/.csv (columns: SubGroupName, Product Code,
  * Product Name — this is the one-time catalog load, so price/discount/stock aren't in the sheet
  * and are left at their defaults; edit individual products afterwards). A SubGroupName with no
- * matching category auto-creates that category under the GENERAL division. All-or-nothing:
+ * matching category auto-creates that (top-level) category. All-or-nothing:
  * if any row is invalid or has a duplicate code, the whole file is rejected.
  */
 export async function importProducts(buffer, originalName) {
@@ -413,7 +404,7 @@ export async function importProducts(buffer, originalName) {
   const categoryLookup = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
 
   // SubGroupNames with no matching category are auto-created (first spelling in the file
-  // wins for display casing) under the GENERAL division inside the same transaction.
+  // wins for display casing) as top-level categories inside the same transaction.
   const missingCategories = new Map();
   for (const row of parsedRows) {
     const key = row.subGroupName.toLowerCase();
@@ -423,21 +414,10 @@ export async function importProducts(buffer, originalName) {
   }
 
   await withTransaction(async (execute) => {
-    if (missingCategories.size > 0) {
-      const [division] = await execute(
-        `SELECT id FROM divisions WHERE LOWER(name) = ? LIMIT 1`,
-        [DEFAULT_IMPORT_DIVISION.toLowerCase()],
-      );
-      let divisionId = division?.id;
-      if (!divisionId) {
-        divisionId = crypto.randomUUID();
-        await execute(`INSERT INTO divisions (id, name, is_active) VALUES (?, ?, TRUE)`, [divisionId, DEFAULT_IMPORT_DIVISION]);
-      }
-      for (const [key, name] of missingCategories) {
-        const categoryId = crypto.randomUUID();
-        await execute(`INSERT INTO categories (id, division_id, name, is_active) VALUES (?, ?, ?, TRUE)`, [categoryId, divisionId, name]);
-        categoryLookup.set(key, categoryId);
-      }
+    for (const [key, name] of missingCategories) {
+      const categoryId = crypto.randomUUID();
+      await execute(`INSERT INTO categories (id, name, is_active) VALUES (?, ?, TRUE)`, [categoryId, name]);
+      categoryLookup.set(key, categoryId);
     }
     for (const row of parsedRows) {
       await execute(
