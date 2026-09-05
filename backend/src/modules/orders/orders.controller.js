@@ -1,4 +1,3 @@
-import { ENV } from '../../config/env.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
 import {
@@ -16,7 +15,7 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/orders */
+/** GET /api/b/:businessId/orders */
 export async function listOrders(req, res, next) {
   try {
     const filters = parseOrThrow(listOrdersQuerySchema, {
@@ -27,7 +26,7 @@ export async function listOrders(req, res, next) {
       customerId: req.query.customer_id,
       isBackorder: req.query.is_backorder,
     });
-    const { rows, total } = await ordersService.listOrders(req.listQuery, filters, req.user);
+    const { rows, total } = await ordersService.listOrders(req.business.id, req.listQuery, filters, req.user);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -35,56 +34,46 @@ export async function listOrders(req, res, next) {
   }
 }
 
-/** GET /api/orders/:id */
+/** GET /api/b/:businessId/orders/:id */
 export async function getOrder(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    const order = await ordersService.getOrderById(id, req.user);
+    const order = await ordersService.getOrderById(req.business.id, id, req.user);
     res.status(200).json(order);
   } catch (err) {
     next(err);
   }
 }
 
-/** POST /api/orders */
+/** POST /api/b/:businessId/orders — internal/manual order (storefront disabled) */
 export async function createOrder(req, res, next) {
   try {
     const input = parseOrThrow(createOrderSchema, req.body);
-    // TODO(phase-5): orders module moves under /api/b/:businessId
-    // Multi-tenant migration Phase 1: with the storefront disabled, a customer-role caller
-    // placing any order is treated as if the route does not exist. Admin/staff unaffected.
-    if (!ENV.STOREFRONT_ENABLED && req.user.role === 'customer') {
-      throw new AppError(404, 'Not found');
-    }
-    const isManualOrder = input.requestedFor !== undefined || input.paymentMethod === 'offline';
-    if (isManualOrder && req.user.role !== 'admin' && req.user.role !== 'staff') {
-      throw new AppError(403, 'Only admin or staff can create manual orders');
-    }
-    const order = await ordersService.createOrder(input, req.user.sub);
+    const order = await ordersService.createOrder(req.business.id, input, req.user.sub);
     res.status(201).json(order);
   } catch (err) {
     next(err);
   }
 }
 
-/** PATCH /api/orders/:id/status */
+/** PATCH /api/b/:businessId/orders/:id/status */
 export async function updateOrderStatus(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const { status } = parseOrThrow(updateOrderStatusSchema, req.body);
-    const order = await ordersService.updateOrderStatus(id, status, req.user);
+    const order = await ordersService.updateOrderStatus(req.business.id, id, status, req.user);
     res.status(200).json(order);
   } catch (err) {
     next(err);
   }
 }
 
-/** PATCH /api/orders/:id/payment-status */
+/** PATCH /api/b/:businessId/orders/:id/payment-status */
 export async function updatePaymentStatus(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const { paymentStatus } = parseOrThrow(updatePaymentStatusSchema, req.body);
-    const order = await ordersService.updatePaymentStatus(id, paymentStatus, req.user);
+    const order = await ordersService.updatePaymentStatus(req.business.id, id, paymentStatus, req.user);
     res.status(200).json(order);
   } catch (err) {
     next(err);

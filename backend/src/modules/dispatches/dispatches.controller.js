@@ -9,7 +9,7 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/dispatches */
+/** GET /api/b/:businessId/dispatches */
 export async function listDispatches(req, res, next) {
   try {
     const filters = parseOrThrow(listDispatchesQuerySchema, {
@@ -17,7 +17,7 @@ export async function listDispatches(req, res, next) {
       dateFrom: req.query.date_from,
       dateTo: req.query.date_to,
     });
-    const { rows, total } = await dispatchesService.listDispatches(req.listQuery, filters);
+    const { rows, total } = await dispatchesService.listDispatches(req.business.id, req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -25,22 +25,22 @@ export async function listDispatches(req, res, next) {
   }
 }
 
-/** GET /api/dispatches/:id */
+/** GET /api/b/:businessId/dispatches/:id */
 export async function getDispatch(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    const dispatch = await dispatchesService.getDispatchById(id);
+    const dispatch = await dispatchesService.getDispatchById(req.business.id, id);
     res.status(200).json(dispatch);
   } catch (err) {
     next(err);
   }
 }
 
-/** POST /api/dispatches — dispatch of an accepted order */
+/** POST /api/b/:businessId/dispatches — dispatch of an accepted order */
 export async function createDispatch(req, res, next) {
   try {
     const input = parseOrThrow(createDispatchSchema, req.body);
-    const result = await dispatchesService.createDispatch(input, req.user.sub);
+    const result = await dispatchesService.createDispatch(req.business.id, input, req.user.sub);
     res.status(201).json(result);
   } catch (err) {
     next(err);

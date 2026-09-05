@@ -7,14 +7,15 @@ function toDateOnly(date) {
   return date.toISOString().slice(0, 10);
 }
 
-export async function getStockSummary() {
+export async function getStockSummary(businessId) {
   const [totals] = await executeQuery(
     `SELECT
        COUNT(*) AS totalProducts,
        SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS activeProducts,
        COALESCE(SUM(quantity_available), 0) AS totalQuantityAvailable,
        SUM(CASE WHEN quantity_available <= reorder_level THEN 1 ELSE 0 END) AS lowStockCount
-     FROM products`,
+     FROM products WHERE business_id = ?`,
+    [businessId],
   );
 
   const lowStockItems = await executeQuery(
@@ -22,9 +23,10 @@ export async function getStockSummary() {
             p.reorder_level AS reorderLevel, c.name AS categoryName
      FROM products p
      JOIN categories c ON c.id = p.category_id
-     WHERE p.is_active = 1 AND p.quantity_available <= p.reorder_level
+     WHERE p.business_id = ? AND p.is_active = 1 AND p.quantity_available <= p.reorder_level
      ORDER BY (p.quantity_available - p.reorder_level) ASC
      LIMIT 10`,
+    [businessId],
   );
 
   return {
@@ -41,11 +43,12 @@ export async function getStockSummary() {
  * ledger rows that represent units physically entering/leaving ('import', 'adjustment',
  * 'dispatch'); order reserve/release rows are reservation bookkeeping, not movement.
  */
-export async function getStockMovement(days) {
+export async function getStockMovement(businessId, days) {
   const [onHand] = await executeQuery(
     `SELECT COALESCE(SUM(quantity_available), 0) AS availableUnits,
             COALESCE(SUM(quantity_reserved), 0)  AS reservedUnits
-     FROM products`,
+     FROM products WHERE business_id = ?`,
+    [businessId],
   );
 
   const dailyRows = await executeQuery(
@@ -53,11 +56,12 @@ export async function getStockMovement(days) {
             COALESCE(SUM(CASE WHEN change_type = 'in' THEN quantity ELSE 0 END), 0) AS inQty,
             COALESCE(SUM(CASE WHEN change_type = 'out' THEN quantity ELSE 0 END), 0) AS outQty
      FROM stock_ledger
-     WHERE reference_type IN ('import', 'adjustment', 'dispatch')
+     WHERE business_id = ?
+       AND reference_type IN ('import', 'adjustment', 'dispatch')
        AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
      GROUP BY DATE(created_at)
      ORDER BY date ASC`,
-    [days - 1],
+    [businessId, days - 1],
   );
   const dailyByDate = new Map(dailyRows.map((row) => [row.date, row]));
 
@@ -85,31 +89,37 @@ export async function getStockMovement(days) {
   };
 }
 
-export async function getOrderHistory(days) {
-  const [totals] = await executeQuery(`SELECT COUNT(*) AS totalOrders FROM orders`);
+export async function getOrderHistory(businessId, days) {
+  const [totals] = await executeQuery(`SELECT COUNT(*) AS totalOrders FROM orders WHERE business_id = ?`, [businessId]);
 
-  const statusRows = await executeQuery(`SELECT status, COUNT(*) AS count FROM orders GROUP BY status`);
+  const statusRows = await executeQuery(
+    `SELECT status, COUNT(*) AS count FROM orders WHERE business_id = ? GROUP BY status`,
+    [businessId],
+  );
   const byStatus = Object.fromEntries(ORDER_STATUSES.map((status) => [status, 0]));
   for (const row of statusRows) {
     byStatus[row.status] = row.count;
   }
 
   const [dispatchedToday] = await executeQuery(
-    `SELECT COUNT(*) AS count FROM orders WHERE status = 'dispatched' AND DATE(updated_at) = CURDATE()`,
+    `SELECT COUNT(*) AS count FROM orders WHERE business_id = ? AND status = 'dispatched' AND DATE(updated_at) = CURDATE()`,
+    [businessId],
   );
 
   // "Order value" excludes rejected/cancelled orders — those never reserved real payment intent.
   const [valueRow] = await executeQuery(
-    `SELECT COALESCE(SUM(total_amount), 0) AS totalOrderValue FROM orders WHERE status NOT IN ('rejected', 'cancelled')`,
+    `SELECT COALESCE(SUM(total_amount), 0) AS totalOrderValue FROM orders
+     WHERE business_id = ? AND status NOT IN ('rejected', 'cancelled')`,
+    [businessId],
   );
 
   const dailyRows = await executeQuery(
     `SELECT DATE(created_at) AS date, COUNT(*) AS count, COALESCE(SUM(total_amount), 0) AS revenue
      FROM orders
-     WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+     WHERE business_id = ? AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
      GROUP BY DATE(created_at)
      ORDER BY date ASC`,
-    [days - 1],
+    [businessId, days - 1],
   );
   const dailyByDate = new Map(dailyRows.map((row) => [row.date, row]));
 
@@ -141,15 +151,16 @@ export async function getOrderHistory(days) {
  * window. `revenue` excludes rejected/cancelled orders, matching totalOrderValue above; `count`
  * includes every order placed that month regardless of status, matching dailyOrders.count above.
  */
-export async function getMonthlyOrderSummary(months) {
+export async function getMonthlyOrderSummary(businessId, months) {
   const monthlyRows = await executeQuery(
     `SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count,
             COALESCE(SUM(CASE WHEN status NOT IN ('rejected', 'cancelled') THEN total_amount ELSE 0 END), 0) AS revenue
      FROM orders
-     WHERE created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
+     WHERE business_id = ?
+       AND created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ? MONTH)
      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
      ORDER BY month ASC`,
-    [months - 1],
+    [businessId, months - 1],
   );
   const monthlyByKey = new Map(monthlyRows.map((row) => [row.month, row]));
 

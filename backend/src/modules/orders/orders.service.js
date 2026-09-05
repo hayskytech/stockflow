@@ -26,23 +26,30 @@ const SORT_COLUMNS = {
   total_amount: 'o.total_amount',
 };
 
+// Order numbers are random, not sequential — per-business uniqueness is enforced by the
+// composite key uq_orders_business_order_number (business_id, order_number). The retry loop
+// in createOrder regenerates on a collision, so the same ORD-YYYYMMDD-XXXXX space is reused
+// independently by every business.
 function generateOrderNumber() {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 5);
   return `ORD-${datePart}-${randomPart}`;
 }
 
-async function getOrderRow(id) {
-  const [row] = await executeQuery(`SELECT ${ORDER_COLUMNS} ${ORDER_JOINS} WHERE o.id = ?`, [id]);
+async function getOrderRow(businessId, id) {
+  const [row] = await executeQuery(
+    `SELECT ${ORDER_COLUMNS} ${ORDER_JOINS} WHERE o.id = ? AND o.business_id = ?`,
+    [id, businessId],
+  );
   if (!row) throw new AppError(404, 'Order not found');
   return row;
 }
 
-export async function listOrders(listQuery, filters, requester) {
+export async function listOrders(businessId, listQuery, filters, requester) {
   const { perPage, offset, search, orderby, order } = listQuery;
 
-  const conditions = [];
-  const params = [];
+  const conditions = ['o.business_id = ?'];
+  const params = [businessId];
   if (requester.role === 'customer' || filters.scope === 'own') {
     conditions.push('o.requested_by = ?');
     params.push(requester.sub);
@@ -71,7 +78,7 @@ export async function listOrders(listQuery, filters, requester) {
     conditions.push('(o.order_number LIKE ? OR u.name LIKE ? OR u.email LIKE ?)');
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
   const orderColumn = SORT_COLUMNS[orderby] ?? SORT_COLUMNS.created_at;
 
   const [rows, countRows] = await Promise.all([
@@ -89,8 +96,8 @@ export async function listOrders(listQuery, filters, requester) {
  * `requester` is optional — omit it for trusted internal lookups (e.g. right after the
  * same user's own `createOrder` call) that don't need the customer-ownership check.
  */
-export async function getOrderById(id, requester) {
-  const order = await getOrderRow(id);
+export async function getOrderById(businessId, id, requester) {
+  const order = await getOrderRow(businessId, id);
   if (requester?.role === 'customer' && order.requestedBy !== requester.sub) {
     // 404, not 403 — a customer must not learn that another user's order id exists.
     throw new AppError(404, 'Order not found');
@@ -104,26 +111,27 @@ export async function getOrderById(id, requester) {
             p.name AS productName, p.product_code AS productCode, p.product_photo_url AS productPhotoUrl
      FROM order_items oi
      JOIN products p ON p.id = oi.product_id
-     WHERE oi.order_id = ?
+     WHERE oi.order_id = ? AND oi.business_id = ?
      ORDER BY oi.id`,
-    [id],
+    [id, businessId],
   );
 
   let duplicateTransactionCount = 0;
   if (requester?.role !== 'customer' && order.transactionId) {
-    const [dupRow] = await executeQuery(`SELECT COUNT(*) AS count FROM orders WHERE transaction_id = ? AND id != ?`, [
-      order.transactionId,
-      id,
-    ]);
+    const [dupRow] = await executeQuery(
+      `SELECT COUNT(*) AS count FROM orders WHERE transaction_id = ? AND id != ? AND business_id = ?`,
+      [order.transactionId, id, businessId],
+    );
     duplicateTransactionCount = dupRow.count;
   }
 
   return { ...order, items, duplicateTransactionCount };
 }
 
-export async function createOrder(input, userId) {
+export async function createOrder(businessId, input, userId) {
   // Manual order: admin/staff place the order on behalf of a customer — the order belongs to
-  // that customer (requested_by) exactly as if they had placed it themselves.
+  // that customer (requested_by) exactly as if they had placed it themselves. A user is global,
+  // so no business filter here; the "requested for" user need not be a member of this business.
   const ownerId = input.requestedFor ?? userId;
   if (input.requestedFor) {
     const [owner] = await executeQuery(`SELECT id, is_active AS isActive FROM users WHERE id = ?`, [input.requestedFor]);
@@ -133,11 +141,11 @@ export async function createOrder(input, userId) {
 
   // Idempotency: a repeat submit with the same key (double-click, retry, back-button) returns
   // the order already created for it instead of creating a duplicate.
-  const [existingByKey] = await executeQuery(`SELECT id FROM orders WHERE idempotency_key = ? AND requested_by = ?`, [
-    input.idempotencyKey,
-    ownerId,
-  ]);
-  if (existingByKey) return getOrderById(existingByKey.id);
+  const [existingByKey] = await executeQuery(
+    `SELECT id FROM orders WHERE idempotency_key = ? AND requested_by = ? AND business_id = ?`,
+    [input.idempotencyKey, ownerId, businessId],
+  );
+  if (existingByKey) return getOrderById(businessId, existingByKey.id);
 
   // Merge duplicate productId lines defensively, then lock rows in a consistent order so two
   // concurrent multi-item orders sharing products can't deadlock each other.
@@ -163,12 +171,13 @@ export async function createOrder(input, userId) {
       const [product] = await execute(
         `SELECT id, name, price, discount_percent AS discountPercent, pieces_per_set AS piecesPerSet,
                 quantity_available AS quantityAvailable, is_active AS isActive
-         FROM products WHERE id = ?`,
-        [item.productId],
+         FROM products WHERE id = ? AND business_id = ?`,
+        [item.productId, businessId],
       );
       if (!product) {
         // Nonexistent/inactive products hard-fail regardless of allowBackorder — that flag is
         // about quantity shortfalls only, never about ordering something that isn't sellable.
+        // A productId that belongs to another business also lands here.
         failures.push(`One of the selected products no longer exists`);
       } else if (!product.isActive) {
         failures.push(`${product.name} is no longer available`);
@@ -202,12 +211,13 @@ export async function createOrder(input, userId) {
       try {
         await execute(
           `INSERT INTO orders (
-             id, order_number, requested_by, status, is_backorder, payment_method, transaction_id, payment_status,
+             id, business_id, order_number, requested_by, status, is_backorder, payment_method, transaction_id, payment_status,
              total_amount, shipping_name, shipping_phone, shipping_address_line1, shipping_address_line2,
              shipping_city, shipping_state, shipping_pincode, idempotency_key, notes
-           ) VALUES (?, ?, ?, 'pending', ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             orderId,
+            businessId,
             orderNumber,
             ownerId,
             isBackorder,
@@ -240,14 +250,23 @@ export async function createOrder(input, userId) {
 
     for (const { productId, quantity, product } of validItems) {
       await execute(
-        `INSERT INTO order_items (id, order_id, product_id, quantity, price_at_order, discount_percent_at_order, pieces_per_set_at_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [crypto.randomUUID(), orderId, productId, quantity, product.price, product.discountPercent, product.piecesPerSet],
+        `INSERT INTO order_items (id, business_id, order_id, product_id, quantity, price_at_order, discount_percent_at_order, pieces_per_set_at_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          crypto.randomUUID(),
+          businessId,
+          orderId,
+          productId,
+          quantity,
+          product.price,
+          product.discountPercent,
+          product.piecesPerSet,
+        ],
       );
     }
   });
 
-  return getOrderById(orderId);
+  return getOrderById(businessId, orderId);
 }
 
 // Order lifecycle: pending -> accepted -> dispatched -> completed, with rejected/cancelled
@@ -259,8 +278,8 @@ const ALLOWED_TRANSITIONS = {
   dispatched: ['completed'],
 };
 
-export async function updateOrderStatus(id, status, requester) {
-  const order = await getOrderRow(id);
+export async function updateOrderStatus(businessId, id, status, requester) {
+  const order = await getOrderRow(businessId, id);
 
   if (requester.role === 'customer') {
     if (order.requestedBy !== requester.sub) throw new AppError(404, 'Order not found');
@@ -276,14 +295,15 @@ export async function updateOrderStatus(id, status, requester) {
   }
 
   if (status === 'completed') {
-    await executeQuery(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
-    return getOrderById(id, requester);
+    await executeQuery(`UPDATE orders SET status = ? WHERE id = ? AND business_id = ?`, [status, id, businessId]);
+    return getOrderById(businessId, id, requester);
   }
 
   if (status === 'accepted') {
-    const items = await executeQuery(`SELECT product_id AS productId, quantity FROM order_items WHERE order_id = ?`, [
-      id,
-    ]);
+    const items = await executeQuery(
+      `SELECT product_id AS productId, quantity FROM order_items WHERE order_id = ? AND business_id = ?`,
+      [id, businessId],
+    );
     // Lock rows in a consistent order so two concurrent acceptances sharing products can't deadlock.
     const sortedItems = [...items].sort((a, b) => a.productId.localeCompare(b.productId));
 
@@ -297,7 +317,10 @@ export async function updateOrderStatus(id, status, requester) {
       // both reserve stock for the same order. Locked (and unlocked, below) in that order —
       // order row first, then product rows — to match dispatches.service.js's lock ordering
       // (order row, then product rows via UPDATE) and avoid a cross-path deadlock.
-      const [lockedOrder] = await execute(`SELECT status FROM orders WHERE id = ? FOR UPDATE`, [id]);
+      const [lockedOrder] = await execute(`SELECT status FROM orders WHERE id = ? AND business_id = ? FOR UPDATE`, [
+        id,
+        businessId,
+      ]);
       if (lockedOrder.status !== 'pending') {
         throw new AppError(409, `Order is ${lockedOrder.status} and cannot be changed to accepted`);
       }
@@ -307,8 +330,8 @@ export async function updateOrderStatus(id, status, requester) {
 
       for (const item of sortedItems) {
         const [product] = await execute(
-          `SELECT id, name, quantity_available AS quantityAvailable FROM products WHERE id = ? FOR UPDATE`,
-          [item.productId],
+          `SELECT id, name, quantity_available AS quantityAvailable FROM products WHERE id = ? AND business_id = ? FOR UPDATE`,
+          [item.productId, businessId],
         );
         if (!product || product.quantityAvailable < item.quantity) {
           failures.push(`${product?.name ?? 'A product'} — only ${product?.quantityAvailable ?? 0} left in stock`);
@@ -323,13 +346,13 @@ export async function updateOrderStatus(id, status, requester) {
       for (const { productId, quantity } of lockedItems) {
         await execute(
           `UPDATE products SET quantity_available = quantity_available - ?, quantity_reserved = quantity_reserved + ?
-           WHERE id = ?`,
-          [quantity, quantity, productId],
+           WHERE id = ? AND business_id = ?`,
+          [quantity, quantity, productId, businessId],
         );
         await execute(
-          `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-           VALUES (?, 'out', ?, 'order', ?, 'Stock reserved for order')`,
-          [productId, quantity, id],
+          `INSERT INTO stock_ledger (business_id, product_id, change_type, quantity, reference_type, reference_id, note)
+           VALUES (?, ?, 'out', ?, 'order', ?, 'Stock reserved for order')`,
+          [businessId, productId, quantity, id],
         );
       }
 
@@ -337,25 +360,30 @@ export async function updateOrderStatus(id, status, requester) {
       // but guard the UPDATE itself too and check the affected-row count in case an isolation
       // level quirk let the lock through — if 0 rows changed, someone else already moved this
       // order out of 'pending' between the lock and here.
-      const updateResult = await execute(`UPDATE orders SET status = 'accepted' WHERE id = ? AND status = 'pending'`, [
-        id,
-      ]);
+      const updateResult = await execute(
+        `UPDATE orders SET status = 'accepted' WHERE id = ? AND business_id = ? AND status = 'pending'`,
+        [id, businessId],
+      );
       if (updateResult.affectedRows === 0) {
         throw new AppError(409, `Order is no longer pending and cannot be changed to accepted`);
       }
     });
 
-    return getOrderById(id, requester);
+    return getOrderById(businessId, id, requester);
   }
 
   // rejected / cancelled — always from pending, before any stock has been reserved, so there's
   // nothing to release.
-  await executeQuery(`UPDATE orders SET status = ? WHERE id = ?`, [status, id]);
-  return getOrderById(id, requester);
+  await executeQuery(`UPDATE orders SET status = ? WHERE id = ? AND business_id = ?`, [status, id, businessId]);
+  return getOrderById(businessId, id, requester);
 }
 
-export async function updatePaymentStatus(id, paymentStatus, requester) {
-  await getOrderRow(id); // 404s if it doesn't exist
-  await executeQuery(`UPDATE orders SET payment_status = ? WHERE id = ?`, [paymentStatus, id]);
-  return getOrderById(id, requester);
+export async function updatePaymentStatus(businessId, id, paymentStatus, requester) {
+  await getOrderRow(businessId, id); // 404s if it doesn't exist in this business
+  await executeQuery(`UPDATE orders SET payment_status = ? WHERE id = ? AND business_id = ?`, [
+    paymentStatus,
+    id,
+    businessId,
+  ]);
+  return getOrderById(businessId, id, requester);
 }

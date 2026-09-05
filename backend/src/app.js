@@ -86,13 +86,13 @@ app.use("/api/b/:businessId/notice", authenticate, resolveBusiness, noticeRouter
 app.use("/api/notice", noticePublicRouter); // just /public
 app.use("/api/b/:businessId/products", authenticate, resolveBusiness, productsRouter);
 app.use("/api/b/:businessId/stock", authenticate, resolveBusiness, stockRouter);
+app.use("/api/b/:businessId/orders", authenticate, resolveBusiness, ordersRouter);
+app.use("/api/b/:businessId/dispatches", authenticate, resolveBusiness, dispatchesRouter);
+app.use("/api/b/:businessId/reports", authenticate, resolveBusiness, reportsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/admin", adminSessionsRouter);
-// still flat (later batches — leave as-is, they don't need to work yet):
+// still flat (Batch D — leave as-is, they don't need to work yet):
 app.use("/api/hero-slides", heroSlidesRouter);
-app.use("/api/orders", ordersRouter);
-app.use("/api/dispatches", dispatchesRouter);
-app.use("/api/reports", reportsRouter);
 app.use("/api/settings", settingsRouter);
 
 app.use(errorHandler);
