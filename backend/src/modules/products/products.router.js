@@ -2,10 +2,9 @@ import { Router } from 'express';
 import multer, { MulterError } from 'multer';
 import path from 'path';
 import { ENV } from '../../config/env.js';
-import { authenticate } from '../../middleware/auth.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { pagination } from '../../middleware/pagination.js';
-import { requireRole } from '../../middleware/requireRole.js';
+import { requireBusinessRole } from '../../middleware/requireBusinessRole.js';
 import {
   createProduct,
   deleteProduct,
@@ -16,7 +15,9 @@ import {
   updateProduct,
 } from './products.controller.js';
 
-export const productsRouter = Router();
+// Mounted in app.js at /api/b/:businessId/products behind `authenticate, resolveBusiness`, so
+// businessId comes from the route param (mergeParams) and every request is an authenticated member.
+export const productsRouter = Router({ mergeParams: true });
 
 const productsPagination = pagination({
   sortable: ['name', 'product_code', 'price', 'discount_percent', 'quantity_available', 'created_at'],
@@ -50,12 +51,12 @@ function handleUpload(req, res, next) {
   });
 }
 
-// Reads are public (storefront browsing needs no login); writes stay admin/staff-only.
+// Reads are member-only (any admin/staff of the business); writes stay admin/staff-only.
 // import-template must come before /:id so "import-template" isn't parsed as a product id.
 productsRouter.get('/', productsPagination, listProducts);
-productsRouter.get('/import-template', authenticate, requireRole('admin', 'staff'), downloadProductImportTemplate);
+productsRouter.get('/import-template', requireBusinessRole('admin', 'staff'), downloadProductImportTemplate);
 productsRouter.get('/:id', getProduct);
-productsRouter.post('/', authenticate, requireRole('admin', 'staff'), createProduct);
-productsRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importProducts);
-productsRouter.put('/:id', authenticate, requireRole('admin', 'staff'), updateProduct);
-productsRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteProduct);
+productsRouter.post('/', requireBusinessRole('admin', 'staff'), createProduct);
+productsRouter.post('/import', requireBusinessRole('admin', 'staff'), handleUpload, importProducts);
+productsRouter.put('/:id', requireBusinessRole('admin', 'staff'), updateProduct);
+productsRouter.delete('/:id', requireBusinessRole('admin', 'staff'), deleteProduct);

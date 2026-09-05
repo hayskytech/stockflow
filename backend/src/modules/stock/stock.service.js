@@ -24,11 +24,11 @@ const SORT_COLUMNS = {
   created_at: 's.created_at',
 };
 
-export async function listStock(listQuery, filters) {
+export async function listStock(businessId, listQuery, filters) {
   const { perPage, offset, search, orderby, order } = listQuery;
 
-  const conditions = [];
-  const params = [];
+  const conditions = ['s.business_id = ?'];
+  const params = [businessId];
   if (search) {
     conditions.push('(s.invoice_no LIKE ? OR p.name LIKE ?)');
     params.push(`%${search}%`, `%${search}%`);
@@ -49,7 +49,7 @@ export async function listStock(listQuery, filters) {
     conditions.push('s.invoice_date <= ?');
     params.push(filters.dateTo);
   }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
   const orderColumn = SORT_COLUMNS[orderby] ?? SORT_COLUMNS.created_at;
   // Search filters on p.name, so the id lookup only needs the products join when searching.
   const idJoins = search ? `FROM stock s JOIN products p ON p.id = s.product_id` : `FROM stock s`;
@@ -70,26 +70,29 @@ export async function listStock(listQuery, filters) {
 
   const ids = idRows.map((r) => r.id);
   const rows = await executeQuery(
-    `SELECT ${STOCK_COLUMNS} ${STOCK_JOINS} WHERE s.id IN (${ids.map(() => '?').join(',')}) ORDER BY ${orderColumn} ${order}`,
-    ids,
+    `SELECT ${STOCK_COLUMNS} ${STOCK_JOINS} WHERE s.business_id = ? AND s.id IN (${ids.map(() => '?').join(',')}) ORDER BY ${orderColumn} ${order}`,
+    [businessId, ...ids],
   );
 
   return { rows, total: countRows[0].total };
 }
 
-export async function getStockById(id) {
-  const [row] = await executeQuery(`SELECT ${STOCK_COLUMNS} ${STOCK_JOINS} WHERE s.id = ?`, [id]);
+export async function getStockById(businessId, id) {
+  const [row] = await executeQuery(
+    `SELECT ${STOCK_COLUMNS} ${STOCK_JOINS} WHERE s.id = ? AND s.business_id = ?`,
+    [id, businessId],
+  );
   if (!row) throw new AppError(404, 'Stock item not found');
   return row;
 }
 
-export async function deleteStock(id) {
-  const existing = await getStockById(id);
+export async function deleteStockBatch(businessId, id) {
+  const existing = await getStockById(businessId, id);
 
   await withTransaction(async (execute) => {
     const [product] = await execute(
-      `SELECT id, name, quantity_available AS quantityAvailable FROM products WHERE id = ? FOR UPDATE`,
-      [existing.productId],
+      `SELECT id, name, quantity_available AS quantityAvailable FROM products WHERE id = ? AND business_id = ? FOR UPDATE`,
+      [existing.productId, businessId],
     );
     if (product.quantityAvailable < existing.quantity) {
       throw new AppError(
@@ -98,15 +101,16 @@ export async function deleteStock(id) {
       );
     }
 
-    await execute(`DELETE FROM stock WHERE id = ?`, [id]);
-    await execute(`UPDATE products SET quantity_available = quantity_available - ? WHERE id = ?`, [
+    await execute(`DELETE FROM stock WHERE id = ? AND business_id = ?`, [id, businessId]);
+    await execute(`UPDATE products SET quantity_available = quantity_available - ? WHERE id = ? AND business_id = ?`, [
       existing.quantity,
       existing.productId,
+      businessId,
     ]);
     await execute(
-      `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-       VALUES (?, 'out', ?, 'adjustment', NULL, ?)`,
-      [existing.productId, existing.quantity, `Stock batch deleted — invoice ${existing.invoiceNo}`],
+      `INSERT INTO stock_ledger (business_id, product_id, change_type, quantity, reference_type, reference_id, note)
+       VALUES (?, ?, 'out', ?, 'adjustment', NULL, ?)`,
+      [businessId, existing.productId, existing.quantity, `Stock batch deleted — invoice ${existing.invoiceNo}`],
     );
   });
 }
@@ -114,29 +118,61 @@ export async function deleteStock(id) {
 /**
  * Creates one stock intake batch against a product/invoice, bumps
  * products.quantity_available, and writes one stock_ledger 'in'/'import' row — all in
- * one transaction.
+ * one transaction. All rows are scoped to / stamped with `businessId`.
+ *
+ * `execute` (optional) — a transaction-runner from an outer `withTransaction`. When passed,
+ * every statement runs on that connection and NO nested transaction is opened, so a caller
+ * (products.createProduct) can include the first stock batch in one atomic transaction.
+ * When omitted, this opens and commits its own transaction as before.
  */
-export async function createStockBatch({ productId, invoiceNo, invoiceDate, price, discountPercent, size, note, quantity }) {
-  const [product] = await executeQuery(
-    `SELECT id, name, is_active AS isActive FROM products WHERE id = ?`,
-    [productId],
+export async function createStockBatch(
+  businessId,
+  { productId, invoiceNo, invoiceDate, price, discountPercent, size, note, quantity },
+  execute,
+) {
+  const run = execute ?? executeQuery;
+
+  const [product] = await run(
+    `SELECT id, name, is_active AS isActive FROM products WHERE id = ? AND business_id = ?`,
+    [productId, businessId],
   );
   if (!product) throw new AppError(404, 'Product not found');
   if (!product.isActive) throw new AppError(409, 'Product is inactive — activate it before adding stock');
 
-  await withTransaction(async (execute) => {
-    await execute(
-      `INSERT INTO stock (id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [crypto.randomUUID(), productId, quantity, price, discountPercent ?? 0, size ?? null, invoiceNo, invoiceDate ?? null, note ?? null],
+  const writes = async (exec) => {
+    await exec(
+      `INSERT INTO stock (id, business_id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        crypto.randomUUID(),
+        businessId,
+        productId,
+        quantity,
+        price,
+        discountPercent ?? 0,
+        size ?? null,
+        invoiceNo,
+        invoiceDate ?? null,
+        note ?? null,
+      ],
     );
-    await execute(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ?`, [quantity, productId]);
-    await execute(
-      `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-       VALUES (?, 'in', ?, 'import', NULL, ?)`,
-      [productId, quantity, `Stock intake — invoice ${invoiceNo}`.slice(0, 500)],
+    await exec(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ? AND business_id = ?`, [
+      quantity,
+      productId,
+      businessId,
+    ]);
+    await exec(
+      `INSERT INTO stock_ledger (business_id, product_id, change_type, quantity, reference_type, reference_id, note)
+       VALUES (?, ?, 'in', ?, 'import', NULL, ?)`,
+      [businessId, productId, quantity, `Stock intake — invoice ${invoiceNo}`.slice(0, 500)],
     );
-  });
+  };
+
+  if (execute) {
+    await writes(execute);
+  } else {
+    await withTransaction(writes);
+  }
 
   return { imported: quantity, productId, productName: product.name, invoiceNo };
 }
@@ -154,8 +190,9 @@ export async function getStockImportTemplate() {
  * Bulk-imports stock rows from an uploaded .xlsx/.csv (columns: Product, ProductSubGroup, Price,
  * InvoiceNo, DiscountPercent, Quantity, InvoiceDate, Size, Note — Itemcode is ignored). All-or-nothing:
  * if any row is invalid, unmatched, or the invoice was already imported, nothing is inserted.
+ * Every lookup, guard and insert is scoped to `businessId`.
  */
-export async function importStock(buffer, originalName) {
+export async function importStock(businessId, buffer, originalName) {
   const rawRows = await parseRowsFromFile(buffer, originalName);
 
   const errors = [];
@@ -179,13 +216,13 @@ export async function importStock(buffer, originalName) {
     throw new AppError(400, 'File has no valid data rows');
   }
 
-  // Duplicate-invoice guard against existing data — checked before anything is matched/inserted
-  // so a re-uploaded file fails cleanly instead of the operator double-counting stock.
+  // Duplicate-invoice guard against this business's existing data — checked before anything is
+  // matched/inserted so a re-uploaded file fails cleanly instead of the operator double-counting stock.
   const invoiceNumbers = [...new Set(parsedRows.map((r) => r.invoiceNo))];
 
   const existingInvoices = await executeQuery(
-    `SELECT DISTINCT invoice_no AS invoiceNo FROM stock WHERE invoice_no IN (${invoiceNumbers.map(() => '?').join(',')})`,
-    invoiceNumbers,
+    `SELECT DISTINCT invoice_no AS invoiceNo FROM stock WHERE business_id = ? AND invoice_no IN (${invoiceNumbers.map(() => '?').join(',')})`,
+    [businessId, ...invoiceNumbers],
   );
   if (existingInvoices.length > 0) {
     throw new AppError(
@@ -194,7 +231,8 @@ export async function importStock(buffer, originalName) {
     );
   }
 
-  // Resolve every distinct (Product, ProductSubGroup) pair to a product_id in one batch query.
+  // Resolve every distinct (Product, ProductSubGroup) pair to a product_id in one batch query —
+  // scoped to this business, so a row naming a product that belongs to another business is unmatched.
   const uniquePairs = [...new Map(parsedRows.map((r) => [pairKey(r.product, r.subGroup), { product: r.product, subGroup: r.subGroup }])).values()];
   const matchConditions = uniquePairs.map(() => '(LOWER(p.name) = ? AND LOWER(c.name) = ?)').join(' OR ');
   const matchParams = uniquePairs.flatMap((pair) => [pair.product.toLowerCase(), pair.subGroup.toLowerCase()]);
@@ -202,8 +240,8 @@ export async function importStock(buffer, originalName) {
   const matches = await executeQuery(
     `SELECT p.id AS productId, p.name, c.name AS categoryName
      FROM products p JOIN categories c ON c.id = p.category_id
-     WHERE ${matchConditions}`,
-    matchParams,
+     WHERE (${matchConditions}) AND p.business_id = ?`,
+    [...matchParams, businessId],
   );
 
   const productLookup = new Map();
@@ -233,27 +271,27 @@ export async function importStock(buffer, originalName) {
     for (const row of parsedRows) {
       const productId = productLookup.get(pairKey(row.product, row.subGroup));
       await execute(
-        `INSERT INTO stock (id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [crypto.randomUUID(), productId, row.quantity, row.price, row.discountPercent, row.size, row.invoiceNo, row.invoiceDate, row.note],
+        `INSERT INTO stock (id, business_id, product_id, quantity, price, discount_percent, size, invoice_no, invoice_date, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [crypto.randomUUID(), businessId, productId, row.quantity, row.price, row.discountPercent, row.size, row.invoiceNo, row.invoiceDate, row.note],
       );
       productCounts.set(productId, (productCounts.get(productId) ?? 0) + row.quantity);
     }
     const ledgerNote = `File import — invoice ${invoiceNumbers.join(', ')}`.slice(0, 500);
     for (const [productId, count] of productCounts) {
-      await execute(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ?`, [count, productId]);
+      await execute(`UPDATE products SET quantity_available = quantity_available + ? WHERE id = ? AND business_id = ?`, [count, productId, businessId]);
       await execute(
-        `INSERT INTO stock_ledger (product_id, change_type, quantity, reference_type, reference_id, note)
-         VALUES (?, 'in', ?, 'import', NULL, ?)`,
-        [productId, count, ledgerNote],
+        `INSERT INTO stock_ledger (business_id, product_id, change_type, quantity, reference_type, reference_id, note)
+         VALUES (?, ?, 'in', ?, 'import', NULL, ?)`,
+        [businessId, productId, count, ledgerNote],
       );
     }
   });
 
   const productIds = [...productCounts.keys()];
   const products = await executeQuery(
-    `SELECT id AS productId, name FROM products WHERE id IN (${productIds.map(() => '?').join(',')})`,
-    productIds,
+    `SELECT id AS productId, name FROM products WHERE business_id = ? AND id IN (${productIds.map(() => '?').join(',')})`,
+    [businessId, ...productIds],
   );
 
   return {

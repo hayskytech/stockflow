@@ -17,29 +17,29 @@ export const MAX_GALLERY_IMAGES = 5;
  * `keepMediaIds` (the product's gallery) are never detached even if replaced as the photo,
  * since they're still referenced by that other role.
  */
-async function resolvePhotoMedia(productId, nextMediaId, previousMediaId, keepMediaIds = []) {
+async function resolvePhotoMedia(businessId, productId, nextMediaId, previousMediaId, keepMediaIds = []) {
   if (nextMediaId === previousMediaId) return undefined; // no change — nothing to persist or re-link
 
   // Validated before detaching the old usage row, so a bad new media id 404s cleanly
   // instead of leaving the product pointing at a media item with no usage row.
-  const media = nextMediaId ? await getMediaById(nextMediaId) : null;
+  const media = nextMediaId ? await getMediaById(businessId, nextMediaId) : null;
 
   if (previousMediaId && !keepMediaIds.includes(previousMediaId)) {
-    await detachUsage(previousMediaId, MEDIA_ENTITY_TYPE, productId);
+    await detachUsage(businessId, previousMediaId, MEDIA_ENTITY_TYPE, productId);
   }
   if (!media) {
     return { productPhotoMediaId: null, productPhotoUrl: null };
   }
 
-  await attachUsage(media.id, MEDIA_ENTITY_TYPE, productId);
+  await attachUsage(businessId, media.id, MEDIA_ENTITY_TYPE, productId);
   return { productPhotoMediaId: media.id, productPhotoUrl: media.url };
 }
 
-async function getGalleryImages(productId) {
+async function getGalleryImages(businessId, productId) {
   const rows = await executeQuery(
     `SELECT media_id AS mediaId, media_url AS url
-       FROM product_gallery_images WHERE product_id = ? ORDER BY sort_order`,
-    [productId],
+       FROM product_gallery_images WHERE product_id = ? AND business_id = ? ORDER BY sort_order`,
+    [productId, businessId],
   );
   return rows;
 }
@@ -49,7 +49,7 @@ async function getGalleryImages(productId) {
  * sync. `keepMediaId` (the product's featured photo) is never detached even if dropped from
  * the gallery, since it's still referenced by that other role.
  */
-async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keepMediaId) {
+async function syncGalleryImages(businessId, productId, nextMediaIds, previousMediaIds, keepMediaId) {
   if (nextMediaIds.length > MAX_GALLERY_IMAGES) {
     throw new AppError(400, `Maximum ${MAX_GALLERY_IMAGES} gallery images allowed`);
   }
@@ -57,12 +57,13 @@ async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keep
   const nextSet = new Set(nextMediaIds);
   for (const mediaId of previousMediaIds) {
     if (nextSet.has(mediaId)) continue;
-    await executeQuery(`DELETE FROM product_gallery_images WHERE product_id = ? AND media_id = ?`, [
+    await executeQuery(`DELETE FROM product_gallery_images WHERE product_id = ? AND media_id = ? AND business_id = ?`, [
       productId,
       mediaId,
+      businessId,
     ]);
     if (mediaId !== keepMediaId) {
-      await detachUsage(mediaId, MEDIA_ENTITY_TYPE, productId);
+      await detachUsage(businessId, mediaId, MEDIA_ENTITY_TYPE, productId);
     }
   }
 
@@ -71,17 +72,17 @@ async function syncGalleryImages(productId, nextMediaIds, previousMediaIds, keep
     const mediaId = nextMediaIds[i];
     if (previousSet.has(mediaId)) {
       await executeQuery(
-        `UPDATE product_gallery_images SET sort_order = ? WHERE product_id = ? AND media_id = ?`,
-        [i, productId, mediaId],
+        `UPDATE product_gallery_images SET sort_order = ? WHERE product_id = ? AND media_id = ? AND business_id = ?`,
+        [i, productId, mediaId, businessId],
       );
       continue;
     }
-    const media = await getMediaById(mediaId); // 404s cleanly if a bad id was sent
+    const media = await getMediaById(businessId, mediaId); // 404s cleanly if a bad id was sent
     await executeQuery(
-      `INSERT INTO product_gallery_images (id, product_id, media_id, media_url, sort_order) VALUES (?, ?, ?, ?, ?)`,
-      [crypto.randomUUID(), productId, media.id, media.url, i],
+      `INSERT INTO product_gallery_images (id, business_id, product_id, media_id, media_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
+      [crypto.randomUUID(), businessId, productId, media.id, media.url, i],
     );
-    await attachUsage(media.id, MEDIA_ENTITY_TYPE, productId);
+    await attachUsage(businessId, media.id, MEDIA_ENTITY_TYPE, productId);
   }
 }
 
@@ -126,20 +127,20 @@ function rethrowAsAppError(err) {
   throw err;
 }
 
-/** Confirms a sub-category (if given) actually belongs to the given category. */
-async function assertSubCategoryBelongsToCategory(subCategoryId, categoryId) {
+/** Confirms a sub-category (if given) actually belongs to the given category (within this business). */
+async function assertSubCategoryBelongsToCategory(businessId, subCategoryId, categoryId) {
   if (!subCategoryId) return;
-  const subCategory = await getSubCategoryById(subCategoryId); // 404s if it doesn't exist at all
+  const subCategory = await getSubCategoryById(businessId, subCategoryId); // 404s if it doesn't exist in this business
   if (subCategory.categoryId !== categoryId) {
     throw new AppError(400, 'Sub-category does not belong to the selected category');
   }
 }
 
-export async function listProducts(listQuery, filters) {
+export async function listProducts(businessId, listQuery, filters) {
   const { perPage, offset, search, orderby, order } = listQuery;
 
-  const conditions = [];
-  const params = [];
+  const conditions = ['p.business_id = ?'];
+  const params = [businessId];
   if (search) {
     conditions.push('(p.name LIKE ? OR p.product_code LIKE ?)');
     params.push(`%${search}%`, `%${search}%`);
@@ -164,7 +165,7 @@ export async function listProducts(listQuery, filters) {
     conditions.push('(p.price * (1 - p.discount_percent / 100)) <= ?');
     params.push(filters.maxPrice);
   }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
   const orderColumn = SORT_COLUMNS[orderby] ?? SORT_COLUMNS.created_at;
 
   const [rows, countRows] = await Promise.all([
@@ -178,101 +179,117 @@ export async function listProducts(listQuery, filters) {
   return { rows, total: countRows[0].total };
 }
 
-export async function getProductById(id) {
-  const [row] = await executeQuery(`SELECT ${PRODUCT_COLUMNS} ${PRODUCT_JOINS} WHERE p.id = ?`, [id]);
+export async function getProductById(businessId, id) {
+  const [row] = await executeQuery(
+    `SELECT ${PRODUCT_COLUMNS} ${PRODUCT_JOINS} WHERE p.id = ? AND p.business_id = ?`,
+    [id, businessId],
+  );
   if (!row) throw new AppError(404, 'Product not found');
-  const galleryImages = await getGalleryImages(id);
+  const galleryImages = await getGalleryImages(businessId, id);
   return { ...row, galleryImages };
 }
 
-export async function createProduct(input) {
-  await getCategoryById(input.categoryId); // 404s if the category doesn't exist
-  await assertSubCategoryBelongsToCategory(input.subCategoryId, input.categoryId);
+export async function createProduct(businessId, input) {
+  await getCategoryById(businessId, input.categoryId); // 404s if the category isn't in this business
+  await assertSubCategoryBelongsToCategory(businessId, input.subCategoryId, input.categoryId);
 
-  // Validated before the insert so a bad media id 404s cleanly instead of leaving behind
-  // a half-created product row with no photo.
-  const photoMedia = input.productPhotoMediaId ? await getMediaById(input.productPhotoMediaId) : null;
+  // All media is validated (reads) BEFORE the transaction opens, so a bad id 404s cleanly without
+  // any half-written rows. The media_usage attaches happen just after commit — media.service uses
+  // its own pool connection so it can't join the transaction below (plan §3.2, option b).
+  const photoMedia = input.productPhotoMediaId ? await getMediaById(businessId, input.productPhotoMediaId) : null;
 
   const galleryMediaIds = input.galleryMediaIds ?? [];
   if (galleryMediaIds.length > MAX_GALLERY_IMAGES) {
     throw new AppError(400, `Maximum ${MAX_GALLERY_IMAGES} gallery images allowed`);
   }
-  const galleryMedia = await Promise.all(galleryMediaIds.map((mediaId) => getMediaById(mediaId)));
+  const galleryMedia = await Promise.all(galleryMediaIds.map((mediaId) => getMediaById(businessId, mediaId)));
 
   const id = crypto.randomUUID();
   try {
-    await executeQuery(
-      `INSERT INTO products (
-         id, product_code, category_id, sub_category_id, name, description,
-         color, size, pieces_per_set, price, discount_percent, quantity_available, reorder_level,
-         product_photo_media_id, product_photo_url, is_active
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        input.productCode,
-        input.categoryId,
-        input.subCategoryId ?? null,
-        input.name,
-        input.description ?? null,
-        input.color ?? null,
-        input.size ?? null,
-        input.piecesPerSet ?? 1,
-        input.price,
-        input.discountPercent ?? 0,
-        0, // quantity_available always starts at 0 — only Stock Import, order reserve/release, and dispatch move it
-        input.reorderLevel ?? 0,
-        photoMedia?.id ?? null,
-        photoMedia?.url ?? null,
-        input.isActive ?? true,
-      ],
-    );
+    // One transaction: product row + gallery rows + the optional first stock batch (threaded via
+    // `execute`, so it does NOT open its own nested transaction).
+    await withTransaction(async (execute) => {
+      await execute(
+        `INSERT INTO products (
+           id, business_id, product_code, category_id, sub_category_id, name, description,
+           color, size, pieces_per_set, price, discount_percent, quantity_available, reorder_level,
+           product_photo_media_id, product_photo_url, is_active
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          businessId,
+          input.productCode,
+          input.categoryId,
+          input.subCategoryId ?? null,
+          input.name,
+          input.description ?? null,
+          input.color ?? null,
+          input.size ?? null,
+          input.piecesPerSet ?? 1,
+          input.price,
+          input.discountPercent ?? 0,
+          0, // quantity_available always starts at 0 — only Stock Import, order reserve/release, and dispatch move it
+          input.reorderLevel ?? 0,
+          photoMedia?.id ?? null,
+          photoMedia?.url ?? null,
+          input.isActive ?? true,
+        ],
+      );
+
+      for (let i = 0; i < galleryMedia.length; i += 1) {
+        const media = galleryMedia[i];
+        await execute(
+          `INSERT INTO product_gallery_images (id, business_id, product_id, media_id, media_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
+          [crypto.randomUUID(), businessId, id, media.id, media.url, i],
+        );
+      }
+
+      // Optional first batch — shares this transaction so the product + its opening stock are atomic.
+      if (input.initialStock) {
+        await createStockBatch(
+          businessId,
+          {
+            productId: id,
+            quantity: input.initialStock.quantity,
+            invoiceNo: input.initialStock.invoiceNo,
+            invoiceDate: input.initialStock.invoiceDate ?? null,
+            note: input.initialStock.note ?? null,
+            price: input.price,
+            discountPercent: input.discountPercent ?? 0,
+            size: input.size ?? null,
+          },
+          execute,
+        );
+      }
+    });
   } catch (err) {
     rethrowAsAppError(err);
   }
 
-  // Attached only after the insert succeeds, so a duplicate product_code never leaves a
-  // dangling usage row pointing at a product that doesn't exist.
+  // media_usage attaches run just after commit. Tiny window: if one fails the product exists
+  // without its usage row — a harmless orphan, and the media orphan-sweeper still won't reap the
+  // media because it's referenced by product_photo_media_id / product_gallery_images.
   if (photoMedia) {
-    await attachUsage(photoMedia.id, MEDIA_ENTITY_TYPE, id);
+    await attachUsage(businessId, photoMedia.id, MEDIA_ENTITY_TYPE, id);
   }
-  for (let i = 0; i < galleryMedia.length; i += 1) {
-    const media = galleryMedia[i];
-    await executeQuery(
-      `INSERT INTO product_gallery_images (id, product_id, media_id, media_url, sort_order) VALUES (?, ?, ?, ?, ?)`,
-      [crypto.randomUUID(), id, media.id, media.url, i],
-    );
-    await attachUsage(media.id, MEDIA_ENTITY_TYPE, id);
+  for (const media of galleryMedia) {
+    await attachUsage(businessId, media.id, MEDIA_ENTITY_TYPE, id);
   }
 
-  // Optional first batch, added after the product row exists so createStockBatch's own
-  // product lookup finds it — see stock.service.js for the reserve/ledger transaction this runs.
-  if (input.initialStock) {
-    await createStockBatch({
-      productId: id,
-      quantity: input.initialStock.quantity,
-      invoiceNo: input.initialStock.invoiceNo,
-      invoiceDate: input.initialStock.invoiceDate ?? null,
-      note: input.initialStock.note ?? null,
-      price: input.price,
-      discountPercent: input.discountPercent ?? 0,
-      size: input.size ?? null,
-    });
-  }
-
-  return getProductById(id);
+  return getProductById(businessId, id);
 }
 
-export async function updateProduct(id, input) {
-  const existing = await getProductById(id);
+export async function updateProduct(businessId, id, input) {
+  const existing = await getProductById(businessId, id);
 
   const nextCategoryId = input.categoryId ?? existing.categoryId;
   const nextSubCategoryId = input.subCategoryId !== undefined ? input.subCategoryId : existing.subCategoryId;
 
   if (input.categoryId !== undefined) {
-    await getCategoryById(input.categoryId); // 404s if the target category doesn't exist
+    await getCategoryById(businessId, input.categoryId); // 404s if the target category isn't in this business
   }
   if (nextSubCategoryId) {
-    await assertSubCategoryBelongsToCategory(nextSubCategoryId, nextCategoryId);
+    await assertSubCategoryBelongsToCategory(businessId, nextSubCategoryId, nextCategoryId);
   }
 
   const columnMap = {
@@ -304,7 +321,7 @@ export async function updateProduct(id, input) {
 
   let nextPhotoMediaId = existing.productPhotoMediaId;
   if (input.productPhotoMediaId !== undefined) {
-    const photo = await resolvePhotoMedia(id, input.productPhotoMediaId, existing.productPhotoMediaId, nextGalleryMediaIds);
+    const photo = await resolvePhotoMedia(businessId, id, input.productPhotoMediaId, existing.productPhotoMediaId, nextGalleryMediaIds);
     if (photo) {
       fields.push('product_photo_media_id = ?', 'product_photo_url = ?');
       params.push(photo.productPhotoMediaId, photo.productPhotoUrl);
@@ -313,30 +330,30 @@ export async function updateProduct(id, input) {
   }
 
   if (input.galleryMediaIds !== undefined) {
-    await syncGalleryImages(id, input.galleryMediaIds, previousGalleryMediaIds, nextPhotoMediaId);
+    await syncGalleryImages(businessId, id, input.galleryMediaIds, previousGalleryMediaIds, nextPhotoMediaId);
   }
 
-  if (fields.length === 0) return getProductById(id);
+  if (fields.length === 0) return getProductById(businessId, id);
 
-  params.push(id);
+  params.push(id, businessId);
   try {
-    await executeQuery(`UPDATE products SET ${fields.join(', ')} WHERE id = ?`, params);
+    await executeQuery(`UPDATE products SET ${fields.join(', ')} WHERE id = ? AND business_id = ?`, params);
   } catch (err) {
     rethrowAsAppError(err);
   }
-  return getProductById(id);
+  return getProductById(businessId, id);
 }
 
-export async function deleteProduct(id) {
-  const existing = await getProductById(id);
+export async function deleteProduct(businessId, id) {
+  const existing = await getProductById(businessId, id);
   if (existing.productPhotoMediaId) {
-    await detachUsage(existing.productPhotoMediaId, MEDIA_ENTITY_TYPE, id);
+    await detachUsage(businessId, existing.productPhotoMediaId, MEDIA_ENTITY_TYPE, id);
   }
   for (const gallery of existing.galleryImages) {
-    await detachUsage(gallery.mediaId, MEDIA_ENTITY_TYPE, id);
+    await detachUsage(businessId, gallery.mediaId, MEDIA_ENTITY_TYPE, id);
   }
   try {
-    await executeQuery(`DELETE FROM products WHERE id = ?`, [id]);
+    await executeQuery(`DELETE FROM products WHERE id = ? AND business_id = ?`, [id, businessId]);
   } catch (err) {
     rethrowAsAppError(err);
   }
@@ -353,10 +370,10 @@ export async function getProductImportTemplate() {
  * Bulk-creates products from an uploaded .xlsx/.csv (columns: SubGroupName, Product Code,
  * Product Name — this is the one-time catalog load, so price/discount/stock aren't in the sheet
  * and are left at their defaults; edit individual products afterwards). A SubGroupName with no
- * matching category auto-creates that (top-level) category. All-or-nothing:
+ * matching category in this business auto-creates that (top-level) category. All-or-nothing:
  * if any row is invalid or has a duplicate code, the whole file is rejected.
  */
-export async function importProducts(buffer, originalName) {
+export async function importProducts(businessId, buffer, originalName) {
   const rawRows = await parseRowsFromFile(buffer, originalName);
 
   const errors = [];
@@ -389,8 +406,8 @@ export async function importProducts(buffer, originalName) {
 
   const codes = parsedRows.map((r) => r.productCode);
   const existingCodes = await executeQuery(
-    `SELECT product_code AS productCode FROM products WHERE product_code IN (${codes.map(() => '?').join(',')})`,
-    codes,
+    `SELECT product_code AS productCode FROM products WHERE business_id = ? AND product_code IN (${codes.map(() => '?').join(',')})`,
+    [businessId, ...codes],
   );
   if (existingCodes.length > 0) {
     throw new AppError(409, `These product codes already exist: ${existingCodes.map((r) => r.productCode).join(', ')}`);
@@ -398,8 +415,8 @@ export async function importProducts(buffer, originalName) {
 
   const subGroupNames = [...new Set(parsedRows.map((r) => r.subGroupName.toLowerCase()))];
   const categories = await executeQuery(
-    `SELECT id, name FROM categories WHERE LOWER(name) IN (${subGroupNames.map(() => '?').join(',')})`,
-    subGroupNames,
+    `SELECT id, name FROM categories WHERE business_id = ? AND LOWER(name) IN (${subGroupNames.map(() => '?').join(',')})`,
+    [businessId, ...subGroupNames],
   );
   const categoryLookup = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
 
@@ -416,14 +433,14 @@ export async function importProducts(buffer, originalName) {
   await withTransaction(async (execute) => {
     for (const [key, name] of missingCategories) {
       const categoryId = crypto.randomUUID();
-      await execute(`INSERT INTO categories (id, name, is_active) VALUES (?, ?, TRUE)`, [categoryId, name]);
+      await execute(`INSERT INTO categories (id, business_id, name, is_active) VALUES (?, ?, ?, TRUE)`, [categoryId, businessId, name]);
       categoryLookup.set(key, categoryId);
     }
     for (const row of parsedRows) {
       await execute(
-        `INSERT INTO products (id, product_code, category_id, name, price, discount_percent, quantity_available, reorder_level, is_active)
-         VALUES (?, ?, ?, ?, 0, 0, 0, 0, TRUE)`,
-        [crypto.randomUUID(), row.productCode, categoryLookup.get(row.subGroupName.toLowerCase()), row.productName],
+        `INSERT INTO products (id, business_id, product_code, category_id, name, price, discount_percent, quantity_available, reorder_level, is_active)
+         VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, TRUE)`,
+        [crypto.randomUUID(), businessId, row.productCode, categoryLookup.get(row.subGroupName.toLowerCase()), row.productName],
       );
     }
   });

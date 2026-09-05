@@ -2,10 +2,9 @@ import { Router } from 'express';
 import multer, { MulterError } from 'multer';
 import path from 'path';
 import { ENV } from '../../config/env.js';
-import { authenticate } from '../../middleware/auth.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { pagination } from '../../middleware/pagination.js';
-import { requireRole } from '../../middleware/requireRole.js';
+import { requireBusinessRole } from '../../middleware/requireBusinessRole.js';
 import {
   createStock,
   deleteStock,
@@ -15,7 +14,9 @@ import {
   listStock,
 } from './stock.controller.js';
 
-export const stockRouter = Router();
+// Mounted in app.js at /api/b/:businessId/stock behind `authenticate, resolveBusiness`, so businessId
+// comes from the route param (mergeParams) and every request already has an authenticated member.
+export const stockRouter = Router({ mergeParams: true });
 
 const ALLOWED_EXTENSIONS = new Set(['.xlsx', '.csv']);
 
@@ -49,11 +50,11 @@ const stockPagination = pagination({
   defaultSort: 'created_at',
 });
 
-// Stock is back-office only — see CLAUDE.md permission matrix (customers never see it).
+// Stock is back-office only — any admin/staff member of the business.
 // import-template must come before /:id so "import-template" isn't parsed as a stock id.
-stockRouter.get('/', authenticate, requireRole('admin', 'staff'), stockPagination, listStock);
-stockRouter.get('/import-template', authenticate, requireRole('admin', 'staff'), downloadStockImportTemplate);
-stockRouter.get('/:id', authenticate, requireRole('admin', 'staff'), getStock);
-stockRouter.post('/', authenticate, requireRole('admin', 'staff'), createStock);
-stockRouter.post('/import', authenticate, requireRole('admin', 'staff'), handleUpload, importStock);
-stockRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteStock);
+stockRouter.get('/', requireBusinessRole('admin', 'staff'), stockPagination, listStock);
+stockRouter.get('/import-template', requireBusinessRole('admin', 'staff'), downloadStockImportTemplate);
+stockRouter.get('/:id', requireBusinessRole('admin', 'staff'), getStock);
+stockRouter.post('/', requireBusinessRole('admin', 'staff'), createStock);
+stockRouter.post('/import', requireBusinessRole('admin', 'staff'), handleUpload, importStock);
+stockRouter.delete('/:id', requireBusinessRole('admin', 'staff'), deleteStock);

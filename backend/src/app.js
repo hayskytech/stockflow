@@ -84,11 +84,11 @@ app.use("/api/b/:businessId/stock-ledger", authenticate, resolveBusiness, stockL
 app.use("/api/b/:businessId/business-settings", authenticate, resolveBusiness, businessSettingsRouter);
 app.use("/api/b/:businessId/notice", authenticate, resolveBusiness, noticeRouter);
 app.use("/api/notice", noticePublicRouter); // just /public
+app.use("/api/b/:businessId/products", authenticate, resolveBusiness, productsRouter);
+app.use("/api/b/:businessId/stock", authenticate, resolveBusiness, stockRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/admin", adminSessionsRouter);
 // still flat (later batches — leave as-is, they don't need to work yet):
-app.use("/api/products", productsRouter);
-app.use("/api/stock", stockRouter);
 app.use("/api/hero-slides", heroSlidesRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/dispatches", dispatchesRouter);

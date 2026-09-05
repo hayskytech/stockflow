@@ -9,7 +9,7 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/products */
+/** GET /api/b/:businessId/products */
 export async function listProducts(req, res, next) {
   try {
     const filters = parseOrThrow(listProductsQuerySchema, {
@@ -19,7 +19,7 @@ export async function listProducts(req, res, next) {
       minPrice: req.query.min_price,
       maxPrice: req.query.max_price,
     });
-    const { rows, total } = await productsService.listProducts(req.listQuery, filters);
+    const { rows, total } = await productsService.listProducts(req.business.id, req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -27,63 +27,63 @@ export async function listProducts(req, res, next) {
   }
 }
 
-/** GET /api/products/:id */
+/** GET /api/b/:businessId/products/:id */
 export async function getProduct(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    const product = await productsService.getProductById(id);
+    const product = await productsService.getProductById(req.business.id, id);
     res.status(200).json(product);
   } catch (err) {
     next(err);
   }
 }
 
-/** POST /api/products */
+/** POST /api/b/:businessId/products */
 export async function createProduct(req, res, next) {
   try {
     const input = parseOrThrow(createProductSchema, req.body);
-    const product = await productsService.createProduct(input);
+    const product = await productsService.createProduct(req.business.id, input);
     res.status(201).json(product);
   } catch (err) {
     next(err);
   }
 }
 
-/** PUT /api/products/:id */
+/** PUT /api/b/:businessId/products/:id */
 export async function updateProduct(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const input = parseOrThrow(updateProductSchema, req.body);
-    const product = await productsService.updateProduct(id, input);
+    const product = await productsService.updateProduct(req.business.id, id, input);
     res.status(200).json(product);
   } catch (err) {
     next(err);
   }
 }
 
-/** DELETE /api/products/:id */
+/** DELETE /api/b/:businessId/products/:id */
 export async function deleteProduct(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    await productsService.deleteProduct(id);
+    await productsService.deleteProduct(req.business.id, id);
     res.status(204).send();
   } catch (err) {
     next(err);
   }
 }
 
-/** POST /api/products/import */
+/** POST /api/b/:businessId/products/import */
 export async function importProducts(req, res, next) {
   try {
     if (!req.file) throw new AppError(400, 'No file uploaded');
-    const result = await productsService.importProducts(req.file.buffer, req.file.originalname);
+    const result = await productsService.importProducts(req.business.id, req.file.buffer, req.file.originalname);
     res.status(201).json(result);
   } catch (err) {
     next(err);
   }
 }
 
-/** GET /api/products/import-template */
+/** GET /api/b/:businessId/products/import-template */
 export async function downloadProductImportTemplate(req, res, next) {
   try {
     const buffer = await productsService.getProductImportTemplate();

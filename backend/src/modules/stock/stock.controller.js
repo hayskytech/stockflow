@@ -9,7 +9,7 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/stock */
+/** GET /api/b/:businessId/stock */
 export async function listStock(req, res, next) {
   try {
     const filters = parseOrThrow(listStockQuerySchema, {
@@ -18,7 +18,7 @@ export async function listStock(req, res, next) {
       dateFrom: req.query.date_from,
       dateTo: req.query.date_to,
     });
-    const { rows, total } = await stockService.listStock(req.listQuery, filters);
+    const { rows, total } = await stockService.listStock(req.business.id, req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -26,29 +26,29 @@ export async function listStock(req, res, next) {
   }
 }
 
-/** GET /api/stock/:id */
+/** GET /api/b/:businessId/stock/:id */
 export async function getStock(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    const stock = await stockService.getStockById(id);
+    const stock = await stockService.getStockById(req.business.id, id);
     res.status(200).json(stock);
   } catch (err) {
     next(err);
   }
 }
 
-/** POST /api/stock/import */
+/** POST /api/b/:businessId/stock/import */
 export async function importStock(req, res, next) {
   try {
     if (!req.file) throw new AppError(400, 'No file uploaded');
-    const result = await stockService.importStock(req.file.buffer, req.file.originalname);
+    const result = await stockService.importStock(req.business.id, req.file.buffer, req.file.originalname);
     res.status(201).json(result);
   } catch (err) {
     next(err);
   }
 }
 
-/** GET /api/stock/import-template */
+/** GET /api/b/:businessId/stock/import-template */
 export async function downloadStockImportTemplate(req, res, next) {
   try {
     const buffer = await stockService.getStockImportTemplate();
@@ -61,22 +61,22 @@ export async function downloadStockImportTemplate(req, res, next) {
   }
 }
 
-/** POST /api/stock — create one stock intake batch against a product/invoice */
+/** POST /api/b/:businessId/stock — create one stock intake batch against a product/invoice */
 export async function createStock(req, res, next) {
   try {
     const input = parseOrThrow(createStockSchema, req.body);
-    const result = await stockService.createStockBatch(input);
+    const result = await stockService.createStockBatch(req.business.id, input);
     res.status(201).json(result);
   } catch (err) {
     next(err);
   }
 }
 
-/** DELETE /api/stock/:id */
+/** DELETE /api/b/:businessId/stock/:id */
 export async function deleteStock(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    await stockService.deleteStock(id);
+    await stockService.deleteStockBatch(req.business.id, id);
     res.status(204).send();
   } catch (err) {
     next(err);
