@@ -56,9 +56,15 @@ export async function deleteAllData(businessId) {
   });
 
   // Files are removed only after the transaction commits — a rollback must not lose files.
-  // Best-effort: another business may share the same content-hashed file on disk, and a missing
-  // file is not fatal here.
+  // media rows dedupe per business but the file on disk is content-hash-sharded and CAN be shared
+  // by another business's media row, so unlink only the paths no surviving row still references.
+  // A missing file is not fatal here.
   for (const storagePath of mediaPaths) {
+    const [stillUsed] = await executeQuery(
+      `SELECT 1 FROM media WHERE storage_path = ? LIMIT 1`,
+      [storagePath],
+    );
+    if (stillUsed) continue;
     await fs.unlink(path.join(ENV.MEDIA_UPLOAD_DIR, storagePath)).catch((err) => {
       logger.error(`Failed to delete media file ${storagePath}: ${err.message}`);
     });
