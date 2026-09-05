@@ -14,8 +14,12 @@ Status / progress (branch `multi-tenant-saas`):
   - ✅ 6A: core infra — axios path-rewrite, BusinessGate, /businesses picker, router restructure,
     Topbar switcher, warehouse→business-settings (`1f866c7`)
   - ✅ 6B: per-business Members UI, dashboard role fix, BusinessAdminRoute guard (`3e0edc9`)
-- 🔄 **Phase 7** — super-admin frontend  ← in progress
-- ⬜ **Phase 8** — tests, docs, polish
+- ✅ **Phase 7** — super-admin platform frontend: `/admin/businesses` CRUD, global user
+  directory, `SuperAdminShell` (`ba27719`)
+- 🔄 **Phase 8** — tests, docs, polish  ← in progress
+  - full multi-tenant API E2E against a live backend: **25/25 pass** (super-admin create-business
+    + first-admin, business switch, cross-tenant 403/404, order→accept→dispatch, per-business
+    wipe isolation, super-admin-only user directory, storefront-off)
 
 **Phase 8 follow-ups noted:** media files on disk are content-hash sharded and may be shared
 across businesses — `delete-all-data`'s `fs.unlink` should ref-check `storage_path` across
