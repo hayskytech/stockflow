@@ -10,7 +10,10 @@ Status / progress (branch `multi-tenant-saas`):
 - ✅ **Phase 4** — businesses CRUD (super admin) + per-business member management (business admin); last-admin guards
 - ✅ **Phase 5** — all 15 tenant modules under `/api/b/:businessId/...`, every query business-scoped;
   `delete-all-data` resets one business now, not the DB (5A `d857acf` · 5B `86209ba` · 5C `f3504b2` · 5D this commit)
-- ⬜ **Phase 6** — frontend tenancy  ← next
+- 🔄 **Phase 6** — frontend tenancy
+  - 🔄 6A: core infra (business.store, axios path-rewrite, BusinessGate, /businesses picker,
+    router restructure, Topbar switcher, warehouse→business-settings)  ← in progress
+  - ⬜ 6B: per-feature cleanup, cache-key/hook fixes, full build green
 - ⬜ **Phase 7** — super-admin frontend
 - ⬜ **Phase 8** — tests, docs, polish
 
