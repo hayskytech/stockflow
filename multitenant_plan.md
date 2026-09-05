@@ -1,6 +1,16 @@
 # StockFlow → Multi-Tenant SaaS — Implementation Plan
 
-Status: **DRAFT — awaiting review**. Nothing in this plan has been implemented yet.
+Status / progress (branch `multi-tenant-saas`):
+
+- ✅ **Phase 0** — divisions removal finished, de-branded, safe cleanup (`9e8768e`)
+- ✅ **Phase 1** — storefront + customer login disabled behind `STOREFRONT_ENABLED` (`798dd0d`)
+- ⬜ **Phase 2** — tenancy schema & seed  ← next, first hard-to-reverse step
+- ⬜ Phase 3 — backend auth & tenancy middleware
+- ⬜ Phase 4 — businesses & membership module
+- ⬜ Phase 5 — convert tenant modules to business scope
+- ⬜ Phase 6 — frontend tenancy
+- ⬜ Phase 7 — super-admin frontend
+- ⬜ Phase 8 — tests, docs, polish
 
 ---
 
