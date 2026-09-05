@@ -1,13 +1,14 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useForm } from "@tanstack/react-form"
+import { useQueryClient } from "@tanstack/react-query"
 import { loginApi } from "@/features/auth/auth.api"
 import { loginSchema } from "@/features/auth/auth.schema"
 import { PasswordField } from "@/components/ui/PasswordField"
 import { useAuthStore } from "@/store/auth.store"
-import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { useSiteTitle } from "@/hooks/use-business-settings"
 import { apiErrorMessage } from "@/lib/errors"
-import { ROUTES, landingPathForRole } from "@/constants/routes"
+import { ROUTES } from "@/constants/routes"
 
 // The OTP / phone sign-in mode is unmounted — storefront & customer login on hold, see
 // multitenant_plan.md Phase 1. hooks/use-otp.js and components/OtpCodeStep.jsx stay on disk, unused.
@@ -15,11 +16,14 @@ export function LoginPage() {
   const [serverError, setServerError] = useState("")
   const setAuth = useAuthStore((s) => s.setAuth)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const siteTitle = useSiteTitle()
 
   function completeLogin({ user, accessToken }) {
     setAuth(user, accessToken)
-    navigate(landingPathForRole(user.role), { replace: true })
+    // Drop any cached data from a previous session, then let RootRedirect pick the landing target.
+    queryClient.clear()
+    navigate("/", { replace: true })
   }
 
   const passwordForm = useForm({

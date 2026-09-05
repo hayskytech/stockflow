@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link } from "@/lib/nav"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import {
@@ -10,7 +10,7 @@ import {
 import { OrdersByStatusChart } from "@/features/dashboard/components/OrdersByStatusChart"
 import { OrdersTrendChart } from "@/features/dashboard/components/OrdersTrendChart"
 import { LowStockTable } from "@/features/dashboard/components/LowStockTable"
-import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { useFormatMoney } from "@/hooks/use-business-settings"
 import { useAuthStore } from "@/store/auth.store"
 import { ROLES } from "@/constants/app"
 import { ROUTES } from "@/constants/routes"

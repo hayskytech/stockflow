@@ -1,4 +1,4 @@
-import { useAppSettings } from "@/hooks/use-warehouse-details"
+import { useAppSettings } from "@/hooks/use-business-settings"
 
 /**
  * Phone input wired to a TanStack Form field — shows the admin-configured country code as a

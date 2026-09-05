@@ -2,18 +2,68 @@ import axios from "axios"
 import { API_BASE_URL, API_ENDPOINTS } from "@/constants/api"
 import { ROUTES } from "@/constants/routes"
 import { useAuthStore } from "@/store/auth.store"
+import { useBusinessStore } from "@/store/business.store"
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // send HttpOnly refresh cookie on every request
 })
 
-/** Attaches the in-memory access token to every outgoing request */
+/**
+ * Tenant-scoped API path prefixes. A request to one of these is rewritten to
+ * `/b/:businessId<path>` using the current business from `useBusinessStore`, so individual
+ * `.api.js` functions never have to pass a `businessId`. Everything else (`/auth`, `/businesses`,
+ * `/users`, `/admin`, and the still-public `.../public` storefront reads) is left flat.
+ */
+const TENANT_PREFIXES = [
+  "/products",
+  "/stock",
+  "/stock-ledger",
+  "/orders",
+  "/dispatches",
+  "/reports",
+  "/categories",
+  "/sub-categories",
+  "/sizes",
+  "/media",
+  "/hero-slides",
+  "/notice",
+  "/business-settings",
+  "/settings/social",
+  "/settings/branding",
+  "/settings/delete-all-data",
+]
+
+/** Still-flat public reads — matched BEFORE the generic `/notice` / `/settings/...` prefixes. */
+const TENANT_PUBLIC_PATHS = new Set([
+  "/notice/public",
+  "/hero-slides/public",
+  "/settings/social/public",
+  "/settings/branding/public",
+])
+
+function needsTenantScope(url) {
+  const path = url.split("?")[0]
+  if (TENANT_PUBLIC_PATHS.has(path)) return false
+  return TENANT_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}
+
+/** Attaches the access token and rewrites tenant-scoped paths to `/b/:businessId/...`. */
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  const url = config.url ?? ""
+  if (!url.startsWith("/b/") && needsTenantScope(url)) {
+    const businessId = useBusinessStore.getState().currentBusinessId
+    if (!businessId) {
+      throw new Error(`Tenant-scoped request "${url}" made with no business selected`)
+    }
+    config.url = `/b/${businessId}${url}`
+  }
+
   return config
 })
 

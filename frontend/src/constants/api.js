@@ -27,8 +27,20 @@ export const API_ENDPOINTS = {
     ADMIN_SESSION_BY_ID: (sessionId) => `/admin/sessions/${sessionId}`,
     ADMIN_USER_SESSIONS: (id) => `/admin/users/${id}/sessions`,
   },
-  WAREHOUSE: "/warehouse",
-  WAREHOUSE_PUBLIC: "/warehouse/public",
+  /** Global, super-admin — NOT tenant-scoped (the axios interceptor leaves these alone). */
+  BUSINESSES: {
+    LIST: "/businesses",
+    BY_ID: (id) => `/businesses/${id}`,
+    MEMBERS: (id) => `/businesses/${id}/members`,
+    MEMBER_BY_ID: (id, userId) => `/businesses/${id}/members/${userId}`,
+  },
+  /** Per-business member management — relative; the interceptor prefixes `/b/:businessId`. */
+  MEMBERS: {
+    LIST: "/members",
+    BY_ID: (userId) => `/members/${userId}`,
+  },
+  /** Per-business settings (was `warehouse`) — relative; the interceptor prefixes `/b/:businessId`. */
+  BUSINESS_SETTINGS: "/business-settings",
   NOTICE: "/notice",
   NOTICE_PUBLIC: "/notice/public",
   CATEGORIES: {

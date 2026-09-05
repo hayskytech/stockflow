@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
+import { useAppNavigate as useNavigate } from "@/hooks/use-app-navigate"
 import { useForm } from "@tanstack/react-form"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"

@@ -55,13 +55,49 @@ export const ROUTES = {
   },
   SETTINGS: "/settings",
   PROFILE: "/profile",
+  // Global (non-tenant) routes — never prefixed with /b/:businessId.
+  BUSINESSES: "/businesses",
+  ADMIN: {
+    BUSINESSES: "/admin/businesses",
+    USERS: "/admin/users",
+  },
+}
+
+/** Route paths that are global — the `/b/:businessId` prefix must never be prepended to these. */
+export const GLOBAL_ROUTE_RE = /^\/(login|change-password|profile|businesses|admin|b)(\/|$)/
+
+/**
+ * Builds an absolute back-office URL under a business: `businessPath(id, "/products")` →
+ * `/b/<id>/products`. Back-office `ROUTES.*` values stay written as their bare paths
+ * (`/products`, `/dashboard`, …); this helper — and the prefixing `Link`/`useAppNavigate`
+ * wrappers in `lib/nav.jsx` / `hooks/use-app-navigate.js` — add the tenant segment at
+ * navigation time, so the ~50 existing call sites did not have to change.
+ */
+export function businessPath(businessId, subpath = "") {
+  if (!businessId) return subpath || ROUTES.BUSINESSES
+  if (!subpath || subpath === "/") return `/b/${businessId}`
+  if (subpath.startsWith("/b/") || GLOBAL_ROUTE_RE.test(subpath)) return subpath
+  return `/b/${businessId}${subpath.startsWith("/") ? "" : "/"}${subpath}`
 }
 
 /**
- * The landing route for a user after login. Only admin/staff log in now (the storefront and
- * customer login are unmounted — see multitenant_plan.md Phase 1), so this is always the dashboard.
- * Kept as a function because call sites still use it and Phase 6 will reintroduce per-user landing.
+ * Post-login / root landing target. A user who belongs to exactly one business (and is not a
+ * super admin, who always gets the picker) goes straight to that business's dashboard;
+ * everyone else lands on the business picker.
+ */
+export function landingPath(me) {
+  const businesses = me?.businesses ?? []
+  if (!me?.isSuperAdmin && businesses.length === 1) {
+    return businessPath(businesses[0].id, ROUTES.DASHBOARD)
+  }
+  return ROUTES.BUSINESSES
+}
+
+/**
+ * @deprecated Superseded by `landingPath(me)`. Only still referenced by the unmounted
+ * storefront `RegisterPage`; kept so that subtree keeps resolving. Remove when the
+ * storefront auth pages are reworked for multi-tenancy.
  */
 export function landingPathForRole() {
-  return ROUTES.DASHBOARD
+  return ROUTES.BUSINESSES
 }

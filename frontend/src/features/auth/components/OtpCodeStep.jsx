@@ -1,4 +1,4 @@
-import { useAppSettings } from "@/hooks/use-warehouse-details"
+import { useAppSettings } from "@/hooks/use-business-settings"
 
 /**
  * The code step of an OTP flow — reached only after a code has actually been sent, so the phone

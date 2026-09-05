@@ -5,13 +5,11 @@ import { changePasswordApi } from "@/features/auth/auth.api"
 import { changePasswordSchema } from "@/features/auth/auth.schema"
 import { PasswordField } from "@/components/ui/PasswordField"
 import { PasswordRequirements } from "@/components/ui/PasswordRequirements"
-import { useAuthStore } from "@/store/auth.store"
-import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { useSiteTitle } from "@/hooks/use-business-settings"
 import { ROUTES } from "@/constants/routes"
 
 export function ChangePasswordPage() {
   const [serverError, setServerError] = useState("")
-  const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const siteTitle = useSiteTitle()
 
@@ -22,7 +20,7 @@ export function ChangePasswordPage() {
       setServerError("")
       try {
         await changePasswordApi(value)
-        navigate(user?.role === "customer" ? ROUTES.STORE.HOME : ROUTES.PROFILE, { replace: true })
+        navigate(ROUTES.PROFILE, { replace: true })
       } catch (err) {
         setServerError(err.response?.data?.message ?? "Could not change password")
       }

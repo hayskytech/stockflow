@@ -4,12 +4,12 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { NumberField } from "@/components/ui/NumberField"
 import { PhoneField } from "@/components/ui/PhoneField"
-import { warehouseSchema } from "@/features/warehouse/warehouse.schema"
-import { useUpdateWarehouse, useWarehouse } from "@/features/warehouse/hooks/use-warehouse"
+import { businessSettingsSchema } from "@/features/business-settings/business-settings.schema"
+import { useBusinessSettings, useUpdateBusinessSettings } from "@/hooks/use-business-settings"
 
-export function WarehousePage() {
-  const { data: warehouse, isLoading } = useWarehouse()
-  const updateWarehouse = useUpdateWarehouse()
+export function BusinessSettingsPage() {
+  const { data: warehouse, isLoading } = useBusinessSettings()
+  const updateWarehouse = useUpdateBusinessSettings()
 
   if (isLoading) {
     return (
@@ -23,7 +23,10 @@ export function WarehousePage() {
 
   return (
     <PageWrapper>
-      <PageHeader title="Warehouse" description="Warehouse name, address, contact, and bank transfer details" />
+      <PageHeader
+        title="Business Settings"
+        description="Business name, address, contact, phone/currency format, and bank transfer details"
+      />
       <div className="card">
         <div className="card-body">
           <WarehouseForm
@@ -61,15 +64,15 @@ function WarehouseForm({ warehouse, onSubmit, isSubmitting }) {
       currencySymbol: warehouse?.currencySymbol ?? "₹",
       currencyDecimalDigits: warehouse?.currencyDecimalDigits ?? 2,
     },
-    validators: { onSubmit: warehouseSchema },
+    validators: { onSubmit: businessSettingsSchema },
     onSubmit: async ({ value }) => {
       setServerError("")
       setSavedMessage("")
       try {
         await onSubmit(value)
-        setSavedMessage("Warehouse settings saved.")
+        setSavedMessage("Business settings saved.")
       } catch (err) {
-        setServerError(err.response?.data?.message ?? "Could not save warehouse settings")
+        setServerError(err.response?.data?.message ?? "Could not save business settings")
       }
     },
   })

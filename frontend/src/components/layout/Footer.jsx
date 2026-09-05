@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { useSiteTitle } from "@/hooks/use-business-settings"
 import { useSocialLinksPublic } from "@/hooks/use-social-links-public"
 import { ROUTES } from "@/constants/routes"
 

@@ -7,14 +7,14 @@ import { useMyProfile } from "@/features/checkout/hooks/use-my-profile"
 import { PhoneField } from "@/components/ui/PhoneField"
 import { PincodeField } from "@/components/ui/PincodeField"
 import { useCartStore } from "@/store/cart.store"
-import { useWarehouseDetails } from "@/hooks/use-warehouse-details"
+import { useBusinessSettings } from "@/hooks/use-business-settings"
 import { formatMoney } from "@/lib/format"
 import { setEffectivePrice } from "@/lib/pricing"
 import { ROUTES } from "@/constants/routes"
 
 export function CheckoutPage() {
   const items = useCartStore((s) => s.items)
-  const { data: warehouse, isLoading: isLoadingWarehouse } = useWarehouseDetails()
+  const { data: warehouse, isLoading: isLoadingWarehouse } = useBusinessSettings()
   const { data: profile, isLoading: isLoadingProfile } = useMyProfile()
 
   // Captured once on mount (not read live) — guards against loading this page directly with an

@@ -1,10 +1,10 @@
-import { Link, NavLink } from "react-router-dom"
-import { useAuthStore } from "@/store/auth.store"
-import { useSiteTitle } from "@/hooks/use-warehouse-details"
+import { Link, NavLink } from "@/lib/nav"
+import { useMe } from "@/features/auth/hooks/use-me"
+import { useBusinessStore } from "@/store/business.store"
+import { useSiteTitle } from "@/hooks/use-business-settings"
 import { ROUTES } from "@/constants/routes"
-import { ROLES } from "@/constants/app"
 
-// Warehouse settings live in the topbar user dropdown (see Topbar.jsx), not here.
+// Business settings live in the topbar user dropdown (see Topbar.jsx), not here.
 const NAV_ITEMS = [
   { to: ROUTES.DASHBOARD, icon: "fa-gauge", label: "Dashboard" },
   { to: ROUTES.CATALOG.CATEGORIES, icon: "fa-tags", label: "Categories" },
@@ -22,7 +22,10 @@ const NAV_ITEMS = [
 ]
 
 export function Sidebar() {
-  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
+  const { data: me } = useMe()
+  const currentBusinessId = useBusinessStore((s) => s.currentBusinessId)
+  const currentRole = me?.businesses?.find((b) => b.id === currentBusinessId)?.role
+  const isAdmin = currentRole === "admin" || Boolean(me?.isSuperAdmin)
   const navItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
   const siteTitle = useSiteTitle()
 

@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useMonthlyOrderSummary, useStockMovement } from "@/features/reports/hooks/use-reports"
-import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { useFormatMoney } from "@/hooks/use-business-settings"
 import { formatDateIST } from "@/lib/format"
 
 const DAY_OPTIONS = [7, 14, 30, 90]

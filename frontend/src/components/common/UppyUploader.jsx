@@ -5,6 +5,7 @@ import Dashboard from "@uppy/react/dashboard"
 import { API_BASE_URL, API_ENDPOINTS } from "@/constants/api"
 import { MEDIA } from "@/constants/app"
 import { useAuthStore } from "@/store/auth.store"
+import { useBusinessStore } from "@/store/business.store"
 
 /**
  * Thin wrapper around Uppy's Dashboard, wired to POST directly at the media upload
@@ -14,6 +15,12 @@ import { useAuthStore } from "@/store/auth.store"
 export function UppyUploader({ onUploaded, allowMultiple = true }) {
   const uppyRef = useRef(null)
   if (!uppyRef.current) {
+    // Uppy uploads bypass the axios interceptor, so scope the endpoint to the current business
+    // by hand. This component only ever mounts inside the business shell, so the id is set.
+    const businessId = useBusinessStore.getState().currentBusinessId
+    const uploadPath = businessId
+      ? `/b/${businessId}${API_ENDPOINTS.MEDIA.UPLOAD}`
+      : API_ENDPOINTS.MEDIA.UPLOAD
     uppyRef.current = new Uppy({
       restrictions: {
         allowedFileTypes: MEDIA.ALLOWED_MIME_TYPES,
@@ -22,7 +29,7 @@ export function UppyUploader({ onUploaded, allowMultiple = true }) {
       },
       autoProceed: false,
     }).use(XHRUpload, {
-      endpoint: `${API_BASE_URL}${API_ENDPOINTS.MEDIA.UPLOAD}`,
+      endpoint: `${API_BASE_URL}${uploadPath}`,
       fieldName: "file",
       formData: true,
       withCredentials: true,

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link } from "@/lib/nav"
 import { DataTable } from "@/components/common/DataTable"
 import { ROUTES } from "@/constants/routes"
 

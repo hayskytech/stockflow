@@ -1,18 +1,21 @@
 // Storefront routes (/store/*, /register) are unmounted — storefront on hold, see multitenant_plan.md Phase 1.
-import { createHashRouter, Navigate } from "react-router-dom"
-import { AppShell } from "@/components/layout/AppShell"
+// Back-office routes are nested under /b/:businessId (multi-tenant — see multitenant_plan.md Phase 6).
+import { createHashRouter } from "react-router-dom"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
 import { NotFoundPage } from "@/components/common/error-pages"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
+import { BusinessGate } from "@/app/BusinessGate"
+import { RootRedirect } from "@/app/RootRedirect"
 import { ROUTES } from "@/constants/routes"
 import { ROLES } from "@/constants/app"
 import { CRUMBS } from "@/constants/breadcrumbs"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
 import { ProfilePage } from "@/features/auth/pages/ProfilePage"
+import { BusinessPickerPage } from "@/features/business-picker/pages/BusinessPickerPage"
 import { ProductDetailPage as AdminProductDetailPage } from "@/features/products/pages/ProductDetailPage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
-import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
+import { BusinessSettingsPage } from "@/features/business-settings/pages/BusinessSettingsPage"
 import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
 import { CategoryDetailPage } from "@/features/catalog/pages/CategoryDetailPage"
 import { ProductsPage } from "@/features/products/pages/ProductsPage"
@@ -36,6 +39,10 @@ import { HeroSlidesPage } from "@/features/heroSlides/pages/HeroSlidesPage"
 import { NoticePage } from "@/features/notice/pages/NoticePage"
 import { SizesPage } from "@/features/sizes/pages/SizesPage"
 
+/** Back-office ROUTES.* values are written absolute (`/products`); as children of `/b/:businessId`
+ *  they must be relative. */
+const rel = (path) => path.replace(/^\//, "")
+
 export const router = createHashRouter([
   {
     path: ROUTES.AUTH.LOGIN,
@@ -50,84 +57,51 @@ export const router = createHashRouter([
     ),
   },
   {
-    path: "/",
-    element: <Navigate to={ROUTES.DASHBOARD} replace />,
+    // Global/flat for now — /auth/me based, no business context (see multitenant_plan.md Phase 6).
+    path: ROUTES.PROFILE,
+    element: (
+      <ProtectedRoute>
+        <ProfilePage />
+      </ProtectedRoute>
+    ),
   },
   {
+    path: "/",
+    element: <RootRedirect />,
+  },
+  {
+    path: ROUTES.BUSINESSES,
+    element: (
+      <ProtectedRoute>
+        <BusinessPickerPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/b/:businessId",
     element: (
       <ProtectedRoute allow={[ROLES.ADMIN, ROLES.STAFF]}>
-        <AppShell />
+        <BusinessGate />
       </ProtectedRoute>
     ),
     errorElement: <RouteErrorPage />,
     children: [
+      { index: true, element: <DashboardPage />, handle: { crumb: CRUMBS.DASHBOARD } },
+      { path: rel(ROUTES.DASHBOARD), element: <DashboardPage />, handle: { crumb: CRUMBS.DASHBOARD } },
+      { path: rel(ROUTES.WAREHOUSE), element: <BusinessSettingsPage />, handle: { crumb: CRUMBS.WAREHOUSE } },
+      { path: rel(ROUTES.CATALOG.CATEGORIES), element: <CategoriesPage />, handle: { crumb: CRUMBS.CATEGORIES } },
+      { path: "catalog/categories/:id", element: <CategoryDetailPage />, handle: { crumb: CRUMBS.CATEGORY_DETAIL } },
+      { path: rel(ROUTES.SIZES), element: <SizesPage />, handle: { crumb: CRUMBS.SIZES } },
+      { path: rel(ROUTES.PRODUCTS.LIST), element: <ProductsPage />, handle: { crumb: CRUMBS.PRODUCTS_LIST } },
+      { path: rel(ROUTES.PRODUCTS.NEW), element: <ProductFormPage />, handle: { crumb: CRUMBS.PRODUCTS_NEW } },
+      { path: "products/:id", element: <AdminProductDetailPage />, handle: { crumb: CRUMBS.PRODUCTS_DETAIL } },
+      { path: "products/:id/edit", element: <ProductFormPage />, handle: { crumb: CRUMBS.PRODUCTS_EDIT } },
+      { path: rel(ROUTES.STOCK.LIST), element: <StockPage />, handle: { crumb: CRUMBS.STOCK_LIST } },
+      { path: rel(ROUTES.STOCK_LEDGER), element: <StockLedgerPage />, handle: { crumb: CRUMBS.STOCK_LEDGER } },
+      { path: rel(ROUTES.MEDIA_LIBRARY.LIST), element: <MediaLibraryPage />, handle: { crumb: CRUMBS.MEDIA_LIST } },
+      { path: "media-library/:id", element: <MediaDetailPage />, handle: { crumb: CRUMBS.MEDIA_DETAIL } },
       {
-        path: ROUTES.DASHBOARD,
-        element: <DashboardPage />,
-        handle: { crumb: CRUMBS.DASHBOARD },
-      },
-      {
-        path: ROUTES.WAREHOUSE,
-        element: <WarehousePage />,
-        handle: { crumb: CRUMBS.WAREHOUSE },
-      },
-      {
-        path: ROUTES.CATALOG.CATEGORIES,
-        element: <CategoriesPage />,
-        handle: { crumb: CRUMBS.CATEGORIES },
-      },
-      {
-        path: "/catalog/categories/:id",
-        element: <CategoryDetailPage />,
-        handle: { crumb: CRUMBS.CATEGORY_DETAIL },
-      },
-      {
-        path: ROUTES.SIZES,
-        element: <SizesPage />,
-        handle: { crumb: CRUMBS.SIZES },
-      },
-      {
-        path: ROUTES.PRODUCTS.LIST,
-        element: <ProductsPage />,
-        handle: { crumb: CRUMBS.PRODUCTS_LIST },
-      },
-      {
-        path: ROUTES.PRODUCTS.NEW,
-        element: <ProductFormPage />,
-        handle: { crumb: CRUMBS.PRODUCTS_NEW },
-      },
-      {
-        path: "/products/:id",
-        element: <AdminProductDetailPage />,
-        handle: { crumb: CRUMBS.PRODUCTS_DETAIL },
-      },
-      {
-        path: "/products/:id/edit",
-        element: <ProductFormPage />,
-        handle: { crumb: CRUMBS.PRODUCTS_EDIT },
-      },
-      {
-        path: ROUTES.STOCK.LIST,
-        element: <StockPage />,
-        handle: { crumb: CRUMBS.STOCK_LIST },
-      },
-      {
-        path: ROUTES.STOCK_LEDGER,
-        element: <StockLedgerPage />,
-        handle: { crumb: CRUMBS.STOCK_LEDGER },
-      },
-      {
-        path: ROUTES.MEDIA_LIBRARY.LIST,
-        element: <MediaLibraryPage />,
-        handle: { crumb: CRUMBS.MEDIA_LIST },
-      },
-      {
-        path: "/media-library/:id",
-        element: <MediaDetailPage />,
-        handle: { crumb: CRUMBS.MEDIA_DETAIL },
-      },
-      {
-        path: ROUTES.HERO_SLIDES,
+        path: rel(ROUTES.HERO_SLIDES),
         element: (
           <ProtectedRoute allow={[ROLES.ADMIN]}>
             <HeroSlidesPage />
@@ -136,7 +110,7 @@ export const router = createHashRouter([
         handle: { crumb: CRUMBS.HERO_SLIDES },
       },
       {
-        path: ROUTES.NOTICE,
+        path: rel(ROUTES.NOTICE),
         element: (
           <ProtectedRoute allow={[ROLES.ADMIN]}>
             <NoticePage />
@@ -144,50 +118,16 @@ export const router = createHashRouter([
         ),
         handle: { crumb: CRUMBS.NOTICE },
       },
+      { path: rel(ROUTES.ORDERS.LIST), element: <OrdersPage />, handle: { crumb: CRUMBS.ORDERS_LIST } },
+      { path: rel(ROUTES.ORDERS.NEW), element: <NewOrderPage />, handle: { crumb: CRUMBS.ORDERS_NEW } },
+      { path: "orders/:id", element: <OrderDetailPage />, handle: { crumb: CRUMBS.ORDERS_DETAIL } },
+      { path: "orders/:id/dispatch", element: <DispatchOrderPage />, handle: { crumb: CRUMBS.ORDERS_DISPATCH } },
+      { path: rel(ROUTES.DISPATCHES.LIST), element: <DispatchesPage />, handle: { crumb: CRUMBS.DISPATCHES_LIST } },
+      { path: "dispatches/:id", element: <DispatchDetailPage />, handle: { crumb: CRUMBS.DISPATCHES_DETAIL } },
+      { path: rel(ROUTES.REPORTS), element: <ReportsPage />, handle: { crumb: CRUMBS.REPORTS } },
+      { path: rel(ROUTES.USERS.LIST), element: <UsersPage />, handle: { crumb: CRUMBS.USERS } },
       {
-        path: ROUTES.ORDERS.LIST,
-        element: <OrdersPage />,
-        handle: { crumb: CRUMBS.ORDERS_LIST },
-      },
-      {
-        path: ROUTES.ORDERS.NEW,
-        element: <NewOrderPage />,
-        handle: { crumb: CRUMBS.ORDERS_NEW },
-      },
-      {
-        path: "/orders/:id",
-        element: <OrderDetailPage />,
-        handle: { crumb: CRUMBS.ORDERS_DETAIL },
-      },
-      {
-        path: "/orders/:id/dispatch",
-        element: <DispatchOrderPage />,
-        handle: { crumb: CRUMBS.ORDERS_DISPATCH },
-      },
-      {
-        path: ROUTES.DISPATCHES.LIST,
-        element: <DispatchesPage />,
-        handle: { crumb: CRUMBS.DISPATCHES_LIST },
-      },
-      {
-        path: "/dispatches/:id",
-        element: <DispatchDetailPage />,
-        handle: { crumb: CRUMBS.DISPATCHES_DETAIL },
-      },
-      {
-        path: ROUTES.REPORTS,
-        element: <ReportsPage />,
-        handle: { crumb: CRUMBS.REPORTS },
-      },
-      {
-        path: ROUTES.USERS.LIST,
-        element: <UsersPage />,
-        handle: { crumb: CRUMBS.USERS },
-      },
-      {
-        // Static segment, so react-router ranks it above the "/users/:id" param route below
-        // regardless of declaration order — but it's declared first anyway for readability.
-        path: ROUTES.USERS.SESSIONS,
+        path: rel(ROUTES.USERS.SESSIONS),
         element: (
           <ProtectedRoute allow={[ROLES.ADMIN]}>
             <AdminSessionsPage />
@@ -195,13 +135,9 @@ export const router = createHashRouter([
         ),
         handle: { crumb: CRUMBS.USERS_SESSIONS },
       },
+      { path: "users/:id", element: <UserViewPage />, handle: { crumb: CRUMBS.USERS_DETAIL } },
       {
-        path: "/users/:id",
-        element: <UserViewPage />,
-        handle: { crumb: CRUMBS.USERS_DETAIL },
-      },
-      {
-        path: ROUTES.SETTINGS,
+        path: rel(ROUTES.SETTINGS),
         element: (
           <ProtectedRoute allow={[ROLES.ADMIN]}>
             <SettingsPage />
@@ -209,15 +145,9 @@ export const router = createHashRouter([
         ),
         handle: { crumb: CRUMBS.SETTINGS },
       },
-      {
-        path: ROUTES.PROFILE,
-        element: <ProfilePage />,
-        handle: { crumb: CRUMBS.PROFILE },
-      },
     ],
   },
   {
-    // Any hash URL that matched none of the above — renders a 404 outside the shell layouts.
     path: "*",
     element: <NotFoundPage />,
   },

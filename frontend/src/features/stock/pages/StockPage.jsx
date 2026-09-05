@@ -12,7 +12,7 @@ import { StockFormModal } from "@/components/common/StockFormModal"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { SearchSelect } from "@/components/ui/SearchSelect"
 import { effectivePrice } from "@/lib/pricing"
-import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { useFormatMoney } from "@/hooks/use-business-settings"
 
 export function StockPage() {
   const formatMoney = useFormatMoney()

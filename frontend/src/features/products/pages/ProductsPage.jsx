@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useAppNavigate as useNavigate } from "@/hooks/use-app-navigate"
+import { Link } from "@/lib/nav"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
@@ -11,7 +12,7 @@ import { useProducts } from "@/features/products/hooks/use-products"
 import { ProductImportModal } from "@/features/products/components/ProductImportModal"
 import { resolveMediaUrl } from "@/lib/media"
 import { effectivePrice } from "@/lib/pricing"
-import { useFormatMoney } from "@/hooks/use-warehouse-details"
+import { useFormatMoney } from "@/hooks/use-business-settings"
 import { ROUTES } from "@/constants/routes"
 
 export function ProductsPage() {

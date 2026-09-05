@@ -1,4 +1,5 @@
-import { Link, useParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
+import { Link } from "@/lib/nav"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { useDispatch } from "@/features/dispatches/hooks/use-dispatches"

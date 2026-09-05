@@ -1,4 +1,5 @@
-import { Link, useMatches } from "react-router-dom"
+import { useMatches } from "react-router-dom"
+import { Link } from "@/lib/nav"
 
 /**
  * Reads `handle.crumb` off the deepest matched route (see app/router.jsx) and renders the

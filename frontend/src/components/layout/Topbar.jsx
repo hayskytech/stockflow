@@ -1,37 +1,59 @@
 import { useEffect, useRef, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
+import { Link } from "@/lib/nav"
+import { useAppNavigate as useNavigate } from "@/hooks/use-app-navigate"
 import { logoutApi } from "@/features/auth/auth.api"
+import { useMe } from "@/features/auth/hooks/use-me"
 import { useAuthStore } from "@/store/auth.store"
-import { useSiteTitle } from "@/hooks/use-warehouse-details"
-import { ROUTES } from "@/constants/routes"
+import { useBusinessStore } from "@/store/business.store"
+import { useSiteTitle } from "@/hooks/use-business-settings"
+import { ROUTES, businessPath } from "@/constants/routes"
 
 export function Topbar({ onToggleSidebar }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   const menuRef = useRef(null)
+  const switcherRef = useRef(null)
   const user = useAuthStore((s) => s.user)
   const clearAuth = useAuthStore((s) => s.clearAuth)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const siteTitle = useSiteTitle()
+  const { data: me } = useMe()
+  const currentBusinessId = useBusinessStore((s) => s.currentBusinessId)
 
-  // Clicking anywhere outside the dropdown closes it (mirrors Bootstrap's own behavior).
+  const businesses = me?.businesses ?? []
+  const currentBusiness = businesses.find((b) => b.id === currentBusinessId)
+  const currentRole = currentBusiness?.role
+  const isBusinessAdmin = currentRole === "admin" || Boolean(me?.isSuperAdmin)
+
+  // Clicking anywhere outside a dropdown closes it (mirrors Bootstrap's own behavior).
   useEffect(() => {
-    if (!menuOpen) return undefined
+    if (!menuOpen && !switcherOpen) return undefined
     function handleOutsideClick(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMenuOpen(false)
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpen(false)
+      if (switcherRef.current && !switcherRef.current.contains(event.target)) setSwitcherOpen(false)
     }
     document.addEventListener("mousedown", handleOutsideClick)
     return () => document.removeEventListener("mousedown", handleOutsideClick)
-  }, [menuOpen])
+  }, [menuOpen, switcherOpen])
 
   async function handleLogout() {
     try {
       await logoutApi()
     } finally {
       clearAuth()
+      queryClient.clear()
       navigate(ROUTES.AUTH.LOGIN, { replace: true })
     }
+  }
+
+  function switchBusiness(businessId) {
+    setSwitcherOpen(false)
+    if (businessId === currentBusinessId) return
+    // Clearing the cache is how we keep per-business data isolated without per-query businessId keys.
+    queryClient.clear()
+    navigate(businessPath(businessId, ROUTES.DASHBOARD))
   }
 
   return (
@@ -46,6 +68,48 @@ export function Topbar({ onToggleSidebar }) {
           <Link id="topbar-site-title-link" to={ROUTES.DASHBOARD} className="nav-link font-weight-bold">
             {siteTitle}
           </Link>
+        </li>
+
+        <li ref={switcherRef} className={`nav-item dropdown ${switcherOpen ? "show" : ""}`}>
+          <button
+            type="button"
+            id="topbar-business-switcher"
+            className="nav-link btn btn-link font-weight-bold"
+            onClick={() => setSwitcherOpen((v) => !v)}
+          >
+            <i className="fas fa-store mr-1 text-muted" />
+            {currentBusiness?.name ?? "Select business"}
+            <i className="fas fa-caret-down ml-1" />
+          </button>
+          <div className={`dropdown-menu ${switcherOpen ? "show" : ""}`}>
+            {businesses.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                className={`dropdown-item ${b.id === currentBusinessId ? "active" : ""}`}
+                onClick={() => switchBusiness(b.id)}
+              >
+                {b.name}
+              </button>
+            ))}
+            {me?.isSuperAdmin ? (
+              <>
+                <div className="dropdown-divider" />
+                <button
+                  type="button"
+                  id="topbar-manage-businesses-link"
+                  className="dropdown-item"
+                  onClick={() => {
+                    setSwitcherOpen(false)
+                    navigate(ROUTES.ADMIN.BUSINESSES)
+                  }}
+                >
+                  <i className="fas fa-cogs mr-2" />
+                  Manage businesses
+                </button>
+              </>
+            ) : null}
+          </div>
         </li>
       </ul>
 
@@ -73,7 +137,7 @@ export function Topbar({ onToggleSidebar }) {
               My Profile
             </button>
             <div className="dropdown-divider" />
-            {user?.role === "admin" ? (
+            {isBusinessAdmin ? (
               <>
                 <button
                   type="button"
@@ -84,8 +148,8 @@ export function Topbar({ onToggleSidebar }) {
                     navigate(ROUTES.WAREHOUSE)
                   }}
                 >
-                  <i className="fas fa-warehouse mr-2" />
-                  Warehouse
+                  <i className="fas fa-sliders-h mr-2" />
+                  Business Settings
                 </button>
                 <button
                   type="button"

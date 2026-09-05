@@ -1,5 +1,5 @@
-/** Defaults match the warehouse "App Settings" defaults — pass `symbol`/`decimalDigits` (see
- *  `useFormatMoney` in hooks/use-warehouse-details.js) to reflect the admin-configured values. */
+/** Defaults match the Business Settings phone/currency defaults — pass `symbol`/`decimalDigits`
+ *  (see `useFormatMoney` in hooks/use-business-settings.js) to reflect the per-business values. */
 export function formatMoney(value, { symbol = "₹", decimalDigits = 2 } = {}) {
   return `${symbol}${Number(value).toFixed(decimalDigits)}`
 }
