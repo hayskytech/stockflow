@@ -4,10 +4,10 @@ import { createHashRouter } from "react-router-dom"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
 import { NotFoundPage } from "@/components/common/error-pages"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
+import { BusinessAdminRoute } from "@/app/BusinessAdminRoute"
 import { BusinessGate } from "@/app/BusinessGate"
 import { RootRedirect } from "@/app/RootRedirect"
 import { ROUTES } from "@/constants/routes"
-import { ROLES } from "@/constants/app"
 import { CRUMBS } from "@/constants/breadcrumbs"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
@@ -31,9 +31,7 @@ import { DispatchesPage } from "@/features/dispatches/pages/DispatchesPage"
 import { DispatchDetailPage } from "@/features/dispatches/pages/DispatchDetailPage"
 import { DispatchOrderPage } from "@/features/dispatches/pages/DispatchOrderPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
-import { UsersPage } from "@/features/users/pages/UsersPage"
-import { UserViewPage } from "@/features/users/pages/UserViewPage"
-import { AdminSessionsPage } from "@/features/users/pages/AdminSessionsPage"
+import { MembersPage } from "@/features/members/pages/MembersPage"
 import { SettingsPage } from "@/features/settings/pages/SettingsPage"
 import { HeroSlidesPage } from "@/features/heroSlides/pages/HeroSlidesPage"
 import { NoticePage } from "@/features/notice/pages/NoticePage"
@@ -80,7 +78,9 @@ export const router = createHashRouter([
   {
     path: "/b/:businessId",
     element: (
-      <ProtectedRoute allow={[ROLES.ADMIN, ROLES.STAFF]}>
+      // Authenticated-only here — per-business membership is the real gate and BusinessGate
+      // enforces it (redirecting non-members to /businesses).
+      <ProtectedRoute>
         <BusinessGate />
       </ProtectedRoute>
     ),
@@ -103,18 +103,18 @@ export const router = createHashRouter([
       {
         path: rel(ROUTES.HERO_SLIDES),
         element: (
-          <ProtectedRoute allow={[ROLES.ADMIN]}>
+          <BusinessAdminRoute>
             <HeroSlidesPage />
-          </ProtectedRoute>
+          </BusinessAdminRoute>
         ),
         handle: { crumb: CRUMBS.HERO_SLIDES },
       },
       {
         path: rel(ROUTES.NOTICE),
         element: (
-          <ProtectedRoute allow={[ROLES.ADMIN]}>
+          <BusinessAdminRoute>
             <NoticePage />
-          </ProtectedRoute>
+          </BusinessAdminRoute>
         ),
         handle: { crumb: CRUMBS.NOTICE },
       },
@@ -125,23 +125,16 @@ export const router = createHashRouter([
       { path: rel(ROUTES.DISPATCHES.LIST), element: <DispatchesPage />, handle: { crumb: CRUMBS.DISPATCHES_LIST } },
       { path: "dispatches/:id", element: <DispatchDetailPage />, handle: { crumb: CRUMBS.DISPATCHES_DETAIL } },
       { path: rel(ROUTES.REPORTS), element: <ReportsPage />, handle: { crumb: CRUMBS.REPORTS } },
-      { path: rel(ROUTES.USERS.LIST), element: <UsersPage />, handle: { crumb: CRUMBS.USERS } },
-      {
-        path: rel(ROUTES.USERS.SESSIONS),
-        element: (
-          <ProtectedRoute allow={[ROLES.ADMIN]}>
-            <AdminSessionsPage />
-          </ProtectedRoute>
-        ),
-        handle: { crumb: CRUMBS.USERS_SESSIONS },
-      },
-      { path: "users/:id", element: <UserViewPage />, handle: { crumb: CRUMBS.USERS_DETAIL } },
+      // Per-business member management. MembersPage itself redirects a non-admin of this
+      // business to the dashboard (the old /users, /users/sessions, /users/:id routes are
+      // gone — their feature files stay on disk for the Phase 7 super-admin directory).
+      { path: rel(ROUTES.MEMBERS), element: <MembersPage />, handle: { crumb: CRUMBS.MEMBERS } },
       {
         path: rel(ROUTES.SETTINGS),
         element: (
-          <ProtectedRoute allow={[ROLES.ADMIN]}>
+          <BusinessAdminRoute>
             <SettingsPage />
-          </ProtectedRoute>
+          </BusinessAdminRoute>
         ),
         handle: { crumb: CRUMBS.SETTINGS },
       },

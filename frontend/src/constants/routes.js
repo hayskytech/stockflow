@@ -48,6 +48,9 @@ export const ROUTES = {
     DETAIL: (id) => `/dispatches/${id}`,
   },
   REPORTS: "/reports",
+  MEMBERS: "/members",
+  // Global super-admin user directory (Phase 7) — the per-business `MEMBERS` route replaces
+  // the old back-office `/users` pages, whose feature files stay on disk for Phase 7.
   USERS: {
     LIST: "/users",
     DETAIL: (id) => `/users/${id}`,

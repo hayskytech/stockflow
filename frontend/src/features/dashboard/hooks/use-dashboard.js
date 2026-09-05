@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import {
   getOrderHistoryApi,
-  getStaffCountApi,
   getStockMovementApi,
   getStockSummaryApi,
 } from "@/features/dashboard/dashboard.api"
@@ -26,13 +25,5 @@ export function useStockMovement(days = 14) {
   return useQuery({
     queryKey: [DASHBOARD_QUERY_KEY, "stockMovement", days],
     queryFn: () => getStockMovementApi({ days }),
-  })
-}
-
-export function useStaffCount({ enabled = true } = {}) {
-  return useQuery({
-    queryKey: [DASHBOARD_QUERY_KEY, "staffCount"],
-    queryFn: getStaffCountApi,
-    enabled,
   })
 }

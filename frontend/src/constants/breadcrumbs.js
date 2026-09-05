@@ -31,9 +31,7 @@ export const CRUMBS = {
   DISPATCHES_LIST: () => trail({ label: "Dispatches" }),
   DISPATCHES_DETAIL: () => trail({ label: "Dispatches", to: ROUTES.DISPATCHES.LIST }, { label: "Dispatch Details" }),
   REPORTS: () => trail({ label: "Reports" }),
-  USERS: () => trail({ label: "Users / Staff" }),
-  USERS_DETAIL: () => trail({ label: "Users / Staff", to: ROUTES.USERS.LIST }, { label: "User Details" }),
-  USERS_SESSIONS: () => trail({ label: "Users / Staff", to: ROUTES.USERS.LIST }, { label: "Active Sessions" }),
+  MEMBERS: () => trail({ label: "Members" }),
   SETTINGS: () => trail({ label: "Settings" }),
   PROFILE: () => trail({ label: "My Profile" }),
 }

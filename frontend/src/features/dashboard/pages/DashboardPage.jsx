@@ -1,9 +1,9 @@
+import { useParams } from "react-router-dom"
 import { Link } from "@/lib/nav"
 import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import {
   useOrderHistory,
-  useStaffCount,
   useStockMovement,
   useStockSummary,
 } from "@/features/dashboard/hooks/use-dashboard"
@@ -11,20 +11,28 @@ import { OrdersByStatusChart } from "@/features/dashboard/components/OrdersBySta
 import { OrdersTrendChart } from "@/features/dashboard/components/OrdersTrendChart"
 import { LowStockTable } from "@/features/dashboard/components/LowStockTable"
 import { useFormatMoney } from "@/hooks/use-business-settings"
-import { useAuthStore } from "@/store/auth.store"
-import { ROLES } from "@/constants/app"
+import { useMe } from "@/features/auth/hooks/use-me"
+import { useMembers } from "@/features/members/hooks/use-members"
 import { ROUTES } from "@/constants/routes"
 
 export function DashboardPage() {
   const formatMoney = useFormatMoney()
-  const isAdmin = useAuthStore((s) => s.user?.role === ROLES.ADMIN)
+  const { businessId } = useParams()
+  const { data: me } = useMe()
+  // Admin status comes from the role in THIS business (or super admin), not the global users.role.
+  const currentRole = me?.businesses?.find((b) => b.id === businessId)?.role
+  const isAdmin = currentRole === "admin" || Boolean(me?.isSuperAdmin)
   const { data: stockSummary, isLoading: isLoadingStock, isError: isStockError } = useStockSummary()
   const { data: orderHistory, isLoading: isLoadingOrders, isError: isOrdersError } = useOrderHistory(14)
   const { data: stockMovement, isLoading: isLoadingMovement, isError: isMovementError } = useStockMovement(14)
-  const { data: staffCount, isLoading: isLoadingStaff, isError: isStaffError } = useStaffCount({ enabled: isAdmin })
+  // Member headcount for this business — the endpoint is admin-only, so only fetch when admin.
+  const { data: members, isLoading: isLoadingMembers, isError: isMembersError } = useMembers(
+    { per_page: 1 },
+    { enabled: isAdmin },
+  )
 
-  const isLoading = isLoadingStock || isLoadingOrders || isLoadingMovement || (isAdmin && isLoadingStaff)
-  const isError = isStockError || isOrdersError || isMovementError || (isAdmin && isStaffError)
+  const isLoading = isLoadingStock || isLoadingOrders || isLoadingMovement || (isAdmin && isLoadingMembers)
+  const isError = isStockError || isOrdersError || isMovementError || (isAdmin && isMembersError)
 
   return (
     <PageWrapper>
@@ -149,15 +157,15 @@ export function DashboardPage() {
             </div>
             {isAdmin ? (
               <div className="col-lg-3 col-6">
-                <Link to={ROUTES.USERS.LIST} className="card stat-card text-decoration-none text-dark d-block">
+                <Link to={ROUTES.MEMBERS} className="card stat-card text-decoration-none text-dark d-block">
                   <div className="card-body d-flex align-items-center">
                     <div className="stat-card-icon bg-info-subtle text-info">
                       <i className="fas fa-users" />
                     </div>
                     <div className="stat-card-text">
-                      <span className="stat-card-label">Staff &amp; Admins</span>
+                      <span className="stat-card-label">Members</span>
                       <h3 id="dashboard-staff-count" className="stat-card-value">
-                        {staffCount}
+                        {members?.total ?? 0}
                       </h3>
                     </div>
                   </div>

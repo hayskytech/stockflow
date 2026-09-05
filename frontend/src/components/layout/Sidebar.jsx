@@ -18,7 +18,7 @@ const NAV_ITEMS = [
   { to: ROUTES.ORDERS.LIST, icon: "fa-cart-shopping", label: "Orders" },
   { to: ROUTES.DISPATCHES.LIST, icon: "fa-truck", label: "Dispatches" },
   { to: ROUTES.REPORTS, icon: "fa-chart-line", label: "Reports" },
-  { to: ROUTES.USERS.LIST, icon: "fa-users", label: "Users / Staff", adminOnly: true },
+  { to: ROUTES.MEMBERS, icon: "fa-users", label: "Members", adminOnly: true },
 ]
 
 export function Sidebar() {

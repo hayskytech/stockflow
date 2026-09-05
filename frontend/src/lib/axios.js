@@ -16,6 +16,7 @@ export const apiClient = axios.create({
  * `/users`, `/admin`, and the still-public `.../public` storefront reads) is left flat.
  */
 const TENANT_PREFIXES = [
+  "/members",
   "/products",
   "/stock",
   "/stock-ledger",
