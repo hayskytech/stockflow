@@ -5,7 +5,7 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { StockFormModal } from "@/components/common/StockFormModal"
 import { useCreateStockBatch } from "@/hooks/use-create-stock-batch"
-import { useAuthStore } from "@/store/auth.store"
+import { useCurrentBusinessRole } from "@/hooks/use-current-business-role"
 import { useProduct } from "@/features/products/hooks/use-products"
 import { formatDateTimeIST, stockBadge } from "@/lib/format"
 import { effectivePrice, setEffectivePrice } from "@/lib/pricing"
@@ -18,8 +18,7 @@ export function ProductDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const formatMoney = useFormatMoney()
-  const isAdmin = useAuthStore((s) => s.user?.role === "admin")
-  const isStaff = useAuthStore((s) => s.user?.role === "staff")
+  const { isAdmin, isStaff } = useCurrentBusinessRole()
   const canManage = isAdmin || isStaff
 
   const [addStockOpen, setAddStockOpen] = useState(false)

@@ -5,12 +5,12 @@ import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { DragHandle, useSortableList } from "@/components/common/SortableList"
-import { useAuthStore } from "@/store/auth.store"
+import { useCurrentBusinessRole } from "@/hooks/use-current-business-role"
 import { SizeFormModal } from "@/features/sizes/components/SizeFormModal"
 import { useCreateSize, useDeleteSize, useReorderSizes, useSizes, useUpdateSize } from "@/features/sizes/hooks/use-sizes"
 
 export function SizesPage() {
-  const isAdmin = useAuthStore((s) => s.user?.role === "admin")
+  const { isAdmin } = useCurrentBusinessRole()
 
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")

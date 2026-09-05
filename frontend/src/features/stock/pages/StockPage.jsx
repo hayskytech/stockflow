@@ -3,7 +3,7 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
-import { useAuthStore } from "@/store/auth.store"
+import { useCurrentBusinessRole } from "@/hooks/use-current-business-role"
 import { useProductOptions } from "@/hooks/use-product-options"
 import { useStockStore } from "@/features/stock/stock.store"
 import { useCreateStockBatch, useDeleteStock, useStockList } from "@/features/stock/hooks/use-stock"
@@ -16,8 +16,7 @@ import { useFormatMoney } from "@/hooks/use-business-settings"
 
 export function StockPage() {
   const formatMoney = useFormatMoney()
-  const isAdmin = useAuthStore((s) => s.user?.role === "admin")
-  const isStaff = useAuthStore((s) => s.user?.role === "staff")
+  const { isAdmin, isStaff } = useCurrentBusinessRole()
   const canManage = isAdmin || isStaff
 
   const search = useStockStore((s) => s.search)

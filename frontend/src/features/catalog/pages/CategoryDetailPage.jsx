@@ -6,7 +6,7 @@ import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { DragHandle, useSortableList } from "@/components/common/SortableList"
-import { useAuthStore } from "@/store/auth.store"
+import { useCurrentBusinessRole } from "@/hooks/use-current-business-role"
 import { useCategories, useCategory } from "@/features/catalog/hooks/use-categories"
 import {
   useCreateSubCategory,
@@ -19,7 +19,7 @@ import { SubCategoryFormModal } from "@/features/catalog/components/SubCategoryF
 
 export function CategoryDetailPage() {
   const { id } = useParams()
-  const isAdmin = useAuthStore((s) => s.user?.role === "admin")
+  const { isAdmin } = useCurrentBusinessRole()
 
   const [subCategoryPage, setSubCategoryPage] = useState(1)
   const [editingSubCategory, setEditingSubCategory] = useState(null)

@@ -5,7 +5,7 @@ import { PageWrapper } from "@/components/layout/PageWrapper"
 import { PageHeader } from "@/components/common/PageHeader"
 import { DataTable } from "@/components/common/DataTable"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
-import { useAuthStore } from "@/store/auth.store"
+import { useCurrentBusinessRole } from "@/hooks/use-current-business-role"
 import { useCategoryOptions } from "@/hooks/use-catalog-options"
 import { useProductsStore } from "@/features/products/products.store"
 import { useProducts } from "@/features/products/hooks/use-products"
@@ -18,8 +18,7 @@ import { ROUTES } from "@/constants/routes"
 export function ProductsPage() {
   const navigate = useNavigate()
   const formatMoney = useFormatMoney()
-  const isAdmin = useAuthStore((s) => s.user?.role === "admin")
-  const isStaff = useAuthStore((s) => s.user?.role === "staff")
+  const { isAdmin, isStaff } = useCurrentBusinessRole()
   const canManage = isAdmin || isStaff
 
   const [importOpen, setImportOpen] = useState(false)

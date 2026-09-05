@@ -2,24 +2,24 @@ import { test, expect } from "@playwright/test"
 import { LoginPage } from "../../pages/login.page.js"
 
 test.describe("Login", () => {
-  test("signs in with valid admin credentials and reaches the dashboard", async ({ page }) => {
+  test("super admin signs in and lands on the business picker", async ({ page }) => {
     const loginPage = new LoginPage(page)
     await loginPage.goto()
 
     await loginPage.login(process.env.TEST_ADMIN_EMAIL, process.env.TEST_ADMIN_PASSWORD)
 
-    await expect(page).toHaveURL(/\/dashboard$/)
+    // admin@example.com is a super admin + member of both seed businesses → the picker.
+    await expect(page).toHaveURL(/\/#\/businesses$/)
   })
 
-  test("signs in with valid staff credentials and reaches the dashboard", async ({ page }) => {
+  test("staff signs in and lands directly on their business dashboard", async ({ page }) => {
     const loginPage = new LoginPage(page)
     await loginPage.goto()
 
-    console.log(process.env.TEST_STAFF_EMAIL, process.env.TEST_STAFF_PASSWORD)
-
     await loginPage.login(process.env.TEST_STAFF_EMAIL, process.env.TEST_STAFF_PASSWORD)
 
-    await expect(page).toHaveURL(/\/dashboard$/)
+    // staff@example.com belongs to exactly one business → straight to /#/b/<id>/dashboard.
+    await expect(page).toHaveURL(/\/#\/b\/[0-9a-f-]+\/dashboard$/)
   })
 
   test("shows a generic error for an incorrect password", async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe("Login", () => {
    * "Send Code" against anything but an MSG91 Demo Credential texts a real handset. What is
    * asserted instead is the part that costs nothing: the step gate itself.
    */
-  // storefront on hold (multitenant_plan.md Phase 1)
+  // storefront on hold (multitenant_plan.md Phase 1) — OTP login mode is unmounted.
   test.skip("keeps the OTP code field out of reach until a code has been sent", async ({ page }) => {
     const loginPage = new LoginPage(page)
     await loginPage.goto()

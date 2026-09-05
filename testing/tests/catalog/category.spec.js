@@ -2,8 +2,8 @@ import { test, expect } from "../../fixtures/auth.fixtures.js"
 import { CategoriesPage } from "../../pages/category.page.js"
 
 test.describe("Categories", () => {
-  test("admin can add a new category", async ({ adminPage: page }) => {
-    const categoriesPage = new CategoriesPage(page)
+  test("admin can add a new category", async ({ adminPage: page, businessId }) => {
+    const categoriesPage = new CategoriesPage(page, businessId)
     const categoryName = `E2E Category ${Date.now()}`
 
     await categoriesPage.goto()
@@ -14,8 +14,8 @@ test.describe("Categories", () => {
     await expect(categoriesPage.categoryRowByText(categoryName)).toBeVisible()
   })
 
-  test("admin can edit an existing category", async ({ adminPage: page }) => {
-    const categoriesPage = new CategoriesPage(page)
+  test("admin can edit an existing category", async ({ adminPage: page, businessId }) => {
+    const categoriesPage = new CategoriesPage(page, businessId)
     const originalName = `E2E Category ${Date.now()}`
     const updatedName = `${originalName} (Updated)`
 
@@ -33,8 +33,8 @@ test.describe("Categories", () => {
     await expect(categoriesPage.categoryRowByText(updatedName)).toBeVisible()
   })
 
-  test("admin can deactivate a category", async ({ adminPage: page }) => {
-    const categoriesPage = new CategoriesPage(page)
+  test("admin can deactivate a category", async ({ adminPage: page, businessId }) => {
+    const categoriesPage = new CategoriesPage(page, businessId)
     const categoryName = `E2E Category ${Date.now()}`
 
     await categoriesPage.goto()
@@ -49,8 +49,8 @@ test.describe("Categories", () => {
     await expect(categoriesPage.categoryRowByText(categoryName)).toContainText("Inactive")
   })
 
-  test("admin can delete a category", async ({ adminPage: page }) => {
-    const categoriesPage = new CategoriesPage(page)
+  test("admin can delete a category", async ({ adminPage: page, businessId }) => {
+    const categoriesPage = new CategoriesPage(page, businessId)
     const categoryName = `E2E Category ${Date.now()}`
 
     await categoriesPage.goto()
@@ -65,8 +65,8 @@ test.describe("Categories", () => {
     await expect(categoriesPage.categoryRowByText(categoryName)).toHaveCount(0)
   })
 
-  test("staff cannot see add/edit/delete controls", async ({ staffPage: page }) => {
-    const categoriesPage = new CategoriesPage(page)
+  test("staff cannot see add/edit/delete controls", async ({ staffPage: page, businessId }) => {
+    const categoriesPage = new CategoriesPage(page, businessId)
 
     await categoriesPage.goto()
 

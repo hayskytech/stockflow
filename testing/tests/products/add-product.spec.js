@@ -3,9 +3,9 @@ import { ProductsPage } from "../../pages/products.page.js"
 import { ProductFormPage } from "../../pages/product-form.page.js"
 
 test.describe("Products", () => {
-  test("admin can add a new product", async ({ adminPage: page }) => {
-    const productsPage = new ProductsPage(page)
-    const productFormPage = new ProductFormPage(page)
+  test("admin can add a new product", async ({ adminPage: page, businessId }) => {
+    const productsPage = new ProductsPage(page, businessId)
+    const productFormPage = new ProductFormPage(page, businessId)
     const productCode = `E2E-${Date.now()}`
     const productName = `E2E Test Product ${Date.now()}`
 
@@ -14,9 +14,8 @@ test.describe("Products", () => {
     await productFormPage.fillNewProduct({
       productCode,
       name: productName,
-      mrp: 999,
-      wsp: 799,
-      quantityAvailable: 10,
+      price: 999,
+      discountPercent: 20,
     })
     await productFormPage.save()
 
@@ -24,9 +23,9 @@ test.describe("Products", () => {
     await expect(productsPage.rowByText(productCode)).toBeVisible()
   })
 
-  test("admin can edit an existing product", async ({ adminPage: page }) => {
-    const productsPage = new ProductsPage(page)
-    const productFormPage = new ProductFormPage(page)
+  test("admin can edit an existing product", async ({ adminPage: page, businessId }) => {
+    const productsPage = new ProductsPage(page, businessId)
+    const productFormPage = new ProductFormPage(page, businessId)
     const productCode = `E2E-${Date.now()}`
     const originalName = `E2E Test Product ${Date.now()}`
     const updatedName = `${originalName} (Updated)`
@@ -36,9 +35,8 @@ test.describe("Products", () => {
     await productFormPage.fillNewProduct({
       productCode,
       name: originalName,
-      mrp: 999,
-      wsp: 799,
-      quantityAvailable: 10,
+      price: 999,
+      discountPercent: 0,
     })
     await productFormPage.save()
 
@@ -46,7 +44,7 @@ test.describe("Products", () => {
     await expect(productsPage.rowByText(productCode)).toBeVisible()
 
     await productsPage.openEditPage(productCode)
-    await productFormPage.updateFields({ name: updatedName, mrp: 1099 })
+    await productFormPage.updateFields({ name: updatedName, price: 1099 })
     await productFormPage.save()
 
     await productsPage.searchFor(productCode)

@@ -6,7 +6,7 @@ import { DataTable } from "@/components/common/DataTable"
 import { ConfirmDialog } from "@/components/common/ConfirmDialog"
 import { RowActionsMenu } from "@/components/ui/RowActionsMenu"
 import { DragHandle, useSortableList } from "@/components/common/SortableList"
-import { useAuthStore } from "@/store/auth.store"
+import { useCurrentBusinessRole } from "@/hooks/use-current-business-role"
 import {
   useCategories,
   useCreateCategory,
@@ -18,7 +18,7 @@ import { CategoryFormModal } from "@/features/catalog/components/CategoryFormMod
 import { ROUTES } from "@/constants/routes"
 
 export function CategoriesPage() {
-  const isAdmin = useAuthStore((s) => s.user?.role === "admin")
+  const { isAdmin } = useCurrentBusinessRole()
 
   const [categoryPage, setCategoryPage] = useState(1)
 
