@@ -49,14 +49,16 @@ INSERT INTO sizes (id, value, sort_order) VALUES
   (UUID(), 'XXL', 5);
 
 -- =============================================================================
--- Initial admin user
+-- Seed users — admin, staff, and a sample customer.
 --
--- Default credentials:
---   Email:    admin@stockflow.local
---   Password: Admin@1234
+-- Default credentials (all three share the same password):
+--   admin@example.com     / NewPassword@123
+--   staff@example.com     / NewPassword@123
+--   customer@example.com  / NewPassword@123
 --
--- Password hash below is bcrypt cost-12 for "Admin@1234".
+-- Password hash below is bcrypt cost-12 for "NewPassword@123".
 -- Generate a fresh hash with: node -e "const b=require('bcryptjs'); b.hash('yourpassword',12).then(console.log)"
+-- IMPORTANT: change these passwords before going to production.
 -- =============================================================================
 INSERT INTO users (
   id,
@@ -65,27 +67,22 @@ INSERT INTO users (
   password_hash,
   role,
   is_active,
+  profile_completed_at,
   created_at,
   updated_at
 ) VALUES (
   'a0000000-0000-4000-8000-000000000001',
   'System Administrator',
-  'admin@stockflow.local',
-  -- bcrypt cost-12 hash for "Admin@1234" — REPLACE THIS before going to production
-  '$2b$12$Xrpko5jTF9EaqcJU1oEEVO2Yk10N.NQrlKaP61dsKFpsGiVqIw9D6',
+  'admin@example.com',
+  -- bcrypt cost-12 hash for "NewPassword@123" — REPLACE THIS before going to production
+  '$2b$12$Q3bGZMiMrflsWMPsOqOR7OvCtaGxIsTffNMIEaYFoyx1IqvDzgMCG',
   'admin',
   TRUE,
+  NOW(),
   NOW(),
   NOW()
 );
 
--- =============================================================================
--- Sample staff user
---
--- Default credentials:
---   Email:    staff@stockflow.local
---   Password: Admin@1234
--- =============================================================================
 INSERT INTO users (
   id,
   name,
@@ -93,15 +90,41 @@ INSERT INTO users (
   password_hash,
   role,
   is_active,
+  profile_completed_at,
   created_at,
   updated_at
 ) VALUES (
   'a0000000-0000-4000-8000-000000000002',
   'Warehouse Staff',
-  'staff@stockflow.local',
-  '$2b$12$Xrpko5jTF9EaqcJU1oEEVO2Yk10N.NQrlKaP61dsKFpsGiVqIw9D6',
+  'staff@example.com',
+  '$2b$12$Q3bGZMiMrflsWMPsOqOR7OvCtaGxIsTffNMIEaYFoyx1IqvDzgMCG',
   'staff',
   TRUE,
+  NOW(),
+  NOW(),
+  NOW()
+);
+
+INSERT INTO users (
+  id,
+  name,
+  email,
+  password_hash,
+  role,
+  phone,
+  is_active,
+  profile_completed_at,
+  created_at,
+  updated_at
+) VALUES (
+  'a0000000-0000-4000-8000-000000000003',
+  'Sample Customer',
+  'customer@example.com',
+  '$2b$12$Q3bGZMiMrflsWMPsOqOR7OvCtaGxIsTffNMIEaYFoyx1IqvDzgMCG',
+  'customer',
+  '+91-9000000003',
+  TRUE,
+  NOW(),
   NOW(),
   NOW()
 );

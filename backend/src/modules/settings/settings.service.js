@@ -9,8 +9,9 @@ import { logger } from '../../utils/logger.js';
 
 // Users created by database/init/02_seed.sql — the only rows that survive a data wipe.
 const SEED_USER_IDS = [
-  'a0000000-0000-4000-8000-000000000001', // admin@stockflow.local
-  'a0000000-0000-4000-8000-000000000002', // staff@stockflow.local
+  'a0000000-0000-4000-8000-000000000001', // admin@example.com
+  'a0000000-0000-4000-8000-000000000002', // staff@example.com
+  'a0000000-0000-4000-8000-000000000003', // customer@example.com
 ];
 
 /**
