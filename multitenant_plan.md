@@ -13,7 +13,7 @@ Status / progress (branch `multi-tenant-saas`):
 - 🔄 **Phase 6** — frontend tenancy
   - 🔄 6A: core infra (business.store, axios path-rewrite, BusinessGate, /businesses picker,
     router restructure, Topbar switcher, warehouse→business-settings)  ← in progress
-  - ⬜ 6B: per-feature cleanup, cache-key/hook fixes, full build green
+  - 🔄 6B: per-business members UI, dashboard role fix, guard cleanup  ← in progress
 - ⬜ **Phase 7** — super-admin frontend
 - ⬜ **Phase 8** — tests, docs, polish
 
