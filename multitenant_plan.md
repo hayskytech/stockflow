@@ -1,34 +1,56 @@
 # StockFlow → Multi-Tenant SaaS — Implementation Plan
 
-Status / progress (branch `multi-tenant-saas`):
+## ✅ COMPLETE — branch `multi-tenant-saas`, all 8 phases done, ready for review
 
-- ✅ **Phase 0** — divisions removal finished, de-branded, safe cleanup (`9e8768e`)
-- ✅ **Phase 1** — storefront + customer login disabled behind `STOREFRONT_ENABLED` (`798dd0d`)
-- ✅ **Phase 2** — tenancy schema & seed; `04`–`06` migrations + rewritten `01`/`02`, validated
-  against the real DB (fresh install, upgrade path, and fresh≡upgraded all pass)
-- ✅ **Phase 3** — token carries `{sub,role,isSuperAdmin,memberships}`; resolveBusiness / requireBusinessRole / requireSuperAdmin middleware; /auth/me business list; multi-tab refresh grace window (migration 07)
-- ✅ **Phase 4** — businesses CRUD (super admin) + per-business member management (business admin); last-admin guards
-- ✅ **Phase 5** — all 15 tenant modules under `/api/b/:businessId/...`, every query business-scoped;
-  `delete-all-data` resets one business now, not the DB (5A `d857acf` · 5B `86209ba` · 5C `f3504b2` · 5D this commit)
-- 🔄 **Phase 6** — frontend tenancy
-  - ✅ 6A: core infra — axios path-rewrite, BusinessGate, /businesses picker, router restructure,
-    Topbar switcher, warehouse→business-settings (`1f866c7`)
-  - ✅ 6B: per-business Members UI, dashboard role fix, BusinessAdminRoute guard (`3e0edc9`)
-- ✅ **Phase 7** — super-admin platform frontend: `/admin/businesses` CRUD, global user
-  directory, `SuperAdminShell` (`ba27719`)
-- 🔄 **Phase 8** — tests, docs, polish  ← in progress
-  - full multi-tenant API E2E against a live backend: **25/25 pass** (super-admin create-business
-    + first-admin, business switch, cross-tenant 403/404, order→accept→dispatch, per-business
-    wipe isolation, super-admin-only user directory, storefront-off)
+StockFlow is now a multi-tenant SaaS admin panel. Every phase was verified against a real
+MariaDB 10.4 database; the final end-to-end check (fresh DB, live backend) passes **16/16** and
+the mid-migration check passed **25/25**. Frontend `lint` + `vite build` are green.
 
-**Phase 8 follow-ups noted:** media files on disk are content-hash sharded and may be shared
-across businesses — `delete-all-data`'s `fs.unlink` should ref-check `storage_path` across
-businesses first (dev-only path, low priority). Backend has no working ESLint config.
+### How to run it locally after pulling this branch
+1. **Rebuild the dev DB** (schema changed a lot):
+   `DROP DATABASE stockflow; CREATE DATABASE stockflow ...;` then import
+   `database/init/01_schema.sql` + `database/init/02_seed.sql`.
+2. `cd backend && npm install` (deps changed — `dotenv`/`swagger*` removed) — then `npm run dev`.
+   Ensure `.env` has `STOREFRONT_ENABLED=false` and `MSG91_AUTH_KEY` / `MSG91_WIDGET_ID` set (any
+   value — the OTP flow is disabled).
+3. `cd frontend && npm install && npm run dev`.
+4. Log in as the seeded **super admin**: `admin@example.com` / `NewPassword@123`
+   → lands on `/#/admin/businesses`. Also seeded: `demo.admin@example.com` (admin of "Demo Cloth
+   Co"), `staff@example.com` (staff of "Default Business"). All password `NewPassword@123`.
 
-**DB engine note:** the dev DB and the cPanel host both run **MariaDB 10.4**, not MySQL 8.0 as the
-old schema header claimed. Migrations use portable syntax (`DROP CONSTRAINT`, not `DROP CHECK`).
-`memberships.permissions JSON` is stored as `LONGTEXT` with a JSON-valid CHECK on MariaDB — fine for
-our use. Headers now say `MariaDB 10.4+ / MySQL 8.0.19+`.
+### What changed, by phase
+| Phase | Commit(s) | What |
+| --- | --- | --- |
+| 0 | `9e8768e` | Finished the half-done `divisions` removal (was breaking catalog/products/reports); de-branded "South Center" (Jenkinsfile → params, guides → placeholders, marketing page deleted); safe cleanup (debug route, ErrorBoundary, 404 route, dropped unused deps). |
+| 1 | `798dd0d` | Storefront + customer login disabled behind `STOREFRONT_ENABLED` (default off). All storefront code kept in-repo, unmounted. |
+| 2 | `601d95c` | `businesses` + `memberships` tables, `users.is_super_admin`; `business_id` on all 13 tenant tables + per-business composite uniques; `warehouse`→`business_settings`; migrations `03`–`06` + rewritten `01`/`02`. |
+| 3 | `22818a7` | Access token → `{ sub, role, isSuperAdmin, memberships:[{b,r}] }`; `resolveBusiness` / `requireBusinessRole` / `requireSuperAdmin` middleware; `/auth/me` business list; multi-tab refresh grace window (migration `07`). |
+| 4 | `93c38af` | `/api/businesses` (super admin CRUD) + `/api/b/:id/members` (business admin); last-admin guards. |
+| 5 | `d857acf` `86209ba` `f3504b2` `edb0d21` | All 15 tenant modules under `/api/b/:businessId/...`, every query business-scoped; `delete-all-data` resets one business, not the DB. |
+| 6 | `1f866c7` `3e0edc9` | Frontend routes under `/b/:businessId`; axios path-rewrite (no per-feature `businessId`); `BusinessGate`, business switcher, `/businesses` picker; per-business Members UI; `useCurrentBusinessRole()` for in-page gating. |
+| 7 | `ba27719` | `SuperAdminShell` + `/admin/businesses` / `/admin/users` / `/admin/sessions`; `features/businesses/`; `features/users/` re-homed. |
+| 8 | `09a14c3` + this | CLAUDE.md rewritten for multi-tenancy; Playwright suite restructured (needs `npm install` in `testing/` to run); `delete-all-data` media-unlink ref-check; deployment guide updated. |
+
+### Known follow-ups (not blocking; noted for later)
+- **Backend has no working ESLint config** — verified throughout with `node --check` + boot + live
+  integration tests instead. Adding a flat config needs `@eslint/js` + `globals` as devDeps.
+- **Playwright** is structurally updated but unverified end-to-end (no `testing/node_modules`).
+  `playwright.config.js` starts only the frontend — a backend + seeded-DB `webServer` entry would
+  make the suite self-contained.
+- **`users.role`** is still on the row (transitional) — only meaningful for dormant `customer`
+  rows now. A later cleanup could drop it once nothing reads it.
+- **Staff granular permissions** — `memberships.permissions` JSON column ships unused; the future
+  work is purely additive (a `requirePermission` middleware + UI).
+- **Storefront re-enable** — flip `STOREFRONT_ENABLED`, re-mount the `/store` routes, and wire the
+  `/public` reads + `notice`/`social_links`/`site_branding`/`hero_slides` to the business in the URL.
+- **`/b/:businessId/warehouse`** — the frontend *route path* string is still `warehouse` though the
+  module/table/feature are all `business-settings`. Cosmetic; renaming touches Playwright selectors.
+
+### DB engine note
+The dev DB and the cPanel host both run **MariaDB 10.4**, not MySQL 8.0 as the old schema header
+claimed. Migrations use portable syntax (`DROP CONSTRAINT`, not `DROP CHECK`).
+`memberships.permissions JSON` is `LONGTEXT` + JSON-valid CHECK on MariaDB. Headers now say
+`MariaDB 10.4+ / MySQL 8.0.19+`.
 
 ---
 

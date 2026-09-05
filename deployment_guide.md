@@ -63,7 +63,6 @@ Create `~/<app-domain>/api/.env` (via File Manager or terminal), based on `.env.
 ```
 NODE_ENV=production
 APP_PORT=<whatever the Node Selector assigned/expects — check the app's "Detected configuration">
-FRONTEND_URL=https://<app-domain>
 DB_HOST=127.0.0.1
 DB_NAME=<cpanel db name>
 DB_USER=<cpanel db user>
@@ -73,13 +72,30 @@ JWT_REFRESH_SECRET=<generate strong random>
 CORS_ALLOWED_ORIGINS=https://<app-domain>
 MEDIA_UPLOAD_DIR=uploads/media
 MEDIA_PUBLIC_PATH=/media-files
+STOREFRONT_ENABLED=false
+# MSG91 is only used by the (currently disabled) customer OTP flow, but the vars are still required at boot:
+MSG91_AUTH_KEY=<msg91 auth key>
+MSG91_WIDGET_ID=<msg91 widget id>
 ```
+
+`STOREFRONT_ENABLED=false` keeps the customer storefront + customer auth (register/OTP) off — the app
+is currently the multi-tenant admin panel only. See `CLAUDE.md` → "On Hold" and `multitenant_plan.md`.
 
 Note: `npm start` runs with `--env-file=.env`, so the `.env` file must sit in the app root next to `package.json`.
 
 ## 6. Database
 
-Create the MySQL DB + user in cPanel → **MySQL Databases**, assign user to DB with full privileges. Import schema via **phpMyAdmin** (`database/` folder in repo has the schema/migrations — import in order).
+Create the MySQL DB + user in cPanel → **MySQL Databases**, assign user to DB with full privileges
+(engine is **MariaDB 10.x** on cPanel). Import via **phpMyAdmin**, in order:
+
+- **Fresh install:** `database/init/01_schema.sql` then `database/init/02_seed.sql`. The seed creates a
+  platform **super admin** (`admin@example.com` / `NewPassword@123` — change this immediately) plus two
+  demo businesses. From there the super admin creates real businesses and assigns their admins in the
+  app (`/#/admin/businesses`).
+- **Existing DB (pre-multi-tenant):** run the numbered migrations `03_*.sql` … `07_*.sql` in order
+  (each targets a specific prior state — a DB already past a given step skips that file). `01_schema.sql`
+  always reflects current head.
+- Every schema change after this gets a new `08_*.sql`, `09_*.sql`, … (see `CLAUDE.md` → migrations).
 
 ## 7. Media uploads path
 
