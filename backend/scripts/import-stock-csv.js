@@ -48,7 +48,7 @@ const BATCH_CHECK_CHUNK = 1000;
 const PAIR_MATCH_CHUNK = 300;
 
 /** Natural batch identity — matches the grouping used to collapse per-unit stock into
- * batches (see database/init/05_remove_stock_barcodes.sql). Two rows with the same key
+ * batches when barcodes were dropped in favour of quantity-based intake. Two rows with the same key
  * represent the same intake batch. price/discountPercent are normalized to a fixed
  * 2-decimal string since mysql2 returns DECIMAL columns as strings (e.g. "899.00") while
  * freshly parsed file rows carry plain numbers (899). */

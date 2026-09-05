@@ -10,9 +10,11 @@
 -- -----------------------------------------------------------------------------
 -- This init script only runs on a fresh database and always reflects current
 -- head — every table below already includes every column/constraint added
--- since the project started. An already-provisioned (older) DB catches up by
--- running the numbered migration files in this directory in order (e.g.
--- 03_add_catalog_sort_order.sql), not by re-reading this file's history.
+-- since the project started. Migrations 03–19 have been folded into this file
+-- and 02_seed.sql and removed; the numbered sequence restarts at
+-- 03_<description>.sql for the next schema change. An already-provisioned
+-- (older) DB catches up by running the numbered migration files in this
+-- directory in order, not by re-reading this file's history.
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================

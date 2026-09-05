@@ -30,6 +30,9 @@ frontend/dist/
 backend/uploads/
 !backend/uploads/.gitkeep
 
+# ---- Local database dumps ----
+database/backups/
+
 # ---- Testing / coverage ----
 coverage/
 .nyc_output/
