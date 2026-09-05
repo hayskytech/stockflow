@@ -12,8 +12,7 @@ Status / progress (branch `multi-tenant-saas`):
   - ✅ 5A: catalog, sizes, media, stock-ledger, warehouse→business-settings, users, notice (`d857acf`)
   - ✅ 5B: stock, products (`86209ba`)
   - ✅ 5C: orders, dispatches, reports (`f3504b2`)
-  - 🔄 5D: hero-slides, settings  ← in progress
-  - ⬜ 5D: hero-slides, settings (social/branding/delete-all-data)
+  - 🔄 5D: hero-slides, settings (social/branding/delete-all-data)  ← in progress
 - ⬜ **Phase 6** — frontend tenancy
 - ⬜ **Phase 7** — super-admin frontend
 - ⬜ **Phase 8** — tests, docs, polish
