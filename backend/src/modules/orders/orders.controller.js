@@ -1,3 +1,4 @@
+import { ENV } from '../../config/env.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { setPaginationHeaders } from '../../middleware/pagination.js';
 import {
@@ -49,6 +50,12 @@ export async function getOrder(req, res, next) {
 export async function createOrder(req, res, next) {
   try {
     const input = parseOrThrow(createOrderSchema, req.body);
+    // TODO(phase-5): orders module moves under /api/b/:businessId
+    // Multi-tenant migration Phase 1: with the storefront disabled, a customer-role caller
+    // placing any order is treated as if the route does not exist. Admin/staff unaffected.
+    if (!ENV.STOREFRONT_ENABLED && req.user.role === 'customer') {
+      throw new AppError(404, 'Not found');
+    }
     const isManualOrder = input.requestedFor !== undefined || input.paymentMethod === 'offline';
     if (isManualOrder && req.user.role !== 'admin' && req.user.role !== 'staff') {
       throw new AppError(403, 'Only admin or staff can create manual orders');

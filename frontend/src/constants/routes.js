@@ -57,7 +57,11 @@ export const ROUTES = {
   PROFILE: "/profile",
 }
 
-/** The landing route for a user after login/registration, based on their role. */
-export function landingPathForRole(role) {
-  return role === "customer" ? ROUTES.STORE.HOME : ROUTES.DASHBOARD
+/**
+ * The landing route for a user after login. Only admin/staff log in now (the storefront and
+ * customer login are unmounted — see multitenant_plan.md Phase 1), so this is always the dashboard.
+ * Kept as a function because call sites still use it and Phase 6 will reintroduce per-user landing.
+ */
+export function landingPathForRole() {
+  return ROUTES.DASHBOARD
 }

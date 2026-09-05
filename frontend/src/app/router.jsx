@@ -1,6 +1,6 @@
+// Storefront routes (/store/*, /register) are unmounted — storefront on hold, see multitenant_plan.md Phase 1.
 import { createHashRouter, Navigate } from "react-router-dom"
 import { AppShell } from "@/components/layout/AppShell"
-import { StoreShell } from "@/components/layout/StoreShell"
 import { RouteErrorPage } from "@/components/common/RouteErrorPage"
 import { NotFoundPage } from "@/components/common/error-pages"
 import { ProtectedRoute } from "@/app/ProtectedRoute"
@@ -8,16 +8,9 @@ import { ROUTES } from "@/constants/routes"
 import { ROLES } from "@/constants/app"
 import { CRUMBS } from "@/constants/breadcrumbs"
 import { LoginPage } from "@/features/auth/pages/LoginPage"
-import { RegisterPage } from "@/features/auth/pages/RegisterPage"
 import { ChangePasswordPage } from "@/features/auth/pages/ChangePasswordPage"
 import { ProfilePage } from "@/features/auth/pages/ProfilePage"
-import { CompleteProfilePage } from "@/features/auth/pages/CompleteProfilePage"
-import { HomePage } from "@/features/home/pages/HomePage"
-import { ProductDetailPage } from "@/features/product-detail/pages/ProductDetailPage"
-import { CategoryPage } from "@/features/category-detail/pages/CategoryPage"
 import { ProductDetailPage as AdminProductDetailPage } from "@/features/products/pages/ProductDetailPage"
-import { CartPage } from "@/features/cart/pages/CartPage"
-import { CheckoutPage } from "@/features/checkout/pages/CheckoutPage"
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage"
 import { WarehousePage } from "@/features/warehouse/pages/WarehousePage"
 import { CategoriesPage } from "@/features/catalog/pages/CategoriesPage"
@@ -34,8 +27,6 @@ import { NewOrderPage } from "@/features/orders/pages/NewOrderPage"
 import { DispatchesPage } from "@/features/dispatches/pages/DispatchesPage"
 import { DispatchDetailPage } from "@/features/dispatches/pages/DispatchDetailPage"
 import { DispatchOrderPage } from "@/features/dispatches/pages/DispatchOrderPage"
-import { MyOrdersPage } from "@/features/my-orders/pages/MyOrdersPage"
-import { MyOrderDetailPage } from "@/features/my-orders/pages/MyOrderDetailPage"
 import { ReportsPage } from "@/features/reports/pages/ReportsPage"
 import { UsersPage } from "@/features/users/pages/UsersPage"
 import { UserViewPage } from "@/features/users/pages/UserViewPage"
@@ -51,10 +42,6 @@ export const router = createHashRouter([
     element: <LoginPage />,
   },
   {
-    path: ROUTES.AUTH.REGISTER,
-    element: <RegisterPage />,
-  },
-  {
     path: ROUTES.AUTH.CHANGE_PASSWORD,
     element: (
       <ProtectedRoute>
@@ -63,73 +50,8 @@ export const router = createHashRouter([
     ),
   },
   {
-    // Public storefront layout — browsing (home + product detail) needs no login;
-    // cart/checkout/order-history are gated per-child below since they're account-owned.
-    path: ROUTES.STORE.HOME,
-    element: <StoreShell />,
-    errorElement: <RouteErrorPage />,
-    children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
-      {
-        path: "products/:id",
-        element: <ProductDetailPage />,
-      },
-      {
-        path: "categories/:id",
-        element: <CategoryPage />,
-      },
-      {
-        // Where an OTP login lands when it just created the account — signed in, but with
-        // nothing on file beyond the phone number it verified.
-        path: "complete-profile",
-        element: (
-          <ProtectedRoute>
-            <CompleteProfilePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "cart",
-        element: (
-          <ProtectedRoute>
-            <CartPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "checkout",
-        element: (
-          <ProtectedRoute>
-            <CheckoutPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "orders",
-        element: (
-          <ProtectedRoute>
-            <MyOrdersPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "orders/:id",
-        element: (
-          <ProtectedRoute>
-            <MyOrderDetailPage />
-          </ProtectedRoute>
-        ),
-      },
-    ],
-  },
-  {
-    // Home URL always lands on the public store — dashboard is reached via the
-    // account dropdown (admin/staff only), never the default landing page.
     path: "/",
-    element: <Navigate to={ROUTES.STORE.HOME} replace />,
+    element: <Navigate to={ROUTES.DASHBOARD} replace />,
   },
   {
     element: (

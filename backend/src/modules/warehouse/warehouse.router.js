@@ -5,6 +5,7 @@ import { getWarehouse, getPublicWarehouse, updateWarehouse } from './warehouse.c
 
 export const warehouseRouter = Router();
 
+// storefront-adjacent: kept public for the login screen
 // Public — no auth: login/register pages need the site name before a session exists.
 warehouseRouter.get('/public', getPublicWarehouse);
 // Read is open to any authenticated role — customers need bank transfer details at checkout.

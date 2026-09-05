@@ -30,6 +30,11 @@ export function App() {
 
     refreshApi()
       .then(({ user, accessToken }) => {
+        // Storefront is on hold — a leftover customer session has no home here.
+        if (user?.role !== "admin" && user?.role !== "staff") {
+          clearAuth()
+          return
+        }
         setAuth(user, accessToken)
       })
       .catch(() => {

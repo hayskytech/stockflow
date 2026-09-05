@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/requireRole.js';
+import { storefrontEnabled } from '../../middleware/storefrontEnabled.js';
 import {
   deleteAllData,
   getPublicSiteBranding,
@@ -14,12 +15,14 @@ import {
 export const settingsRouter = Router();
 
 // Public — no auth: the storefront footer needs the social links for every visitor.
-settingsRouter.get('/social/public', getPublicSocialLinks);
+// Gated by storefrontEnabled (multi-tenant migration Phase 1).
+settingsRouter.get('/social/public', storefrontEnabled, getPublicSocialLinks);
 settingsRouter.get('/social', authenticate, getSocialLinks);
 settingsRouter.put('/social', authenticate, requireRole('admin'), updateSocialLinks);
 
 // Public — no auth: the storefront header (logo) and browser tab (favicon) need this for every visitor.
-settingsRouter.get('/branding/public', getPublicSiteBranding);
+// Gated by storefrontEnabled (multi-tenant migration Phase 1).
+settingsRouter.get('/branding/public', storefrontEnabled, getPublicSiteBranding);
 settingsRouter.get('/branding', authenticate, getSiteBranding);
 settingsRouter.put('/branding', authenticate, requireRole('admin'), updateSiteBranding);
 

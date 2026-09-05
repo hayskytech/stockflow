@@ -9,7 +9,7 @@ test.describe("Sub-categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await categoriesPage.selectCategoryForSubCategories(categoryName)
@@ -28,7 +28,7 @@ test.describe("Sub-categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await categoriesPage.selectCategoryForSubCategories(categoryName)
@@ -52,7 +52,7 @@ test.describe("Sub-categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await categoriesPage.selectCategoryForSubCategories(categoryName)
@@ -74,7 +74,7 @@ test.describe("Sub-categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await categoriesPage.selectCategoryForSubCategories(categoryName)

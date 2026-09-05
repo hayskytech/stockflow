@@ -8,7 +8,7 @@ test.describe("Categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await expect(categoriesPage.categoryRowByText(categoryName)).toBeVisible()
@@ -21,7 +21,7 @@ test.describe("Categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: originalName })
+    await categoriesPage.fillCategoryForm({ name: originalName })
     await categoriesPage.saveCategory()
 
     await expect(categoriesPage.categoryRowByText(originalName)).toBeVisible()
@@ -39,7 +39,7 @@ test.describe("Categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await categoriesPage.openEditCategoryModal(categoryName)
@@ -55,7 +55,7 @@ test.describe("Categories", () => {
 
     await categoriesPage.goto()
     await categoriesPage.openAddCategoryModal()
-    await categoriesPage.fillCategoryForm({ divisionIndex: 0, name: categoryName })
+    await categoriesPage.fillCategoryForm({ name: categoryName })
     await categoriesPage.saveCategory()
 
     await expect(categoriesPage.categoryRowByText(categoryName)).toBeVisible()

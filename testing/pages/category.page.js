@@ -4,7 +4,6 @@ export class CategoriesPage {
 
     this.addCategoryButton = page.getByRole("button", { name: /add category/i })
     this.categoryNameInput = page.locator("#category-name")
-    this.categoryDivisionSelect = page.locator("#category-division")
     this.categoryActiveCheckbox = page.locator("#category-active")
 
     this.addSubCategoryButton = page.getByRole("button", { name: /add sub-category/i })
@@ -47,11 +46,7 @@ export class CategoriesPage {
     await this.categoryNameInput.waitFor({ state: "visible" })
   }
 
-  async fillCategoryForm({ divisionIndex, name, isActive } = {}) {
-    if (divisionIndex !== undefined) {
-      await this.categoryDivisionSelect.locator("option").nth(divisionIndex + 1).waitFor({ state: "attached" })
-      await this.categoryDivisionSelect.selectOption({ index: divisionIndex + 1 })
-    }
+  async fillCategoryForm({ name, isActive } = {}) {
     if (name !== undefined) await this.categoryNameInput.fill(name)
     if (isActive !== undefined) {
       const checked = await this.categoryActiveCheckbox.isChecked()

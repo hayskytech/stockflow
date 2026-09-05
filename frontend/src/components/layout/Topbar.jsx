@@ -50,18 +50,6 @@ export function Topbar({ onToggleSidebar }) {
       </ul>
 
       <ul className="navbar-nav ml-auto">
-        <li className="nav-item">
-          <a
-            id="view-store-link"
-            href={`/#${ROUTES.STORE.HOME}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="nav-link"
-          >
-            <i className="fas fa-store mr-md-1" />
-            <span className="d-none d-md-inline">View Store</span>
-          </a>
-        </li>
         <li ref={menuRef} className={`nav-item dropdown ${menuOpen ? "show" : ""}`}>
           <button
             type="button"

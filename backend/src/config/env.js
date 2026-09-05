@@ -22,6 +22,10 @@ export const ENV = {
   APP_NAME: optional('APP_NAME', 'StockFlow'),
   FRONTEND_URL: optional('FRONTEND_URL', ''),
 
+  // Multi-tenant migration Phase 1: the customer storefront and customer authentication are
+  // disabled behind this flag. Default off — admin/staff email+password login is unaffected.
+  STOREFRONT_ENABLED: optional('STOREFRONT_ENABLED', 'false') === 'true',
+
   DB_HOST: required('DB_HOST'),
   DB_PORT: parseInt(optional('DB_PORT', '3306'), 10),
   DB_NAME: required('DB_NAME'),

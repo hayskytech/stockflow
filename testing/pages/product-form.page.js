@@ -3,7 +3,6 @@ export class ProductFormPage {
     this.page = page
     this.productCodeInput = page.locator("#product-code")
     this.nameInput = page.locator("#product-name")
-    this.divisionSelect = page.locator("#product-division")
     this.categorySelect = page.locator("#product-category")
     this.mrpInput = page.locator("#product-mrp")
     this.wspInput = page.locator("#product-wsp")
@@ -16,9 +15,6 @@ export class ProductFormPage {
   async fillNewProduct({ productCode, name, mrp, wsp, quantityAvailable, unit = "pc" }) {
     await this.productCodeInput.fill(productCode)
     await this.nameInput.fill(name)
-
-    await this.divisionSelect.locator("option").nth(1).waitFor({ state: "attached" })
-    await this.divisionSelect.selectOption({ index: 1 })
 
     await this.categorySelect.locator("option").nth(1).waitFor({ state: "attached" })
     await this.categorySelect.selectOption({ index: 1 })

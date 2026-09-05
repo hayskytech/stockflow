@@ -38,7 +38,8 @@ test.describe("Login", () => {
    * "Send Code" against anything but an MSG91 Demo Credential texts a real handset. What is
    * asserted instead is the part that costs nothing: the step gate itself.
    */
-  test("keeps the OTP code field out of reach until a code has been sent", async ({ page }) => {
+  // storefront on hold (multitenant_plan.md Phase 1)
+  test.skip("keeps the OTP code field out of reach until a code has been sent", async ({ page }) => {
     const loginPage = new LoginPage(page)
     await loginPage.goto()
 

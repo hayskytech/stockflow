@@ -19,18 +19,20 @@ export class LoginPage {
   }
 
   /**
-   * Signs in with a password. `identifier` is an email (admin/staff) or a phone number
-   * (customers). The page opens on the OTP tab, so this switches tabs first — the password form
-   * is not in the DOM until then.
+   * Signs in with a password. `identifier` is an email (admin/staff) or a phone number.
+   * The mode toggle and the OTP tab are unmounted — storefront & customer login on hold
+   * (multitenant_plan.md Phase 1) — so the password form is the only form on the page.
    */
   async login(identifier, password) {
-    await this.passwordModeTab.click()
     await this.identifierInput.fill(identifier)
     await this.passwordInput.fill(password)
     await this.passwordSubmitButton.click()
   }
 
   /**
+   * storefront on hold (multitenant_plan.md Phase 1) — the OTP login mode is unmounted, so this
+   * helper is currently dead (kept for when the storefront is re-enabled).
+   *
    * Signs in with phone + OTP. Only usable against an MSG91 Demo Credential — a real number
    * gets a real SMS that no test can read (see CLAUDE.md > OTP).
    *
