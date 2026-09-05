@@ -1,8 +1,8 @@
 import { executeQuery } from '../../db/query.js';
-import { AppError } from '../../middleware/errorHandler.js';
 
 const NOTICE_COLUMNS = `
-  id, message, is_active AS isActive, created_at AS createdAt, updated_at AS updatedAt
+  business_id AS businessId, message, is_active AS isActive,
+  created_at AS createdAt, updated_at AS updatedAt
 `;
 
 const COLUMN_MAP = {
@@ -10,33 +10,44 @@ const COLUMN_MAP = {
   isActive: 'is_active',
 };
 
-export async function getNotice() {
-  const [row] = await executeQuery(`SELECT ${NOTICE_COLUMNS} FROM notice WHERE id = 1`);
-  if (!row) throw new AppError(404, 'Notice board has not been configured yet');
-  return row;
+/** A business with no notice row yet reads back a default (inactive, no message). */
+export async function getNotice(businessId) {
+  const [row] = await executeQuery(`SELECT ${NOTICE_COLUMNS} FROM notice WHERE business_id = ?`, [businessId]);
+  return row ?? { businessId, message: null, isActive: false, createdAt: null, updatedAt: null };
 }
 
-/** Public subset for the unauthenticated storefront — empty when the notice is switched off. */
+/**
+ * Public subset for the unauthenticated storefront — empty when the notice is switched off.
+ * TODO(storefront): needs business context when re-enabled — the storefront is disabled so this
+ * is unreachable (the route is storefrontEnabled-gated and 404s before this runs).
+ */
 export async function getPublicNotice() {
-  const [row] = await executeQuery(`SELECT message, is_active AS isActive FROM notice WHERE id = 1`);
-  if (!row || !row.isActive || !row.message) return { message: null };
-  return { message: row.message };
+  return { message: null };
 }
 
-export async function updateNotice(input) {
-  await getNotice(); // 404s if the single settings row doesn't exist yet
-
-  const fields = [];
+/** Upsert — creates the notice row on first write, merges into it thereafter. */
+export async function updateNotice(businessId, input) {
+  const columns = [];
+  const placeholders = [];
   const params = [];
+  const updates = [];
   for (const [key, column] of Object.entries(COLUMN_MAP)) {
     if (input[key] !== undefined) {
-      fields.push(`${column} = ?`);
+      columns.push(column);
+      placeholders.push('?');
       params.push(input[key] === '' ? null : input[key]);
+      updates.push(`${column} = VALUES(${column})`);
     }
   }
-  if (fields.length === 0) return getNotice();
 
-  params.push(1);
-  await executeQuery(`UPDATE notice SET ${fields.join(', ')} WHERE id = ?`, params);
-  return getNotice();
+  if (columns.length === 0) return getNotice(businessId);
+
+  await executeQuery(
+    `INSERT INTO notice (business_id, ${columns.join(', ')})
+     VALUES (?, ${placeholders.join(', ')})
+     ON DUPLICATE KEY UPDATE ${updates.join(', ')}`,
+    [businessId, ...params],
+  );
+
+  return getNotice(businessId);
 }

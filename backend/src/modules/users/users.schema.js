@@ -32,6 +32,7 @@ export const createUserSchema = z.object({
   role: roleField,
   password: passwordPolicy,
   isActive: z.boolean().optional(),
+  isSuperAdmin: z.boolean().optional(),
   ...profileFields,
 });
 
@@ -43,6 +44,7 @@ export const updateUserSchema = z
     role: roleField.optional(),
     password: passwordPolicy.optional(),
     isActive: z.boolean().optional(),
+    isSuperAdmin: z.boolean().optional(),
     ...profileFields,
   })
   .refine((data) => Object.keys(data).length > 0, { message: 'At least one field is required' });

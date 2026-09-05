@@ -14,11 +14,11 @@ const SORT_COLUMNS = {
 };
 
 /** Read-only list over the append-only movement log — there are no write endpoints here. */
-export async function listStockLedger(listQuery, filters) {
+export async function listStockLedger(businessId, listQuery, filters) {
   const { perPage, offset, search, orderby, order } = listQuery;
 
-  const conditions = [];
-  const params = [];
+  const conditions = ['l.business_id = ?'];
+  const params = [businessId];
   if (search) {
     conditions.push('(p.name LIKE ? OR p.product_code LIKE ? OR l.note LIKE ?)');
     params.push(`%${search}%`, `%${search}%`, `%${search}%`);

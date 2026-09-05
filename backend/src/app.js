@@ -9,12 +9,13 @@ import { generalLimiter } from "./middleware/rateLimiter.js";
 import { requireBusinessRole } from "./middleware/requireBusinessRole.js";
 import { resolveBusiness } from "./middleware/resolveBusiness.js";
 import { authRouter } from "./modules/auth/auth.router.js";
+import { businessSettingsRouter } from "./modules/business-settings/business-settings.router.js";
 import { businessMembersRouter, businessesRouter } from "./modules/businesses/businesses.router.js";
 import { catalogRouter } from "./modules/catalog/catalog.router.js";
 import { dispatchesRouter } from "./modules/dispatches/dispatches.router.js";
 import { heroSlidesRouter } from "./modules/heroSlides/heroSlides.router.js";
 import { mediaRouter } from "./modules/media/media.router.js";
-import { noticeRouter } from "./modules/notice/notice.router.js";
+import { noticePublicRouter, noticeRouter } from "./modules/notice/notice.router.js";
 import { ordersRouter } from "./modules/orders/orders.router.js";
 import { productsRouter } from "./modules/products/products.router.js";
 import { reportsRouter } from "./modules/reports/reports.router.js";
@@ -23,7 +24,6 @@ import { sizesRouter } from "./modules/sizes/sizes.router.js";
 import { stockRouter } from "./modules/stock/stock.router.js";
 import { stockLedgerRouter } from "./modules/stockLedger/stockLedger.router.js";
 import { adminSessionsRouter, usersRouter } from "./modules/users/users.router.js";
-import { warehouseRouter } from "./modules/warehouse/warehouse.router.js";
 
 const app = express();
 
@@ -58,6 +58,7 @@ app.use(cookieParser());
 
 // Uploaded media is served as plain static files (referenced directly in <img src>, which can't
 // send an Authorization header) — cross-origin-resource-policy is relaxed only for this path.
+// NOTE: media files on disk are not tenant-partitioned; the media table is.
 app.use(
   ENV.MEDIA_PUBLIC_PATH,
   (_req, res, next) => {
@@ -76,17 +77,19 @@ app.use(
   requireBusinessRole("admin"),
   businessMembersRouter,
 );
-app.use("/api", catalogRouter);
-app.use("/api/products", productsRouter);
-app.use("/api/sizes", sizesRouter);
-app.use("/api/stock", stockRouter);
-app.use("/api/stock-ledger", stockLedgerRouter);
-app.use("/api/media", mediaRouter);
-app.use("/api/hero-slides", heroSlidesRouter);
-app.use("/api/notice", noticeRouter);
+app.use("/api/b/:businessId", authenticate, resolveBusiness, catalogRouter);
+app.use("/api/b/:businessId/sizes", authenticate, resolveBusiness, sizesRouter);
+app.use("/api/b/:businessId/media", authenticate, resolveBusiness, mediaRouter);
+app.use("/api/b/:businessId/stock-ledger", authenticate, resolveBusiness, stockLedgerRouter);
+app.use("/api/b/:businessId/business-settings", authenticate, resolveBusiness, businessSettingsRouter);
+app.use("/api/b/:businessId/notice", authenticate, resolveBusiness, noticeRouter);
+app.use("/api/notice", noticePublicRouter); // just /public
 app.use("/api/users", usersRouter);
 app.use("/api/admin", adminSessionsRouter);
-app.use("/api/warehouse", warehouseRouter);
+// still flat (later batches — leave as-is, they don't need to work yet):
+app.use("/api/products", productsRouter);
+app.use("/api/stock", stockRouter);
+app.use("/api/hero-slides", heroSlidesRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/dispatches", dispatchesRouter);
 app.use("/api/reports", reportsRouter);

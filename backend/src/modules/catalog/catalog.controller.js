@@ -29,7 +29,7 @@ export async function listCategories(req, res, next) {
     const filters = parseOrThrow(listCategoriesQuerySchema, {
       isActive: req.query.is_active,
     });
-    const { rows, total } = await catalogService.listCategories(req.listQuery, filters);
+    const { rows, total } = await catalogService.listCategories(req.business.id, req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -41,7 +41,7 @@ export async function listCategories(req, res, next) {
 export async function getCategory(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    const category = await catalogService.getCategoryById(id);
+    const category = await catalogService.getCategoryById(req.business.id, id);
     res.status(200).json(category);
   } catch (err) {
     next(err);
@@ -52,7 +52,7 @@ export async function getCategory(req, res, next) {
 export async function createCategory(req, res, next) {
   try {
     const input = parseOrThrow(createCategorySchema, req.body);
-    const category = await catalogService.createCategory(input);
+    const category = await catalogService.createCategory(req.business.id, input);
     res.status(201).json(category);
   } catch (err) {
     next(err);
@@ -64,7 +64,7 @@ export async function updateCategory(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const input = parseOrThrow(updateCategorySchema, req.body);
-    const category = await catalogService.updateCategory(id, input);
+    const category = await catalogService.updateCategory(req.business.id, id, input);
     res.status(200).json(category);
   } catch (err) {
     next(err);
@@ -75,7 +75,7 @@ export async function updateCategory(req, res, next) {
 export async function deleteCategory(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    await catalogService.deleteCategory(id);
+    await catalogService.deleteCategory(req.business.id, id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -86,7 +86,7 @@ export async function deleteCategory(req, res, next) {
 export async function reorderCategories(req, res, next) {
   try {
     const { orderedIds } = parseOrThrow(reorderCategoriesSchema, req.body);
-    await catalogService.reorderCategories(orderedIds);
+    await catalogService.reorderCategories(req.business.id, orderedIds);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -104,7 +104,7 @@ export async function listSubCategories(req, res, next) {
       categoryId: req.query.category_id,
       isActive: req.query.is_active,
     });
-    const { rows, total } = await catalogService.listSubCategories(req.listQuery, filters);
+    const { rows, total } = await catalogService.listSubCategories(req.business.id, req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -116,7 +116,7 @@ export async function listSubCategories(req, res, next) {
 export async function createSubCategory(req, res, next) {
   try {
     const input = parseOrThrow(createSubCategorySchema, req.body);
-    const subCategory = await catalogService.createSubCategory(input);
+    const subCategory = await catalogService.createSubCategory(req.business.id, input);
     res.status(201).json(subCategory);
   } catch (err) {
     next(err);
@@ -128,7 +128,7 @@ export async function updateSubCategory(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const input = parseOrThrow(updateSubCategorySchema, req.body);
-    const subCategory = await catalogService.updateSubCategory(id, input);
+    const subCategory = await catalogService.updateSubCategory(req.business.id, id, input);
     res.status(200).json(subCategory);
   } catch (err) {
     next(err);
@@ -139,7 +139,7 @@ export async function updateSubCategory(req, res, next) {
 export async function deleteSubCategory(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    await catalogService.deleteSubCategory(id);
+    await catalogService.deleteSubCategory(req.business.id, id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -150,7 +150,7 @@ export async function deleteSubCategory(req, res, next) {
 export async function reorderSubCategories(req, res, next) {
   try {
     const { categoryId, orderedIds } = parseOrThrow(reorderSubCategoriesSchema, req.body);
-    await catalogService.reorderSubCategories(categoryId, orderedIds);
+    await catalogService.reorderSubCategories(req.business.id, categoryId, orderedIds);
     res.status(204).send();
   } catch (err) {
     next(err);

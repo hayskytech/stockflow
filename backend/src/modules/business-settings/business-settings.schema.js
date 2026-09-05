@@ -8,8 +8,8 @@ const optionalText = (max) =>
     .optional()
     .or(z.literal(''));
 
-/** PUT /api/warehouse — all fields optional, but at least one must be present */
-export const updateWarehouseSchema = z
+/** PUT /api/b/:businessId/business-settings — all fields optional, but at least one must be present */
+export const updateBusinessSettingsSchema = z
   .object({
     name: z.string().trim().min(1, 'Name is required').max(150, 'Name is too long').optional(),
     address: optionalText(500),

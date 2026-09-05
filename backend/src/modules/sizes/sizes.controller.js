@@ -9,10 +9,10 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/sizes */
+/** GET /api/b/:businessId/sizes */
 export async function listSizes(req, res, next) {
   try {
-    const { rows, total } = await sizesService.listSizes(req.listQuery);
+    const { rows, total } = await sizesService.listSizes(req.business.id, req.listQuery);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {
@@ -20,45 +20,45 @@ export async function listSizes(req, res, next) {
   }
 }
 
-/** POST /api/sizes */
+/** POST /api/b/:businessId/sizes */
 export async function createSize(req, res, next) {
   try {
     const input = parseOrThrow(createSizeSchema, req.body);
-    const size = await sizesService.createSize(input);
+    const size = await sizesService.createSize(req.business.id, input);
     res.status(201).json(size);
   } catch (err) {
     next(err);
   }
 }
 
-/** PUT /api/sizes/:id */
+/** PUT /api/b/:businessId/sizes/:id */
 export async function updateSize(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
     const input = parseOrThrow(updateSizeSchema, req.body);
-    const size = await sizesService.updateSize(id, input);
+    const size = await sizesService.updateSize(req.business.id, id, input);
     res.status(200).json(size);
   } catch (err) {
     next(err);
   }
 }
 
-/** DELETE /api/sizes/:id */
+/** DELETE /api/b/:businessId/sizes/:id */
 export async function deleteSize(req, res, next) {
   try {
     const { id } = parseOrThrow(idParamSchema, req.params);
-    await sizesService.deleteSize(id);
+    await sizesService.deleteSize(req.business.id, id);
     res.status(204).send();
   } catch (err) {
     next(err);
   }
 }
 
-/** PATCH /api/sizes/reorder */
+/** PATCH /api/b/:businessId/sizes/reorder */
 export async function reorderSizes(req, res, next) {
   try {
     const { orderedIds } = parseOrThrow(reorderSizesSchema, req.body);
-    await sizesService.reorderSizes(orderedIds);
+    await sizesService.reorderSizes(req.business.id, orderedIds);
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -1,10 +1,9 @@
 import { Router } from 'express';
 import multer, { MulterError } from 'multer';
 import { ENV } from '../../config/env.js';
-import { authenticate } from '../../middleware/auth.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import { pagination } from '../../middleware/pagination.js';
-import { requireRole } from '../../middleware/requireRole.js';
+import { requireBusinessRole } from '../../middleware/requireBusinessRole.js';
 import {
   attachUsage,
   deleteMedia,
@@ -19,7 +18,8 @@ import {
   uploadMedia,
 } from './media.controller.js';
 
-export const mediaRouter = Router();
+// Mounted in app.js at /api/b/:businessId/media behind `authenticate, resolveBusiness`.
+export const mediaRouter = Router({ mergeParams: true });
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
@@ -54,14 +54,15 @@ function handleUpload(req, res, next) {
   });
 }
 
-mediaRouter.get('/', authenticate, mediaPagination, listMedia);
-mediaRouter.get('/:id', authenticate, getMedia);
-mediaRouter.get('/:id/usage', authenticate, getMediaUsage);
-mediaRouter.get('/:id/related', authenticate, getRelatedMedia);
-mediaRouter.post('/', authenticate, requireRole('admin', 'staff'), handleUpload, uploadMedia);
-mediaRouter.patch('/:id', authenticate, requireRole('admin', 'staff'), renameMedia);
-mediaRouter.post('/:id/file', authenticate, requireRole('admin', 'staff'), handleUpload, replaceMediaFile);
-mediaRouter.post('/:id/usage', authenticate, requireRole('admin', 'staff'), attachUsage);
-mediaRouter.delete('/:id/usage', authenticate, requireRole('admin', 'staff'), detachUsage);
-mediaRouter.delete('/:id', authenticate, requireRole('admin', 'staff'), deleteMedia);
-mediaRouter.post('/sweep-orphans', authenticate, requireRole('admin'), sweepOrphans);
+// Reads are member-only (any admin/staff of the business); writes are admin/staff.
+mediaRouter.get('/', mediaPagination, listMedia);
+mediaRouter.get('/:id', getMedia);
+mediaRouter.get('/:id/usage', getMediaUsage);
+mediaRouter.get('/:id/related', getRelatedMedia);
+mediaRouter.post('/', requireBusinessRole('admin', 'staff'), handleUpload, uploadMedia);
+mediaRouter.patch('/:id', requireBusinessRole('admin', 'staff'), renameMedia);
+mediaRouter.post('/:id/file', requireBusinessRole('admin', 'staff'), handleUpload, replaceMediaFile);
+mediaRouter.post('/:id/usage', requireBusinessRole('admin', 'staff'), attachUsage);
+mediaRouter.delete('/:id/usage', requireBusinessRole('admin', 'staff'), detachUsage);
+mediaRouter.delete('/:id', requireBusinessRole('admin', 'staff'), deleteMedia);
+mediaRouter.post('/sweep-orphans', requireBusinessRole('admin'), sweepOrphans);

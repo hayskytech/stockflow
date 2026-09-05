@@ -6,7 +6,7 @@ import { AppError } from '../../middleware/errorHandler.js';
 import { generateRefreshToken, hashRefreshToken, signAccessToken } from '../../utils/jwt.js';
 import { logger } from '../../utils/logger.js';
 import { sendOtp as sendProviderOtp, verifyOtp as verifyProviderOtp } from '../../utils/msg91.js';
-import { getPublicWarehouseInfo } from '../warehouse/warehouse.service.js';
+import { getPublicSettingsDefaults } from '../business-settings/business-settings.service.js';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
@@ -107,7 +107,8 @@ const genericOtpError = () =>
 
 /** MSG91 wants the country code with no leading `+` (e.g. 919876543210). */
 async function toProviderIdentifier(phone) {
-  const { phoneCountryCode } = await getPublicWarehouseInfo();
+  // OTP flow is disabled; static default is fine.
+  const { phoneCountryCode } = getPublicSettingsDefaults();
   return `${phoneCountryCode.replace('+', '')}${phone}`;
 }
 

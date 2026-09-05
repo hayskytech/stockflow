@@ -61,6 +61,12 @@ export async function updateUser(req, res, next) {
       throw new AppError(400, 'You cannot deactivate your own account');
     }
 
+    // Mirror of the self-deactivate guard: a super admin cannot strip their own super-admin flag
+    // (which would immediately lock them out of every platform route).
+    if (id === req.user.sub && input.isSuperAdmin === false) {
+      throw new AppError(400, 'You cannot remove your own super admin access');
+    }
+
     const user = await usersService.updateUser(id, input);
     res.status(200).json(user);
   } catch (err) {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth.js';
 import { pagination } from '../../middleware/pagination.js';
-import { requireRole } from '../../middleware/requireRole.js';
+import { requireSuperAdmin } from '../../middleware/requireSuperAdmin.js';
 import {
   createUser,
   deleteUser,
@@ -38,15 +38,14 @@ const adminSessionsPagination = pagination({
 usersRouter.get('/me/sessions', authenticate, listMySessions);
 usersRouter.delete('/me/sessions/:sessionId', authenticate, revokeMySession);
 
-// User management is admin-only across the board.
-usersRouter.get('/', authenticate, requireRole('admin'), usersPagination, listUsers);
-usersRouter.get('/:id', authenticate, requireRole('admin'), getUser);
-usersRouter.post('/', authenticate, requireRole('admin'), createUser);
-usersRouter.put('/:id', authenticate, requireRole('admin'), updateUser);
-usersRouter.delete('/:id', authenticate, requireRole('admin'), deleteUser);
+// Global user directory — platform super-admin only (this router stays flat, no business context).
+usersRouter.get('/', authenticate, requireSuperAdmin, usersPagination, listUsers);
+usersRouter.get('/:id', authenticate, requireSuperAdmin, getUser);
+usersRouter.post('/', authenticate, requireSuperAdmin, createUser);
+usersRouter.put('/:id', authenticate, requireSuperAdmin, updateUser);
+usersRouter.delete('/:id', authenticate, requireSuperAdmin, deleteUser);
 
-// Admin session management — viewing/terminating another user's session is admin-only
-// per the permission matrix ("View/terminate sessions — others").
-adminSessionsRouter.get('/sessions', authenticate, requireRole('admin'), adminSessionsPagination, listAllSessions);
-adminSessionsRouter.delete('/sessions/:sessionId', authenticate, requireRole('admin'), revokeAnySession);
-adminSessionsRouter.delete('/users/:id/sessions', authenticate, requireRole('admin'), revokeAllSessionsForUser);
+// Admin session management — viewing/terminating another user's session is platform super-admin only.
+adminSessionsRouter.get('/sessions', authenticate, requireSuperAdmin, adminSessionsPagination, listAllSessions);
+adminSessionsRouter.delete('/sessions/:sessionId', authenticate, requireSuperAdmin, revokeAnySession);
+adminSessionsRouter.delete('/users/:id/sessions', authenticate, requireSuperAdmin, revokeAllSessionsForUser);

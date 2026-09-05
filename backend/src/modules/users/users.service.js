@@ -5,7 +5,7 @@ import { AppError } from '../../middleware/errorHandler.js';
 
 // Never selects password_hash or token data — only safe, displayable fields.
 const USER_COLUMNS = `
-  id, name, email, role, is_active AS isActive,
+  id, name, email, role, is_active AS isActive, is_super_admin AS isSuperAdmin,
   phone, business_name AS businessName, address, town, district, state, pincode,
   profile_completed_at AS profileCompletedAt,
   last_login_at AS lastLoginAt, created_at AS createdAt, updated_at AS updatedAt
@@ -109,10 +109,10 @@ export async function createUser(input) {
     await executeQuery(
       // Name, email and a password are all mandatory here, so an admin-created account is
       // complete the moment it exists — unlike one minted by an OTP login.
-      `INSERT INTO users (id, name, email, password_hash, role, is_active, profile_completed_at,
+      `INSERT INTO users (id, name, email, password_hash, role, is_active, is_super_admin, profile_completed_at,
                            phone, business_name, address, town, district, state, pincode)
-       VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
-      [id, input.name, input.email, passwordHash, input.role, input.isActive ?? true, ...profileValues],
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
+      [id, input.name, input.email, passwordHash, input.role, input.isActive ?? true, input.isSuperAdmin ?? false, ...profileValues],
     );
     return getUserById(id);
   } catch (err) {
@@ -128,6 +128,7 @@ export async function updateUser(id, input) {
     email: 'email',
     role: 'role',
     isActive: 'is_active',
+    isSuperAdmin: 'is_super_admin',
     ...PROFILE_COLUMN_MAP,
   };
 

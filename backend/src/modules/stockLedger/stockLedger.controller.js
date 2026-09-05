@@ -9,7 +9,7 @@ function parseOrThrow(schema, data) {
   return parsed.data;
 }
 
-/** GET /api/stock-ledger */
+/** GET /api/b/:businessId/stock-ledger */
 export async function listStockLedger(req, res, next) {
   try {
     const filters = parseOrThrow(listStockLedgerQuerySchema, {
@@ -19,7 +19,7 @@ export async function listStockLedger(req, res, next) {
       dateFrom: req.query.date_from,
       dateTo: req.query.date_to,
     });
-    const { rows, total } = await stockLedgerService.listStockLedger(req.listQuery, filters);
+    const { rows, total } = await stockLedgerService.listStockLedger(req.business.id, req.listQuery, filters);
     setPaginationHeaders(res, total, req.listQuery.perPage);
     res.status(200).json(rows);
   } catch (err) {

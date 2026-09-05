@@ -27,10 +27,14 @@ function normalizeName(name) {
   return name.toLowerCase().replace(/[\s-]+/g, '');
 }
 
-/** Throws the given 409 message if another row (optionally scoped, optionally excluding one id) has an equivalent name. */
-async function assertNameNotTaken(table, name, message, { scopeColumn, scopeValue, excludeId } = {}) {
-  const conditions = [`${NORMALIZED_NAME_SQL} = ?`];
-  const params = [normalizeName(name)];
+/**
+ * Throws the given 409 message if another row in this business (optionally further scoped,
+ * optionally excluding one id) has an equivalent name. Always scoped to `businessId` — uniqueness
+ * is per-business (uq_categories_business_name / uq_sub_categories_business_category_name).
+ */
+async function assertNameNotTaken(table, businessId, name, message, { scopeColumn, scopeValue, excludeId } = {}) {
+  const conditions = [`${NORMALIZED_NAME_SQL} = ?`, 'business_id = ?'];
+  const params = [normalizeName(name), businessId];
   if (scopeColumn) {
     conditions.push(`${scopeColumn} = ?`);
     params.push(scopeValue);
@@ -43,11 +47,18 @@ async function assertNameNotTaken(table, name, message, { scopeColumn, scopeValu
   if (dup) throw new AppError(409, message);
 }
 
-/** New rows join at the end of manual drag-and-drop order, not the front (sort_order 0). */
-async function nextSortOrder(table, scopeColumn, scopeValue) {
-  const where = scopeColumn ? `WHERE ${scopeColumn} = ?` : '';
-  const params = scopeColumn ? [scopeValue] : [];
-  const [row] = await executeQuery(`SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table} ${where}`, params);
+/** New rows join at the end of this business's manual drag-and-drop order, not the front. */
+async function nextSortOrder(table, businessId, scopeColumn, scopeValue) {
+  const conditions = ['business_id = ?'];
+  const params = [businessId];
+  if (scopeColumn) {
+    conditions.push(`${scopeColumn} = ?`);
+    params.push(scopeValue);
+  }
+  const [row] = await executeQuery(
+    `SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM ${table} WHERE ${conditions.join(' AND ')}`,
+    params,
+  );
   return row.next;
 }
 
@@ -55,11 +66,11 @@ async function nextSortOrder(table, scopeColumn, scopeValue) {
 // Categories — top-level of the product tree (there are no divisions above them).
 // ---------------------------------------------------------------------------
 
-export async function listCategories(listQuery, filters) {
+export async function listCategories(businessId, listQuery, filters) {
   const { perPage, offset, search, orderby, order } = listQuery;
 
-  const conditions = [];
-  const params = [];
+  const conditions = ['c.business_id = ?'];
+  const params = [businessId];
   if (search) {
     conditions.push('c.name LIKE ?');
     params.push(`%${search}%`);
@@ -68,7 +79,7 @@ export async function listCategories(listQuery, filters) {
     conditions.push('c.is_active = ?');
     params.push(filters.isActive);
   }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
 
   const [rows, countRows] = await Promise.all([
     executeQuery(
@@ -81,20 +92,24 @@ export async function listCategories(listQuery, filters) {
   return { rows, total: countRows[0].total };
 }
 
-export async function getCategoryById(id) {
-  const [row] = await executeQuery(`SELECT ${CATEGORY_COLUMNS} FROM ${CATEGORY_FROM} WHERE c.id = ?`, [id]);
+export async function getCategoryById(businessId, id) {
+  const [row] = await executeQuery(
+    `SELECT ${CATEGORY_COLUMNS} FROM ${CATEGORY_FROM} WHERE c.id = ? AND c.business_id = ?`,
+    [id, businessId],
+  );
   if (!row) throw new AppError(404, 'Category not found');
   return row;
 }
 
-export async function createCategory(input) {
-  await assertNameNotTaken('categories', input.name, 'A category with this name already exists');
+export async function createCategory(businessId, input) {
+  await assertNameNotTaken('categories', businessId, input.name, 'A category with this name already exists');
 
   const id = crypto.randomUUID();
-  const sortOrder = await nextSortOrder('categories');
+  const sortOrder = await nextSortOrder('categories', businessId);
   try {
-    await executeQuery(`INSERT INTO categories (id, name, is_active, sort_order) VALUES (?, ?, ?, ?)`, [
+    await executeQuery(`INSERT INTO categories (id, business_id, name, is_active, sort_order) VALUES (?, ?, ?, ?, ?)`, [
       id,
+      businessId,
       input.name,
       input.isActive ?? true,
       sortOrder,
@@ -102,12 +117,12 @@ export async function createCategory(input) {
   } catch (err) {
     rethrowAsAppError(err, { onDuplicate: 'A category with this name already exists' });
   }
-  return getCategoryById(id);
+  return getCategoryById(businessId, id);
 }
 
-/** Persists a full manual reorder — every existing category id must be present exactly once. */
-export async function reorderCategories(orderedIds) {
-  const existing = await executeQuery(`SELECT id FROM categories`);
+/** Persists a full manual reorder — every category in this business must be present exactly once. */
+export async function reorderCategories(businessId, orderedIds) {
+  const existing = await executeQuery(`SELECT id FROM categories WHERE business_id = ?`, [businessId]);
   const existingIds = new Set(existing.map((row) => row.id));
   if (orderedIds.length !== existingIds.size || orderedIds.some((id) => !existingIds.has(id))) {
     throw new AppError(400, 'orderedIds must contain every category exactly once');
@@ -115,16 +130,18 @@ export async function reorderCategories(orderedIds) {
 
   await withTransaction(async (execute) => {
     for (const [index, id] of orderedIds.entries()) {
-      await execute(`UPDATE categories SET sort_order = ? WHERE id = ?`, [index, id]);
+      await execute(`UPDATE categories SET sort_order = ? WHERE id = ? AND business_id = ?`, [index, id, businessId]);
     }
   });
 }
 
-export async function updateCategory(id, input) {
-  await getCategoryById(id);
+export async function updateCategory(businessId, id, input) {
+  await getCategoryById(businessId, id);
 
   if (input.name !== undefined) {
-    await assertNameNotTaken('categories', input.name, 'A category with this name already exists', { excludeId: id });
+    await assertNameNotTaken('categories', businessId, input.name, 'A category with this name already exists', {
+      excludeId: id,
+    });
   }
 
   const fields = [];
@@ -138,19 +155,19 @@ export async function updateCategory(id, input) {
     params.push(input.isActive);
   }
 
-  params.push(id);
+  params.push(id, businessId);
   try {
-    await executeQuery(`UPDATE categories SET ${fields.join(', ')} WHERE id = ?`, params);
+    await executeQuery(`UPDATE categories SET ${fields.join(', ')} WHERE id = ? AND business_id = ?`, params);
   } catch (err) {
     rethrowAsAppError(err, { onDuplicate: 'A category with this name already exists' });
   }
-  return getCategoryById(id);
+  return getCategoryById(businessId, id);
 }
 
-export async function deleteCategory(id) {
-  await getCategoryById(id);
+export async function deleteCategory(businessId, id) {
+  await getCategoryById(businessId, id);
   try {
-    await executeQuery(`DELETE FROM categories WHERE id = ?`, [id]);
+    await executeQuery(`DELETE FROM categories WHERE id = ? AND business_id = ?`, [id, businessId]);
   } catch (err) {
     rethrowAsAppError(err, {
       onRestricted: 'Cannot delete a category that still has sub-categories or products under it. Deactivate it instead.',
@@ -162,11 +179,11 @@ export async function deleteCategory(id) {
 // Sub-categories
 // ---------------------------------------------------------------------------
 
-export async function listSubCategories(listQuery, filters) {
+export async function listSubCategories(businessId, listQuery, filters) {
   const { perPage, offset, search, orderby, order } = listQuery;
 
-  const conditions = [];
-  const params = [];
+  const conditions = ['business_id = ?'];
+  const params = [businessId];
   if (search) {
     conditions.push('name LIKE ?');
     params.push(`%${search}%`);
@@ -179,7 +196,7 @@ export async function listSubCategories(listQuery, filters) {
     conditions.push('is_active = ?');
     params.push(filters.isActive);
   }
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const where = `WHERE ${conditions.join(' AND ')}`;
 
   const [rows, countRows] = await Promise.all([
     executeQuery(
@@ -192,40 +209,44 @@ export async function listSubCategories(listQuery, filters) {
   return { rows, total: countRows[0].total };
 }
 
-export async function getSubCategoryById(id) {
-  const [row] = await executeQuery(`SELECT ${SUB_CATEGORY_COLUMNS} FROM sub_categories WHERE id = ?`, [id]);
+export async function getSubCategoryById(businessId, id) {
+  const [row] = await executeQuery(
+    `SELECT ${SUB_CATEGORY_COLUMNS} FROM sub_categories WHERE id = ? AND business_id = ?`,
+    [id, businessId],
+  );
   if (!row) throw new AppError(404, 'Sub-category not found');
   return row;
 }
 
-export async function createSubCategory(input) {
-  await getCategoryById(input.categoryId); // 404s if the category doesn't exist
+export async function createSubCategory(businessId, input) {
+  await getCategoryById(businessId, input.categoryId); // 404s if the parent isn't in this business
   await assertNameNotTaken(
     'sub_categories',
+    businessId,
     input.name,
     'A sub-category with this name already exists under this category',
     { scopeColumn: 'category_id', scopeValue: input.categoryId },
   );
 
   const id = crypto.randomUUID();
-  const sortOrder = await nextSortOrder('sub_categories', 'category_id', input.categoryId);
+  const sortOrder = await nextSortOrder('sub_categories', businessId, 'category_id', input.categoryId);
   try {
-    await executeQuery(`INSERT INTO sub_categories (id, category_id, name, is_active, sort_order) VALUES (?, ?, ?, ?, ?)`, [
-      id,
-      input.categoryId,
-      input.name,
-      input.isActive ?? true,
-      sortOrder,
-    ]);
+    await executeQuery(
+      `INSERT INTO sub_categories (id, business_id, category_id, name, is_active, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, businessId, input.categoryId, input.name, input.isActive ?? true, sortOrder],
+    );
   } catch (err) {
     rethrowAsAppError(err, { onDuplicate: 'A sub-category with this name already exists under this category' });
   }
-  return getSubCategoryById(id);
+  return getSubCategoryById(businessId, id);
 }
 
 /** Persists a full manual reorder — every sub-category in the category must be present exactly once. */
-export async function reorderSubCategories(categoryId, orderedIds) {
-  const existing = await executeQuery(`SELECT id FROM sub_categories WHERE category_id = ?`, [categoryId]);
+export async function reorderSubCategories(businessId, categoryId, orderedIds) {
+  const existing = await executeQuery(`SELECT id FROM sub_categories WHERE category_id = ? AND business_id = ?`, [
+    categoryId,
+    businessId,
+  ]);
   const existingIds = new Set(existing.map((row) => row.id));
   if (orderedIds.length !== existingIds.size || orderedIds.some((id) => !existingIds.has(id))) {
     throw new AppError(400, 'orderedIds must contain every sub-category in this category exactly once');
@@ -233,20 +254,21 @@ export async function reorderSubCategories(categoryId, orderedIds) {
 
   await withTransaction(async (execute) => {
     for (const [index, id] of orderedIds.entries()) {
-      await execute(`UPDATE sub_categories SET sort_order = ? WHERE id = ?`, [index, id]);
+      await execute(`UPDATE sub_categories SET sort_order = ? WHERE id = ? AND business_id = ?`, [index, id, businessId]);
     }
   });
 }
 
-export async function updateSubCategory(id, input) {
-  const existing = await getSubCategoryById(id);
+export async function updateSubCategory(businessId, id, input) {
+  const existing = await getSubCategoryById(businessId, id);
   if (input.categoryId !== undefined) {
-    await getCategoryById(input.categoryId); // 404s if the target category doesn't exist
+    await getCategoryById(businessId, input.categoryId); // 404s if the target category isn't in this business
   }
 
   if (input.name !== undefined) {
     await assertNameNotTaken(
       'sub_categories',
+      businessId,
       input.name,
       'A sub-category with this name already exists under this category',
       { scopeColumn: 'category_id', scopeValue: input.categoryId ?? existing.categoryId, excludeId: id },
@@ -268,19 +290,19 @@ export async function updateSubCategory(id, input) {
     params.push(input.isActive);
   }
 
-  params.push(id);
+  params.push(id, businessId);
   try {
-    await executeQuery(`UPDATE sub_categories SET ${fields.join(', ')} WHERE id = ?`, params);
+    await executeQuery(`UPDATE sub_categories SET ${fields.join(', ')} WHERE id = ? AND business_id = ?`, params);
   } catch (err) {
     rethrowAsAppError(err, { onDuplicate: 'A sub-category with this name already exists under this category' });
   }
-  return getSubCategoryById(id);
+  return getSubCategoryById(businessId, id);
 }
 
-export async function deleteSubCategory(id) {
-  await getSubCategoryById(id);
+export async function deleteSubCategory(businessId, id) {
+  await getSubCategoryById(businessId, id);
   try {
-    await executeQuery(`DELETE FROM sub_categories WHERE id = ?`, [id]);
+    await executeQuery(`DELETE FROM sub_categories WHERE id = ? AND business_id = ?`, [id, businessId]);
   } catch (err) {
     rethrowAsAppError(err, {
       onRestricted: 'Cannot delete a sub-category that still has products under it. Deactivate it instead.',
