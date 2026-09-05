@@ -11,6 +11,13 @@ import { getPublicWarehouseInfo } from '../warehouse/warehouse.service.js';
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
+// Grace window for a benign multi-tab double-refresh. Two tabs sharing one refresh cookie both
+// POST /auth/refresh; the second presents a token the first just rotated away. If that just-revoked
+// token still points at a live successor and was revoked less than this long ago, we re-issue from
+// the successor chain instead of treating the replay as token theft. Kept short — a genuinely
+// stolen token replayed minutes later still trips the revoke-all-sessions response.
+const REFRESH_REPLAY_GRACE_MS = 15 * 1000;
+
 /** Parses duration strings like "7d", "15m", "1h" into milliseconds for DB expiry calculation. */
 export function parseDurationMs(duration) {
   const unit = duration.slice(-1);
@@ -40,18 +47,53 @@ function toSessionUser(row) {
     name: row.name,
     email: row.email,
     role: row.role,
+    isSuperAdmin: Boolean(row.is_super_admin),
     profileComplete: Boolean(row.profile_completed_at),
   };
 }
 
-/** Stores a new refresh token hash in the DB — used after login and after token rotation. */
+/**
+ * Assembles the access-token payload for a user: the transitional global `role`, the platform
+ * `isSuperAdmin` flag, and the list of businesses the user is an active member of (memberships and
+ * businesses both `is_active = 1`), each as a compact `{ b: businessId, r: role }` pair.
+ * One query for identity, one for the membership list. `[]` when the user has no memberships.
+ */
+export async function buildAccessTokenPayload(userId) {
+  const [user] = await executeQuery(`SELECT role, is_super_admin FROM users WHERE id = ?`, [userId]);
+  if (!user) throw new AppError(404, 'User not found');
+
+  const memberships = await executeQuery(
+    `SELECT m.business_id AS b, m.role AS r
+     FROM memberships m
+     JOIN businesses bus ON bus.id = m.business_id
+     WHERE m.user_id = ? AND m.is_active = 1 AND bus.is_active = 1
+     ORDER BY bus.name`,
+    [userId],
+  );
+
+  return {
+    sub: userId,
+    // transitional: global users.role; superseded by memberships
+    role: user.role,
+    isSuperAdmin: Boolean(user.is_super_admin),
+    memberships: memberships.map((m) => ({ b: m.b, r: m.r })),
+  };
+}
+
+/**
+ * Stores a new refresh token hash in the DB — used after login and after token rotation.
+ * The row id is generated here (not `UUID()` in SQL) so the caller can link the row it replaces
+ * to this successor via `refresh_tokens.replaced_by`. Returns the new row id.
+ */
 async function storeRefreshToken(userId, tokenHash, ip, userAgent) {
+  const id = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + parseDurationMs(ENV.JWT_REFRESH_EXPIRES_IN));
   await executeQuery(
     `INSERT INTO refresh_tokens (id, user_id, token_hash, device_info, ip_address, expires_at)
-     VALUES (UUID(), ?, ?, ?, ?, ?)`,
-    [userId, tokenHash, userAgent, ip, expiresAt],
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, userId, tokenHash, userAgent, ip, expiresAt],
   );
+  return id;
 }
 
 /**
@@ -132,7 +174,8 @@ async function consumeOtp(phone, purpose, otp) {
 /** Looks up an account by the phone number it signs in with. */
 async function findUserByPhone(phone) {
   const [user] = await executeQuery(
-    `SELECT id, name, email, role, is_active, profile_completed_at FROM users WHERE phone = ?`,
+    `SELECT id, name, email, role, is_super_admin, is_active, profile_completed_at
+     FROM users WHERE phone = ?`,
     [phone],
   );
   return user;
@@ -163,7 +206,15 @@ async function createCustomerFromPhone(phone) {
 
   logger.info({ userId: id }, 'Created a customer account from a verified phone number');
 
-  return { id, name: null, email: null, role: 'customer', is_active: 1, profile_completed_at: null };
+  return {
+    id,
+    name: null,
+    email: null,
+    role: 'customer',
+    is_super_admin: 0,
+    is_active: 1,
+    profile_completed_at: null,
+  };
 }
 
 /**
@@ -189,7 +240,7 @@ export async function loginWithOtp(input, ip, userAgent) {
     [user.id],
   );
 
-  const accessToken = signAccessToken({ sub: user.id, role: user.role });
+  const accessToken = signAccessToken(await buildAccessTokenPayload(user.id));
   const refreshToken = generateRefreshToken();
 
   await storeRefreshToken(user.id, hashRefreshToken(refreshToken), ip, userAgent);
@@ -316,7 +367,7 @@ export async function registerCustomer(input, ip, userAgent) {
 
   const finalId = inactiveMatch?.id ?? id;
 
-  const accessToken = signAccessToken({ sub: finalId, role: 'customer' });
+  const accessToken = signAccessToken(await buildAccessTokenPayload(finalId));
   const refreshToken = generateRefreshToken();
 
   await storeRefreshToken(finalId, hashRefreshToken(refreshToken), ip, userAgent);
@@ -350,7 +401,7 @@ export async function registerCustomer(input, ip, userAgent) {
  */
 export async function loginUser(input, ip, userAgent) {
   const [user] = await executeQuery(
-    `SELECT id, name, email, password_hash, role, is_active,
+    `SELECT id, name, email, password_hash, role, is_super_admin, is_active,
             failed_login_attempts, locked_until, profile_completed_at
      FROM users
      WHERE email = ? OR phone = ?`,
@@ -393,7 +444,7 @@ export async function loginUser(input, ip, userAgent) {
     [user.id],
   );
 
-  const accessToken = signAccessToken({ sub: user.id, role: user.role });
+  const accessToken = signAccessToken(await buildAccessTokenPayload(user.id));
   const refreshToken = generateRefreshToken();
 
   await storeRefreshToken(user.id, hashRefreshToken(refreshToken), ip, userAgent);
@@ -402,24 +453,84 @@ export async function loginUser(input, ip, userAgent) {
 }
 
 /**
- * Rotates refresh tokens on every use.
- * If a revoked token is replayed, all sessions are wiped — this indicates token theft.
+ * Consumes `oldRow` and issues a fresh token pair from it: load the (still active) user, store the
+ * successor refresh-token row, then revoke `oldRow` and point its `replaced_by` at the successor.
+ * The `replaced_by` link is what lets a later replay of `oldRow` be recognised as a benign
+ * multi-tab double-refresh (see `refreshTokens`) rather than token theft.
+ */
+async function rotateFromRow(oldRow, ip, userAgent) {
+  const [user] = await executeQuery(
+    `SELECT id, name, email, role, is_super_admin, profile_completed_at
+     FROM users WHERE id = ? AND is_active = 1`,
+    [oldRow.user_id],
+  );
+
+  if (!user) throw new AppError(401, 'User account is no longer active');
+
+  const newRefreshToken = generateRefreshToken();
+  const newRowId = await storeRefreshToken(
+    oldRow.user_id,
+    hashRefreshToken(newRefreshToken),
+    ip,
+    userAgent,
+  );
+
+  // COALESCE keeps an already-set revoked_at (the grace-window case rotates a row that a prior
+  // replay may have just revoked) while still stamping a fresh one on the normal path.
+  await executeQuery(
+    `UPDATE refresh_tokens
+     SET revoked_at = COALESCE(revoked_at, NOW()), last_used_at = NOW(), replaced_by = ?
+     WHERE id = ?`,
+    [newRowId, oldRow.id],
+  );
+
+  const accessToken = signAccessToken(await buildAccessTokenPayload(oldRow.user_id));
+
+  return { accessToken, refreshToken: newRefreshToken, user: toSessionUser(user) };
+}
+
+/**
+ * Rotates refresh tokens on every use: each call consumes the presented token and issues a new pair.
+ *
+ * Replay of an already-revoked token is normally treated as theft (every session for that user is
+ * revoked). The one exception is a benign multi-tab double-refresh: two tabs share the refresh
+ * cookie, both call this, and the slower one presents a token the faster one rotated away moments
+ * ago. When the presented token was revoked less than `REFRESH_REPLAY_GRACE_MS` ago AND its
+ * recorded successor (`replaced_by`) is still active, we rotate from that successor and return a
+ * valid pair without the revoke-all response. Outside that window, or if the successor is also
+ * gone, it is still treated as theft.
  */
 export async function refreshTokens(rawToken, ip, userAgent) {
   const tokenHash = hashRefreshToken(rawToken);
 
   const [existing] = await executeQuery(
-    `SELECT id, user_id, revoked_at, expires_at FROM refresh_tokens WHERE token_hash = ?`,
+    `SELECT id, user_id, revoked_at, expires_at, replaced_by FROM refresh_tokens WHERE token_hash = ?`,
     [tokenHash],
   );
 
   if (!existing) throw new AppError(401, 'Invalid refresh token');
 
   if (existing.revoked_at) {
+    const revokedAgoMs = Date.now() - new Date(existing.revoked_at).getTime();
+
+    // Benign multi-tab double-refresh: a just-revoked token whose successor is still usable.
+    if (existing.replaced_by && revokedAgoMs <= REFRESH_REPLAY_GRACE_MS) {
+      const [successor] = await executeQuery(
+        `SELECT id, user_id, revoked_at, expires_at, replaced_by FROM refresh_tokens WHERE id = ?`,
+        [existing.replaced_by],
+      );
+
+      if (successor && !successor.revoked_at && new Date(successor.expires_at) > new Date()) {
+        return rotateFromRow(successor, ip, userAgent);
+      }
+    }
+
+    // Outside the grace window, or the successor is revoked/expired/missing → real token theft.
     logger.warn({ userId: existing.user_id }, 'Refresh token reuse detected — revoking all sessions');
-    await executeQuery(`UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL`, [
-      existing.user_id,
-    ]);
+    await executeQuery(
+      `UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL`,
+      [existing.user_id],
+    );
     throw new AppError(401, 'Refresh token already used');
   }
 
@@ -427,24 +538,7 @@ export async function refreshTokens(rawToken, ip, userAgent) {
     throw new AppError(401, 'Refresh token expired');
   }
 
-  // Revoke the consumed token before issuing the new pair.
-  await executeQuery(`UPDATE refresh_tokens SET revoked_at = NOW(), last_used_at = NOW() WHERE id = ?`, [
-    existing.id,
-  ]);
-
-  const [user] = await executeQuery(
-    `SELECT id, name, email, role, profile_completed_at FROM users WHERE id = ? AND is_active = 1`,
-    [existing.user_id],
-  );
-
-  if (!user) throw new AppError(401, 'User account is no longer active');
-
-  const accessToken = signAccessToken({ sub: existing.user_id, role: user.role });
-  const newRefreshToken = generateRefreshToken();
-
-  await storeRefreshToken(existing.user_id, hashRefreshToken(newRefreshToken), ip, userAgent);
-
-  return { accessToken, refreshToken: newRefreshToken, user: toSessionUser(user) };
+  return rotateFromRow(existing, ip, userAgent);
 }
 
 /** Revokes the refresh token cookie so it cannot be replayed after logout. */
@@ -455,11 +549,47 @@ export async function logoutUser(rawToken) {
   ]);
 }
 
-/** Returns the authenticated user's profile, excluding all sensitive fields. */
+/**
+ * The businesses the switcher should list for a user: every business they are an active member of
+ * (role taken from the membership row) and — for a super admin — every other active business as
+ * well, reported with role `'admin'` since a super admin may act inside any business. De-duplicated
+ * by business id (an explicit membership role wins over the synthetic `'admin'`), ordered by name.
+ */
+async function getUserBusinesses(userId, isSuperAdmin) {
+  const memberRows = await executeQuery(
+    `SELECT b.id, b.name, b.slug, m.role
+     FROM memberships m
+     JOIN businesses b ON b.id = m.business_id
+     WHERE m.user_id = ? AND m.is_active = 1 AND b.is_active = 1
+     ORDER BY b.name`,
+    [userId],
+  );
+
+  const byId = new Map(
+    memberRows.map((r) => [r.id, { id: r.id, name: r.name, slug: r.slug, role: r.role }]),
+  );
+
+  if (isSuperAdmin) {
+    const allActive = await executeQuery(
+      `SELECT id, name, slug FROM businesses WHERE is_active = 1 ORDER BY name`,
+    );
+    for (const b of allActive) {
+      if (!byId.has(b.id)) byId.set(b.id, { id: b.id, name: b.name, slug: b.slug, role: 'admin' });
+    }
+  }
+
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Returns the authenticated user's profile, excluding all sensitive fields.
+ * Includes `isSuperAdmin` and a `businesses` array (`{ id, name, slug, role }`) for the business
+ * switcher — the user's active memberships, plus every active business for a super admin.
+ */
 export async function getMe(userId) {
   const [user] = await executeQuery(
-    `SELECT id, name, email, phone, role, business_name, address, town, district, state, pincode,
-            is_active, profile_completed_at, last_login_at, created_at, updated_at
+    `SELECT id, name, email, phone, role, is_super_admin, business_name, address, town, district,
+            state, pincode, is_active, profile_completed_at, last_login_at, created_at, updated_at
      FROM users
      WHERE id = ? AND is_active = 1`,
     [userId],
@@ -467,9 +597,16 @@ export async function getMe(userId) {
 
   if (!user) throw new AppError(404, 'User not found');
 
+  const businesses = await getUserBusinesses(userId, Boolean(user.is_super_admin));
+
   // Derived rather than raw so every endpoint that describes the current user agrees on one name
   // for it — the timestamp itself is of no use to a client.
-  return { ...user, profileComplete: Boolean(user.profile_completed_at) };
+  return {
+    ...user,
+    isSuperAdmin: Boolean(user.is_super_admin),
+    businesses,
+    profileComplete: Boolean(user.profile_completed_at),
+  };
 }
 
 /** Validates current password and sets a new one, clearing the forced-change flag. */

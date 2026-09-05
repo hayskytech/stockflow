@@ -16,10 +16,12 @@
 --   05_multitenant_business_id.sql  — business_id on every tenant-owned table
 --   06_settings_per_business.sql    — warehouse→business_settings + per-business
 --                                     settings rows
+--   07_refresh_token_replaced_by.sql — refresh_tokens.replaced_by (multi-tab
+--                                     refresh grace window)
 -- A fresh install of 01 + 02 ends up identical to running the old 01 + 02 then
--- 03 + 04 + 05 + 06 in order. An already-provisioned (older) DB catches up by
+-- 03 + 04 + 05 + 06 + 07 in order. An already-provisioned (older) DB catches up by
 -- running the numbered migration files in this directory in order, not by
--- re-reading this file. The next schema change starts at 07_<description>.sql.
+-- re-reading this file. The next schema change starts at 08_<description>.sql.
 -- -----------------------------------------------------------------------------
 
 -- =============================================================================
@@ -143,12 +145,14 @@ CREATE TABLE refresh_tokens (
   last_used_at  DATETIME      NULL                                  COMMENT 'Touched on every /auth/refresh',
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   revoked_at    DATETIME      NULL                                  COMMENT 'Set on logout or token rotation - NULL means active',
+  replaced_by   CHAR(36)      NULL                                  COMMENT 'Successor refresh_tokens.id set on rotation - drives the multi-tab refresh grace window',
 
   PRIMARY KEY (id),
   UNIQUE KEY uq_refresh_tokens_hash  (token_hash),
   KEY idx_refresh_tokens_user_id     (user_id),
   KEY idx_refresh_tokens_expires_at  (expires_at),
   KEY idx_refresh_tokens_revoked_at  (revoked_at),
+  KEY idx_refresh_tokens_replaced_by (replaced_by),
 
   CONSTRAINT fk_refresh_tokens_user_id
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE

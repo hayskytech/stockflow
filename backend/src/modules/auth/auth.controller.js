@@ -155,7 +155,10 @@ export async function logout(req, res, next) {
   }
 }
 
-/** GET /api/auth/me */
+/**
+ * GET /api/auth/me — the authenticated user's safe profile, plus `isSuperAdmin` and a `businesses`
+ * array (`{ id, name, slug, role }`) for the business switcher.
+ */
 export async function me(req, res, next) {
   try {
     if (!req.user) throw new AppError(401, 'Not authenticated');

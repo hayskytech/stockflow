@@ -2,7 +2,11 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env.js';
 
-/** Signs a short-lived access token carrying the user's identity and role. */
+/**
+ * Signs a short-lived access token. The payload is assembled by
+ * `auth.service.js` `buildAccessTokenPayload()` and carries the user id (`sub`), the transitional
+ * global `role`, the `isSuperAdmin` flag, and the active `memberships` list.
+ */
 export function signAccessToken(payload) {
   return jwt.sign(payload, ENV.JWT_ACCESS_SECRET, { expiresIn: ENV.JWT_ACCESS_EXPIRES_IN });
 }

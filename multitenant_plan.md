@@ -6,7 +6,8 @@ Status / progress (branch `multi-tenant-saas`):
 - ✅ **Phase 1** — storefront + customer login disabled behind `STOREFRONT_ENABLED` (`798dd0d`)
 - ✅ **Phase 2** — tenancy schema & seed; `04`–`06` migrations + rewritten `01`/`02`, validated
   against the real DB (fresh install, upgrade path, and fresh≡upgraded all pass)
-- ⬜ **Phase 3** — backend auth & tenancy middleware  ← next
+- ✅ **Phase 3** — token carries `{sub,role,isSuperAdmin,memberships}`; resolveBusiness / requireBusinessRole / requireSuperAdmin middleware; /auth/me business list; multi-tab refresh grace window (migration 07)
+- ⬜ **Phase 4** — businesses & membership module  ← next
 
 **DB engine note:** the dev DB and the cPanel host both run **MariaDB 10.4**, not MySQL 8.0 as the
 old schema header claimed. Migrations use portable syntax (`DROP CONSTRAINT`, not `DROP CHECK`).
