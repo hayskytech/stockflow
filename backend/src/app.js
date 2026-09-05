@@ -3,9 +3,13 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { ENV } from "./config/env.js";
+import { authenticate } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { generalLimiter } from "./middleware/rateLimiter.js";
+import { requireBusinessRole } from "./middleware/requireBusinessRole.js";
+import { resolveBusiness } from "./middleware/resolveBusiness.js";
 import { authRouter } from "./modules/auth/auth.router.js";
+import { businessMembersRouter, businessesRouter } from "./modules/businesses/businesses.router.js";
 import { catalogRouter } from "./modules/catalog/catalog.router.js";
 import { dispatchesRouter } from "./modules/dispatches/dispatches.router.js";
 import { heroSlidesRouter } from "./modules/heroSlides/heroSlides.router.js";
@@ -64,6 +68,14 @@ app.use(
 );
 
 app.use("/api/auth", authRouter);
+app.use("/api/businesses", businessesRouter);
+app.use(
+  "/api/b/:businessId/members",
+  authenticate,
+  resolveBusiness,
+  requireBusinessRole("admin"),
+  businessMembersRouter,
+);
 app.use("/api", catalogRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/sizes", sizesRouter);

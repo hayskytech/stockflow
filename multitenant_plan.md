@@ -7,7 +7,8 @@ Status / progress (branch `multi-tenant-saas`):
 - ✅ **Phase 2** — tenancy schema & seed; `04`–`06` migrations + rewritten `01`/`02`, validated
   against the real DB (fresh install, upgrade path, and fresh≡upgraded all pass)
 - ✅ **Phase 3** — token carries `{sub,role,isSuperAdmin,memberships}`; resolveBusiness / requireBusinessRole / requireSuperAdmin middleware; /auth/me business list; multi-tab refresh grace window (migration 07)
-- ⬜ **Phase 4** — businesses & membership module  ← next
+- ✅ **Phase 4** — businesses CRUD (super admin) + per-business member management (business admin); last-admin guards
+- ⬜ **Phase 5** — convert tenant modules to business scope  ← next
 
 - ⬜ **Phase 5** — convert tenant modules to business scope
 - ⬜ **Phase 6** — frontend tenancy
